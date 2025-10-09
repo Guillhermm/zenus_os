@@ -11,11 +11,13 @@ Although there are research prototypes already in place, still there is no full 
 
 What would be the impacts on user experience? Should we build a new concept of user interface, or the new concept is totally user customizable?
 
-## Prototype
+Discussions over possible impacts and needed technology and scientific improvements can be found **[here](./docs/advances.md)**.
 
-### System Architecture
+## 1. Prototype
 
-#### AI Assistant Layer
+### 1.1. System Architecture
+
+#### 1.1.1. AI Assistant Layer
 
 - LLM (Large Language Model) that interprets intent.
 - Is there another better way than LLM, more efficient that does not consume much from CPU, for the system core?
@@ -23,7 +25,7 @@ What would be the impacts on user experience? Should we build a new concept of u
 - Autonomous agent capabilities?
 - Maybe we can build this as a modular backend that sits between voice and the system APIs?
 
-#### Voice Interface Layer
+#### 1.1.2. Voice Interface Layer
 
 - Voice-to-text: Whisper (local), Deepgram, or Google SST.
 - Text-to-voice: ElevenLabs, Piper, or built-in TTS engines.
@@ -34,7 +36,7 @@ Natural conversion loop:
 Wake word → voice capture → intent → action → AI response → spoken feedback
 ```
 
-#### OS Shell/Control Layer
+#### 1.1.3. OS Shell/Control Layer
 
 This layer connects AI actions to real system commands.
 
@@ -46,7 +48,7 @@ This layer connects AI actions to real system commands.
 
 Would we be able to fully control OS in second and third approaches?
 
-#### Autonomous Task Engine
+#### 1.1.4. Autonomous Task Engine
 
 AI should not just follow single commands, it should:
 
@@ -55,7 +57,7 @@ AI should not just follow single commands, it should:
 - Execute subtasks step by step.
 - Adapt to errors or unexpected results.
 
-#### Security and Permissions
+#### 1.1.5. Security and Permissions
 
 A voice controlled OS must have strong authentication, especially for destructive actions.
 
@@ -67,9 +69,9 @@ A voice controlled OS must have strong authentication, especially for destructiv
 
 We should be able to "translate" voice into a single id, combined with passphrase, for authentication. Passwords might be fallback. Instead of wake word, OS might recognize user voice timbre.
 
-## Use Case Scenarios Examples
+## 2. Use Case Scenarios Examples
 
-### Daily Tasks
+### 2.1. Daily Tasks
 
 "Check my calendar and tell me what's coming up"
 
@@ -77,13 +79,13 @@ We should be able to "translate" voice into a single id, combined with passphras
 
 "Summarize latest posts from my social media"
 
-### Autonomous Ops
+### 2.2. Autonomous Ops
 
 "Find the 5 largest files on my system, back them up, and free up space"
 
 "Setup a new dev environment with Python, Docker, and VS Code"
 
-### Developer Mode
+### 2.3. Developer Mode
 
 "Create a Python script that monitors CPU usage and logs"
 
