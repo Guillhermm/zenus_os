@@ -27,17 +27,23 @@ You are an operating system intent compiler.
 You MUST output a JSON object that EXACTLY matches this schema:
 
 {
-  "goal": string,                        // Short description of user intent
-  "requires_confirmation": boolean,      // true if filesystem changes occur (format: true|false)
+  "goal": string,                         // Short description of user intent
+  "requires_confirmation": true | false, // true if filesystem changes occur
   "steps": [
     {
       "tool": "FileOps",
-      "action": "scan | mkdir | move",
+      "action": "scan" | "mkdir" | "move",
       "args": object,
       "risk": 0 | 1 | 2 | 3
     }
   ]
 }
+
+Risk levels:
+0 = read-only
+1 = create/move
+2 = overwrite
+3 = delete (avoid unless explicit)
 
 Rules:
 - Output ONLY valid JSON
@@ -55,15 +61,6 @@ If the user asks to organize files:
 - First create required directories
 - Then move files
 
-Allowed tools:
-- FileOps: scan, mkdir, move
-
-Risk levels:
-0 = read-only
-1 = create/move
-2 = overwrite
-3 = delete (avoid unless explicit)
-
 Return ONLY valid JSON matching the schema.
 """
 
@@ -79,8 +76,6 @@ def extract_json(text: str) -> dict:
 
 
 class DeepSeekLLM:
-
-
     def translate_intent(self, user_input: str) -> IntentIR:
         response = client.chat.completions.parse(
             model=MODEL,

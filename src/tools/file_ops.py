@@ -1,3 +1,4 @@
+import glob
 import os
 import shutil
 from tools.base import Tool
@@ -13,9 +14,11 @@ class FileOps(Tool):
         os.makedirs(os.path.expanduser(path), exist_ok=True)
         return f"Directory created: {path}"
 
-    def move(self, src: str, dst: str):
-        shutil.move(
-            os.path.expanduser(src),
-            os.path.expanduser(dst),
-        )
-        return f"Moved {src} -> {dst}"
+    def move(self, source: str, destination: str):
+        src_pattern = os.path.expanduser(source)
+        dst = os.path.expanduser(destination)
+
+        for path in glob.glob(src_pattern):
+            shutil.move(path, dst)
+
+        return f"Moved files matching {source} -> {destination}"

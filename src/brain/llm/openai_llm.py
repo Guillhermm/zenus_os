@@ -48,5 +48,5 @@ class OpenAILLM:
             response_format=IntentIR,
         )
 
-        print(response)
+
         return response.choices[0].message.parsed
