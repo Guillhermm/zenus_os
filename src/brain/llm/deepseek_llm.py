@@ -12,8 +12,8 @@ load_dotenv()
 
 DEEPSEEK_API_KEY=os.getenv("DEEPSEEK_API_KEY"),
 DEEPSEEK_API_URL=os.getenv("DEEPSEEK_API_BASE_URL")
-MODEL="deepseek-chat"
-
+MODEL=os.getenv("LLM_MODEL")
+MAX_TOKENS=int(os.getenv("LLM_TOKENS"))
 
 client = OpenAI(
     api_key=os.getenv("DEEPSEEK_API_KEY"),
@@ -61,6 +61,37 @@ If the user asks to organize files:
 - First create required directories
 - Then move files
 
+PROJECT CREATION RULES:
+- A project consists of:
+  (1) A root directory
+  (2) A minimal runnable entry point
+  (3) A README explaining how to run it
+- If the user asks for a project:
+  - You MUST create files, not only directories
+  - You MUST populate code files with valid content
+- Generated code must be minimal but functional
+- Prefer standard conventions for the requested stack
+
+STRICT TOOL RULES:
+
+- FileOps.mkdir
+  args: { path: string }
+
+- FileOps.write_file
+  args: { path: string, content: string }
+
+- FileOps.touch
+  args: { path: string }
+
+- FileOps.move
+  args: { src: string, dst: string }
+
+IMPORTANT:
+- NEVER include "content" in FileOps.move
+- To create a file with content, ALWAYS use FileOps.write_file
+- FileOps.move is ONLY for moving existing files
+- If content is provided, the action MUST be FileOps.write_file
+
 Return ONLY valid JSON matching the schema.
 """
 
@@ -83,6 +114,7 @@ class DeepSeekLLM:
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": user_input},
             ],
+            max_tokens=MAX_TOKENS*1024
         )
 
         content = response.choices[0].message.content

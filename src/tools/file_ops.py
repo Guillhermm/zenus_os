@@ -20,5 +20,18 @@ class FileOps(Tool):
 
         for path in glob.glob(src_pattern):
             shutil.move(path, dst)
-
         return f"Moved files matching {source} -> {destination}"
+    
+    def write_file(self, path: str, content: str):
+        full = os.path.expanduser(path)
+        os.makedirs(os.path.dirname(full), exist_ok=True)
+        with open(full, "w") as f:
+            f.write(content)
+        return f"File written: {path}"
+
+
+    def touch(self, path: str):
+        full = os.path.expanduser(path)
+        os.makedirs(os.path.dirname(full), exist_ok=True)
+        open(full, "a").close()
+        return f"File created: {path}"
