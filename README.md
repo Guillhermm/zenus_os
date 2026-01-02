@@ -1,6 +1,8 @@
 # Zenus OS
 
-A full operating systems that can be controlled by voice, where AI:
+Zenus OS is a voice-first, AI-mediated operating system layer that replaces traditional user interfaces with intent-based interaction and bounded autonomy.
+
+This is, a full operating systems that can be controlled by voice, where AI:
 
 - Understands complex user intent.
 - Plans and performs operations autonomously.
@@ -90,3 +92,37 @@ We should be able to "translate" voice into a single id, combined with passphras
 "Create a Python script that monitors CPU usage and logs"
 
 "Download latest stable release of MySQL and configure it"
+
+## Setup
+
+Make it sure `python3` and `python3-venv` are installed:
+
+```bash
+sudo apt update
+sudo apt install python3 python3-venv
+```
+
+Create a **virtual environment** on the project root and activate it (needed for every time):
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+```
+
+Install dependencies:
+
+```bash
+pip3 install -r requirements.txt
+pip3 install -r requirements-dev.txt # Dev env only
+```
+
+## Run
+
+On root, run:
+
+```bash
+python3 src/main.py
+
+# That will initialize Zenus OS CLI, so you can provide commands
+zenus > Organize my Downloads folder by file type, do not delete anything
+```
