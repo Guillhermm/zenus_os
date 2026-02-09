@@ -1,179 +1,170 @@
 """
 Intent History
 
-Persistent log of past intents and outcomes.
-Enables learning from history and pattern recognition.
+Persistent storage of past intents and their outcomes.
+Used for learning patterns and improving future execution.
 """
 
-import os
 import json
+import os
 from pathlib import Path
 from typing import List, Dict, Optional
-from datetime import datetime, timedelta
+from datetime import datetime
 
 
 class IntentHistory:
     """
-    Manages persistent intent history
+    Persistent intent history storage
     
-    Stores all intents across sessions with:
-    - User input
-    - Generated plan
-    - Execution outcome
-    - Timestamp
+    Stores all intents, plans, and outcomes for:
+    - Learning from past executions
+    - Understanding usage patterns
+    - Debugging and auditing
     """
     
-    def __init__(self, storage_dir: Optional[str] = None):
-        if storage_dir is None:
-            storage_dir = os.path.expanduser("~/.zenus/history")
+    def __init__(self, history_dir: Optional[str] = None):
+        if history_dir is None:
+            history_dir = os.path.expanduser("~/.zenus/history")
         
-        self.storage_dir = storage_dir
-        os.makedirs(storage_dir, exist_ok=True)
+        self.history_dir = Path(history_dir)
+        self.history_dir.mkdir(parents=True, exist_ok=True)
         
-        # Current month file
-        self.current_file = self._get_current_file()
-    
-    def _get_current_file(self) -> str:
-        """Get path to current month's history file"""
-        
-        year_month = datetime.now().strftime("%Y-%m")
-        return os.path.join(self.storage_dir, f"history_{year_month}.jsonl")
+        # Current history file (daily)
+        today = datetime.now().strftime("%Y-%m-%d")
+        self.current_file = self.history_dir / f"intents_{today}.jsonl"
     
     def record(
         self, 
         user_input: str, 
-        goal: str, 
-        steps_count: int,
+        intent_ir: dict, 
         success: bool,
-        duration_seconds: float = 0
+        result: str,
+        metadata: Optional[Dict] = None
     ):
-        """Record an intent execution"""
+        """
+        Record an intent execution
         
+        Args:
+            user_input: Original user command
+            intent_ir: The Intent IR that was executed
+            success: Whether execution succeeded
+            result: Output or error message
+            metadata: Additional context
+        """
         entry = {
             "timestamp": datetime.now().isoformat(),
             "user_input": user_input,
-            "goal": goal,
-            "steps_count": steps_count,
+            "goal": intent_ir.get("goal"),
+            "steps": len(intent_ir.get("steps", [])),
             "success": success,
-            "duration_seconds": duration_seconds
+            "result": result,
+            "metadata": metadata or {}
         }
         
-        with open(self.current_file, 'a') as f:
-            f.write(json.dumps(entry) + '\n')
+        with open(self.current_file, "a") as f:
+            f.write(json.dumps(entry) + "\n")
     
-    def search(
-        self, 
-        query: str, 
-        limit: int = 10,
-        days_back: int = 30
-    ) -> List[Dict]:
+    def get_recent(self, limit: int = 10) -> List[Dict]:
+        """Get recent intent executions"""
+        if not self.current_file.exists():
+            return []
+        
+        entries = []
+        with open(self.current_file, "r") as f:
+            for line in f:
+                entries.append(json.loads(line))
+        
+        return entries[-limit:]
+    
+    def search(self, query: str, limit: int = 10) -> List[Dict]:
         """
-        Search intent history
+        Search intent history by query
         
-        Args:
-            query: Search term (matches user_input or goal)
-            limit: Maximum results
-            days_back: How many days to search back
-        
-        Returns:
-            List of matching history entries
+        Searches in:
+        - user_input
+        - goal
+        - result
         """
-        
-        cutoff = datetime.now() - timedelta(days=days_back)
+        query_lower = query.lower()
         matches = []
         
-        # Search current and recent files
-        for file_path in self._get_recent_files(days_back):
-            if not os.path.exists(file_path):
-                continue
-            
-            with open(file_path, 'r') as f:
+        # Search all history files
+        for history_file in sorted(self.history_dir.glob("intents_*.jsonl"), reverse=True):
+            with open(history_file, "r") as f:
                 for line in f:
-                    try:
-                        entry = json.loads(line)
-                        entry_time = datetime.fromisoformat(entry["timestamp"])
+                    entry = json.loads(line)
+                    
+                    # Search in relevant fields
+                    searchable = " ".join([
+                        entry.get("user_input", ""),
+                        entry.get("goal", ""),
+                        entry.get("result", "")
+                    ]).lower()
+                    
+                    if query_lower in searchable:
+                        matches.append(entry)
                         
-                        if entry_time < cutoff:
-                            continue
-                        
-                        # Simple substring search
-                        if (query.lower() in entry["user_input"].lower() or
-                            query.lower() in entry["goal"].lower()):
-                            matches.append(entry)
-                            
-                            if len(matches) >= limit:
-                                return matches
-                    except:
-                        continue
+                        if len(matches) >= limit:
+                            return matches
         
         return matches
     
-    def _get_recent_files(self, days_back: int) -> List[str]:
-        """Get list of history files covering the time range"""
-        
-        files = []
-        current_date = datetime.now()
-        
-        # Get current and previous months
-        for i in range(3):  # Cover up to 3 months back
-            year_month = (current_date - timedelta(days=30 * i)).strftime("%Y-%m")
-            file_path = os.path.join(self.storage_dir, f"history_{year_month}.jsonl")
-            files.append(file_path)
-        
-        return files
-    
-    def get_recent(self, count: int = 10) -> List[Dict]:
-        """Get N most recent intents"""
-        
-        recent = []
-        
-        if not os.path.exists(self.current_file):
-            return recent
-        
-        # Read file in reverse (simple implementation)
-        with open(self.current_file, 'r') as f:
-            lines = f.readlines()
-        
-        for line in reversed(lines[-count:]):
-            try:
-                recent.append(json.loads(line))
-            except:
-                continue
-        
-        return recent
-    
-    def get_stats(self, days: int = 7) -> Dict:
-        """Get statistics for recent period"""
-        
-        cutoff = datetime.now() - timedelta(days=days)
+    def get_success_rate(self, days: int = 7) -> float:
+        """Calculate success rate over last N days"""
         total = 0
-        successful = 0
+        successes = 0
         
-        for file_path in self._get_recent_files(days):
-            if not os.path.exists(file_path):
+        # Get files from last N days
+        cutoff = datetime.now().timestamp() - (days * 86400)
+        
+        for history_file in self.history_dir.glob("intents_*.jsonl"):
+            if history_file.stat().st_mtime < cutoff:
                 continue
             
-            with open(file_path, 'r') as f:
+            with open(history_file, "r") as f:
                 for line in f:
-                    try:
-                        entry = json.loads(line)
-                        entry_time = datetime.fromisoformat(entry["timestamp"])
-                        
-                        if entry_time < cutoff:
-                            continue
-                        
-                        total += 1
-                        if entry.get("success"):
-                            successful += 1
-                    except:
-                        continue
+                    entry = json.loads(line)
+                    total += 1
+                    if entry.get("success"):
+                        successes += 1
         
-        success_rate = (successful / total * 100) if total > 0 else 0
+        return successes / total if total > 0 else 0.0
+    
+    def get_popular_goals(self, limit: int = 10) -> List[Dict]:
+        """Get most frequently executed goal types"""
+        goal_counts = {}
         
-        return {
-            "period_days": days,
-            "total_intents": total,
-            "successful": successful,
-            "failed": total - successful,
-            "success_rate": success_rate
-        }
+        for history_file in self.history_dir.glob("intents_*.jsonl"):
+            with open(history_file, "r") as f:
+                for line in f:
+                    entry = json.loads(line)
+                    goal = entry.get("goal", "unknown")
+                    
+                    if goal not in goal_counts:
+                        goal_counts[goal] = 0
+                    goal_counts[goal] += 1
+        
+        # Sort by frequency
+        popular = [
+            {"goal": goal, "count": count}
+            for goal, count in goal_counts.items()
+        ]
+        popular.sort(key=lambda x: x["count"], reverse=True)
+        
+        return popular[:limit]
+    
+    def analyze_failures(self, limit: int = 10) -> List[Dict]:
+        """Get recent failures for analysis"""
+        failures = []
+        
+        for history_file in sorted(self.history_dir.glob("intents_*.jsonl"), reverse=True):
+            with open(history_file, "r") as f:
+                for line in f:
+                    entry = json.loads(line)
+                    if not entry.get("success"):
+                        failures.append(entry)
+                        
+                        if len(failures) >= limit:
+                            return failures
+        
+        return failures

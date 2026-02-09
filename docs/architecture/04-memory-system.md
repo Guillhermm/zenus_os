@@ -1,228 +1,227 @@
-# Memory System Architecture
+# Memory System
 
-## Problem Statement
+## Purpose
 
-Without memory, every Zenus interaction is context-free:
-- "Organize that folder" -> What folder?
-- "Show me those files again" -> Which files?
-- "Do the same thing for Documents" -> What thing?
+Enable Zenus to remember context across commands and sessions, making interaction feel natural and intelligent rather than stateless.
 
-Memory enables context, learning, and intelligence.
-
-## Three-Layer Memory Architecture
+## Architecture
 
 ```mermaid
 graph TB
-    subgraph "Session Memory (RAM)"
-        SM[Session Memory<br/>Current context]
-    end
+    User[User Command] --> Session[Session Memory]
+    Session --> World[World Model]
+    World --> Intent[Intent History]
     
-    subgraph "World Model (Disk)"
-        WM[World Model<br/>System knowledge]
-    end
+    Session -.->|"that folder"| Resolve[Resolve References]
+    World -.->|"my downloads"| Infer[Infer Paths]
+    Intent -.->|"like last time"| Learn[Learn Patterns]
     
-    subgraph "Intent History (Disk)"
-        IH[Intent History<br/>Past actions]
-    end
-    
-    User[User Input] --> SM
-    SM --> WM
-    SM --> IH
-    WM --> LLM[LLM Context]
-    IH --> LLM
-    
-    style SM fill:#4a9eff
-    style WM fill:#51cf66
-    style IH fill:#ffa94d
+    style Session fill:#4a9eff
+    style World fill:#51cf66
+    style Intent fill:#ffd43b
 ```
 
-## Layer 1: Session Memory (Short-Term)
+## Three Layers of Memory
 
-**Purpose:** Track context within current session
+### 1. Session Memory (Short-Term)
 
-**Lifetime:** Clears on session end
+**Lifetime:** Current session only
+**Purpose:** Resolve ambiguous references
 
-**Stores:**
-- Recent intents and results
-- Context references ("that folder", "those files")
-- Execution state
-
-**Example:**
 ```python
-session = SessionMemory()
-session.add_intent(
-    "organize downloads", 
-    intent, 
-    "success"
-)
-session.add_context_ref("last_directory", "/home/user/Downloads")
+# User says: "scan my downloads"
+session.remember_entity("directory", "downloads", {"path": "~/Downloads"})
 
-# Later in same session
-"show me that directory again"
--> context_ref resolves to "/home/user/Downloads"
+# Later, user says: "organize that folder"
+# Zenus resolves "that folder" -> ~/Downloads
 ```
 
-## Layer 2: World Model (Long-Term Knowledge)
+**What It Tracks:**
+- Last 10 intents and results
+- Recently accessed entities (files, directories, processes)
+- Conversation context variables
 
-**Purpose:** Persistent knowledge about system and user
-
-**Lifetime:** Persists forever (until explicitly cleared)
-
-**Stores:**
-- Frequent paths (learned from usage)
-- User preferences
-- Application locations
-- Recurring patterns
-
-**Storage:** `~/.zenus/world_model.json`
-
-**Example:**
+**Key Methods:**
 ```python
-world = WorldModel()
-
-# Track usage
-world.add_frequent_path("~/projects/zenus_os")
-
-# Learn preferences
-world.set_preference("backup_location", "~/Backups")
-
-# Recognize patterns
-world.add_pattern("User backs up on Fridays")
+session.remember_entity(type, name, metadata)
+session.resolve_reference("that folder")
+session.get_last_result()
 ```
 
-## Layer 3: Intent History (Audit + Learning)
+### 2. World Model (Long-Term)
 
-**Purpose:** Complete record of all past intents
+**Lifetime:** Persistent across all sessions
+**Purpose:** Understand user's system and preferences
 
-**Lifetime:** Permanent (rotates monthly)
-
-**Stores:**
-- Every intent execution
-- Success/failure outcomes
-- Timestamps
-- Performance metrics
-
-**Storage:** `~/.zenus/history/history_YYYY-MM.jsonl`
-
-**Example:**
 ```python
-history = IntentHistory()
+# User frequently works in ~/projects/zenus_os
+world.remember_path("zenus", "~/projects/zenus_os")
+world.remember_project("zenus_os", path, "python")
 
-history.record(
-    user_input="organize downloads",
-    goal="Organize files by type",
-    steps_count=5,
-    success=True,
-    duration_seconds=2.3
-)
-
-# Later: learn from history
-similar = history.search("organize", limit=5)
-stats = history.get_stats(days=7)
+# Later, user says: "test zenus"
+# Zenus knows: zenus -> ~/projects/zenus_os -> pytest
 ```
 
-## Memory Integration Flow
+**What It Stores:**
+- User preferences (default editor, shell, etc.)
+- Frequently used paths with aliases
+- Known applications and locations
+- Project directories and metadata
+- System configuration
 
-```mermaid
-sequenceDiagram
-    participant U as User
-    participant O as Orchestrator
-    participant SM as Session Memory
-    participant L as LLM
-    participant WM as World Model
-    participant IH as Intent History
-    
-    U->>O: "organize that folder"
-    O->>SM: get_context_ref("last_directory")
-    SM->>O: "/home/user/Downloads"
-    O->>WM: get_frequent_paths()
-    WM->>O: [common patterns]
-    O->>L: translate with context
-    L->>O: IntentIR
-    O->>SM: add_intent(intent, result)
-    O->>WM: add_frequent_path(path)
-    O->>IH: record(intent, success)
+**Key Methods:**
+```python
+world.set_preference(key, value)
+world.remember_path(alias, path)
+world.remember_project(name, path, type)
+world.get_application(name)
 ```
 
-## Context-Aware Intent Translation
+### 3. Intent History (Long-Term + Searchable)
 
-With memory, LLM gets richer context:
+**Lifetime:** Persistent, organized by date
+**Purpose:** Learn from past executions
 
-**Without Memory:**
-```
-User: "organize that folder"
-LLM: ??? (ambiguous)
-```
+```python
+# Record every intent
+history.record(user_input, intent_ir, success, result)
 
-**With Memory:**
-```
-Context:
-- Last directory: ~/Downloads
-- Frequent paths: ~/Documents, ~/projects
-- Recent intent: "scan downloads"
-- Pattern: User organizes weekly
-
-User: "organize that folder"
-LLM: Organize ~/Downloads by file type
+# Analyze patterns
+success_rate = history.get_success_rate(days=7)
+popular = history.get_popular_goals()
+failures = history.analyze_failures()
 ```
 
-## Privacy and Control
+**What It Records:**
+- Every intent execution (success or failure)
+- Original command and generated plan
+- Execution outcome
+- Timestamp and metadata
 
-**User Controls:**
-- Clear session memory anytime
-- Delete world model
-- Purge intent history
-- Export all memory data
+**Key Methods:**
+```python
+history.record(input, intent, success, result)
+history.search(query)
+history.get_success_rate(days)
+history.analyze_failures()
+```
 
-**Privacy Principles:**
-- All memory stored locally
-- No memory sent to LLM servers
-- User owns all memory data
-- Transparent storage format (JSON/JSONL)
+## Example Usage
+
+### Scenario: Organizing Files
+
+```python
+# First command
+User: "scan my downloads folder"
+
+# Zenus execution:
+session.remember_entity("directory", "downloads", {
+    "path": "~/Downloads",
+    "files_count": 127
+})
+world.remember_path("downloads", "~/Downloads")
+
+# Second command (minutes later)
+User: "organize that folder by file type"
+
+# Zenus resolves:
+folder = session.resolve_reference("that folder")
+# -> {"path": "~/Downloads", "files_count": 127}
+
+# Zenus can now execute without asking "which folder?"
+```
+
+### Scenario: Project Work
+
+```python
+# User works on a project
+User: "create a python project called my_app"
+
+# Zenus records:
+world.remember_project("my_app", "~/projects/my_app", "python", {
+    "venv": "~/projects/my_app/.venv",
+    "created": "2026-02-09"
+})
+
+# Days later
+User: "run tests for my_app"
+
+# Zenus knows:
+project = world.get_project("my_app")
+# -> path, type, venv location
+# Can automatically: cd to path, activate venv, run pytest
+```
+
+## Data Storage
+
+### Session Memory
+- **Location:** In-memory only
+- **Format:** Python objects
+- **Cleared:** On session end
+
+### World Model
+- **Location:** `~/.zenus/world_model.json`
+- **Format:** JSON
+- **Persisted:** Continuously
+
+### Intent History
+- **Location:** `~/.zenus/history/intents_YYYY-MM-DD.jsonl`
+- **Format:** JSONL (one JSON object per line)
+- **Persisted:** Daily files
 
 ## Future Enhancements
 
-### 1. Vector-Based Semantic Memory
-Store embeddings of past intents for semantic search:
-```python
-# Find similar past intents
-similar = memory.find_similar("organize files", k=5)
+### 1. Vector Embeddings
+Store embeddings of past commands for semantic search:
+```
+User: "do what I did last week with the downloads"
+-> Find semantically similar past intent
 ```
 
-### 2. Active Learning
-Learn from corrections:
-```python
-# User corrects a misunderstanding
-memory.record_correction(
-    original_intent="delete tmp files",
-    corrected_intent="move tmp files to trash"
-)
+### 2. Learning Preferences
+Automatically learn preferences from patterns:
+```
+User always organizes by "type" not "date"
+User prefers ~/backup not ~/Backup
+User's Python projects always use pytest
 ```
 
-### 3. Proactive Suggestions
-Based on patterns:
-```python
-# Friday 5pm detected
-if memory.has_pattern("backup on Friday"):
-    suggest("Would you like to run your usual backup?")
+### 3. Context Prediction
+Predict what user will ask based on context:
+```
+User scans ~/Downloads with 200 files
+-> Likely next: organize or clean up
 ```
 
-## Implementation Status
+### 4. Cross-Session Continuity
+```
+Yesterday at 5pm: User was working on project X
+Today at 9am: "continue where I left off"
+-> Resume project X context
+```
 
-```
-✓ Session Memory (complete)
-✓ World Model (complete)
-✓ Intent History (complete)
-○ LLM context integration (next)
-○ Vector semantic search (future)
-○ Active learning (future)
-```
+## Integration Points
+
+Memory system integrates with:
+- **Orchestrator:** Passes session memory to LLM for context
+- **Adaptive Planner:** Uses history to improve retry strategies
+- **Tools:** Update world model when discovering new entities
+- **Audit Logger:** Feeds intent history for analysis
 
 ## Why This Matters
 
-Memory transforms Zenus from:
-- **Reactive** → **Context-aware**
-- **Stateless** → **Continuous**
-- **Forgetful** → **Learning**
+Without memory, every command is a cold start:
+```
+User: "scan my downloads"
+User: "organize that folder"
+Zenus: "Which folder?" ❌
+```
 
-This is the foundation for true autonomy.
+With memory, conversation flows naturally:
+```
+User: "scan my downloads"
+User: "organize that folder"
+Zenus: *organizes ~/Downloads* ✓
+```
+
+This is the difference between a command executor and an intelligent assistant.

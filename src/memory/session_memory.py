@@ -1,104 +1,145 @@
 """
 Session Memory
 
-Short-term memory for current session.
-Tracks recent intents, execution results, and context.
+Short-term memory for the current session.
+Tracks context that helps resolve ambiguous references like:
+- "that folder" -> which folder?
+- "those files" -> which files?
+- "the last result" -> what was it?
 """
 
-from typing import Optional, List, Dict
+from typing import Dict, List, Optional, Any
 from datetime import datetime
-from brain.llm.schemas import IntentIR
 
 
 class SessionMemory:
     """
-    Manages short-term memory for current session
+    Short-term context memory for current session
     
-    Stores:
-    - Recent intents and results
-    - File/directory references
-    - Execution context
+    Maintains:
+    - Recent intents and outcomes
+    - Referenced entities (files, directories, processes)
+    - Conversation context
     """
     
-    def __init__(self, max_history: int = 10):
-        self.max_history = max_history
-        self.intent_history: List[Dict] = []
-        self.context_refs: Dict[str, str] = {}
+    def __init__(self):
+        self.intents = []
+        self.entities = {}
+        self.context = {}
         self.session_start = datetime.now()
     
-    def add_intent(self, user_input: str, intent: IntentIR, result: str):
-        """Record an intent and its result"""
-        
-        entry = {
+    def add_intent(self, user_input: str, intent_ir: dict, result: str):
+        """Record an executed intent"""
+        self.intents.append({
             "timestamp": datetime.now().isoformat(),
-            "user_input": user_input,
-            "goal": intent.goal,
-            "steps_count": len(intent.steps),
-            "result": result,
-            "duration_seconds": 0  # Can be enhanced later
-        }
+            "input": user_input,
+            "intent": intent_ir,
+            "result": result
+        })
         
-        self.intent_history.append(entry)
-        
-        # Keep only recent history
-        if len(self.intent_history) > self.max_history:
-            self.intent_history.pop(0)
+        # Keep only last 10 intents in memory
+        if len(self.intents) > 10:
+            self.intents.pop(0)
     
-    def add_context_ref(self, key: str, value: str):
+    def remember_entity(self, entity_type: str, name: str, metadata: Dict[str, Any]):
         """
-        Store a context reference for later use
+        Remember an entity (file, directory, process, etc.)
+        
+        Args:
+            entity_type: "file", "directory", "process", etc.
+            name: Entity identifier
+            metadata: Additional context (path, pid, etc.)
+        """
+        if entity_type not in self.entities:
+            self.entities[entity_type] = {}
+        
+        self.entities[entity_type][name] = {
+            "metadata": metadata,
+            "last_accessed": datetime.now().isoformat()
+        }
+    
+    def get_entity(self, entity_type: str, name: str) -> Optional[Dict]:
+        """Retrieve entity metadata"""
+        if entity_type in self.entities and name in self.entities[entity_type]:
+            return self.entities[entity_type][name]["metadata"]
+        return None
+    
+    def get_recent_entities(self, entity_type: str, limit: int = 5) -> List[str]:
+        """Get recently accessed entities of a type"""
+        if entity_type not in self.entities:
+            return []
+        
+        entities = list(self.entities[entity_type].items())
+        entities.sort(
+            key=lambda x: x[1]["last_accessed"],
+            reverse=True
+        )
+        
+        return [name for name, _ in entities[:limit]]
+    
+    def set_context(self, key: str, value: Any):
+        """Set a context variable"""
+        self.context[key] = value
+    
+    def get_context(self, key: str, default: Any = None) -> Any:
+        """Get a context variable"""
+        return self.context.get(key, default)
+    
+    def get_last_intent(self) -> Optional[Dict]:
+        """Get the most recent intent"""
+        return self.intents[-1] if self.intents else None
+    
+    def get_last_result(self) -> Optional[str]:
+        """Get the result of the last intent"""
+        last = self.get_last_intent()
+        return last["result"] if last else None
+    
+    def resolve_reference(self, reference: str) -> Optional[Any]:
+        """
+        Attempt to resolve ambiguous references
         
         Examples:
-        - "last_directory" -> "/home/user/Downloads"
-        - "that_file" -> "/home/user/document.pdf"
-        - "those_images" -> "/home/user/Pictures/*.jpg"
+        - "that folder" -> last mentioned directory
+        - "those files" -> last scanned files
+        - "the result" -> last command output
         """
-        self.context_refs[key] = value
+        reference_lower = reference.lower()
+        
+        # Reference to last result
+        if reference_lower in ["the result", "that result", "it"]:
+            return self.get_last_result()
+        
+        # Reference to last directory
+        if reference_lower in ["that folder", "that directory", "there"]:
+            recent_dirs = self.get_recent_entities("directory", limit=1)
+            if recent_dirs:
+                return self.get_entity("directory", recent_dirs[0])
+        
+        # Reference to last file
+        if reference_lower in ["that file", "this file"]:
+            recent_files = self.get_recent_entities("file", limit=1)
+            if recent_files:
+                return self.get_entity("file", recent_files[0])
+        
+        return None
     
-    def get_context_ref(self, key: str) -> Optional[str]:
-        """Retrieve a context reference"""
-        return self.context_refs.get(key)
+    def get_session_duration(self) -> str:
+        """Get human-readable session duration"""
+        duration = datetime.now() - self.session_start
+        minutes = int(duration.total_seconds() / 60)
+        return f"{minutes} minutes"
     
-    def get_recent_intents(self, count: int = 5) -> List[Dict]:
-        """Get N most recent intents"""
-        return self.intent_history[-count:]
-    
-    def get_context_summary(self) -> str:
-        """
-        Get a text summary of current session context
-        
-        Useful for passing to LLM for context-aware intent translation
-        """
-        
-        if not self.intent_history:
-            return "No recent activity in this session."
-        
-        lines = ["Recent session context:"]
-        
-        for entry in self.intent_history[-3:]:
-            lines.append(
-                f"- {entry['timestamp']}: {entry['goal']} -> {entry['result']}"
-            )
-        
-        if self.context_refs:
-            lines.append("\nContext references:")
-            for key, value in self.context_refs.items():
-                lines.append(f"- {key}: {value}")
-        
-        return "\n".join(lines)
+    def summarize(self) -> Dict:
+        """Get session summary"""
+        return {
+            "duration": self.get_session_duration(),
+            "intents_executed": len(self.intents),
+            "entities_tracked": sum(len(e) for e in self.entities.values()),
+            "context_keys": len(self.context)
+        }
     
     def clear(self):
         """Clear session memory"""
-        self.intent_history.clear()
-        self.context_refs.clear()
-    
-    def get_session_stats(self) -> Dict:
-        """Get session statistics"""
-        
-        duration = (datetime.now() - self.session_start).total_seconds()
-        
-        return {
-            "session_duration_seconds": duration,
-            "total_intents": len(self.intent_history),
-            "context_refs": len(self.context_refs)
-        }
+        self.intents.clear()
+        self.entities.clear()
+        self.context.clear()
