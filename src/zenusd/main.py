@@ -2,12 +2,12 @@
 Zenus OS - Main Entry Point
 
 CLI-first, agent-driven operating layer
-Routes commands through: CLI → Intent → Plan → Execute
+Routes commands through: CLI to Intent to Plan to Execute
 """
 
 import sys
 from cli.router import CommandRouter
-from cli.orchestrator import Orchestrator
+from cli.orchestrator import Orchestrator, OrchestratorError
 
 
 def main():
@@ -21,20 +21,36 @@ def main():
     command = router.parse(args)
     
     # Route to appropriate handler
-    if command.mode == "help":
-        router.show_help()
+    try:
+        if command.mode == "help":
+            router.show_help()
+        
+        elif command.mode == "version":
+            router.show_version()
+        
+        elif command.mode == "interactive":
+            orchestrator.interactive_shell()
+        
+        elif command.mode == "direct":
+            # Direct execution (auto-confirm for non-interactive use)
+            dry_run = command.flags.get("dry_run", False)
+            result = orchestrator.process(
+                command.input_text, 
+                auto_confirm=True,
+                dry_run=dry_run
+            )
+            if result:
+                print(result)
     
-    elif command.mode == "version":
-        router.show_version()
-    
-    elif command.mode == "interactive":
-        orchestrator.interactive_shell()
-    
-    elif command.mode == "direct":
-        # Direct execution (auto-confirm for non-interactive use)
-        result = orchestrator.process(command.input_text, auto_confirm=True)
-        if result:
-            print(result)
+    except OrchestratorError as e:
+        print(f"Error: {e}", file=sys.stderr)
+        sys.exit(1)
+    except KeyboardInterrupt:
+        print("\nInterrupted")
+        sys.exit(130)
+    except Exception as e:
+        print(f"Unexpected error: {e}", file=sys.stderr)
+        sys.exit(1)
 
 
 if __name__ == "__main__":

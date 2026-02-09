@@ -1,7 +1,7 @@
 """
 CLI Orchestrator
 
-Manages the full pipeline: CLI input → Intent → Plan → Execution
+Manages the full pipeline: CLI input to Intent to Plan to Execution.
 Ensures clear separation of concerns and deterministic flow.
 """
 
@@ -9,64 +9,124 @@ from typing import Optional
 from brain.llm.factory import get_llm
 from brain.planner import execute_plan
 from brain.llm.schemas import IntentIR
+from audit.logger import get_logger
+
+
+class OrchestratorError(Exception):
+    """Base exception for orchestrator errors"""
+    pass
+
+
+class IntentTranslationError(OrchestratorError):
+    """Failed to translate user input to intent"""
+    pass
+
+
+class ExecutionError(OrchestratorError):
+    """Failed to execute plan"""
+    pass
 
 
 class Orchestrator:
     """
-    Orchestrates the intent → plan → execution pipeline
+    Orchestrates the intent to plan to execution pipeline
     
     Responsibilities:
     - Translate natural language to IntentIR
     - Execute plans through the planner
+    - Log all operations for audit
     - Provide consistent interface for both interactive and direct modes
     """
 
     def __init__(self):
         self.llm = get_llm()
+        self.logger = get_logger()
 
-    def process(self, user_input: str, auto_confirm: bool = False) -> Optional[str]:
+    def process(
+        self, 
+        user_input: str, 
+        auto_confirm: bool = False,
+        dry_run: bool = False
+    ) -> Optional[str]:
         """
         Process a single user command through the full pipeline
         
         Args:
             user_input: Natural language command
             auto_confirm: If True, skip confirmation prompts (for direct CLI mode)
+            dry_run: If True, show plan but do not execute
         
         Returns:
             Status message or None
         """
         try:
             # Step 1: Translate intent
-            intent = self.llm.translate_intent(user_input)
+            try:
+                intent = self.llm.translate_intent(user_input)
+            except Exception as e:
+                error_msg = f"Failed to understand command: {str(e)}"
+                self.logger.log_error(error_msg, {"user_input": user_input})
+                raise IntentTranslationError(error_msg) from e
             
-            # Step 2: Execute plan
-            result = self._execute_with_confirmation(intent, auto_confirm)
+            # Log intent
+            mode = "direct" if auto_confirm else "interactive"
+            if dry_run:
+                mode = f"{mode}_dry_run"
+            self.logger.log_intent(user_input, intent, mode)
+            
+            # Step 2: Show plan and execute
+            result = self._execute_with_confirmation(
+                intent, 
+                auto_confirm, 
+                dry_run
+            )
             return result
             
+        except OrchestratorError:
+            # Re-raise our own errors
+            raise
         except Exception as e:
-            return f"Error: {e}"
+            error_msg = f"Unexpected error: {str(e)}"
+            self.logger.log_error(error_msg, {"user_input": user_input})
+            raise OrchestratorError(error_msg) from e
 
-    def _execute_with_confirmation(self, intent: IntentIR, auto_confirm: bool) -> str:
+    def _execute_with_confirmation(
+        self, 
+        intent: IntentIR, 
+        auto_confirm: bool,
+        dry_run: bool
+    ) -> str:
         """Execute plan with optional confirmation"""
         
         # Display plan
         print(f"\nGoal: {intent.goal}\n")
         for i, step in enumerate(intent.steps, 1):
-            risk_label = ["READ", "CREATE", "MODIFY", "DELETE"][step.risk]
+            risk_labels = ["READ", "CREATE", "MODIFY", "DELETE"]
+            risk_label = risk_labels[step.risk] if step.risk < len(risk_labels) else "UNKNOWN"
             print(f"  [{risk_label}] Step {i}: {step.tool}.{step.action} {step.args}")
+        
+        # Dry run mode stops here
+        if dry_run:
+            print("\n[DRY RUN] Plan not executed")
+            return "Dry run complete"
         
         # Confirmation handling
         if intent.requires_confirmation and not auto_confirm:
             confirm = input("\nExecute this plan? (y/n): ")
             if confirm.lower() != "y":
+                self.logger.log_execution_end(False, "User aborted")
                 return "Aborted by user"
         
         # Execute through planner
+        self.logger.log_execution_start(intent)
         try:
-            execute_plan(intent)
-            return "✓ Plan executed successfully"
+            execute_plan(intent, self.logger)
+            self.logger.log_execution_end(True)
+            return "Plan executed successfully"
         except Exception as e:
-            return f"✗ Execution failed: {e}"
+            error_msg = f"Execution failed: {str(e)}"
+            self.logger.log_execution_end(False, error_msg)
+            raise ExecutionError(error_msg) from e
 
     def interactive_shell(self):
         """Run interactive REPL mode"""
@@ -84,9 +144,23 @@ class Orchestrator:
                     print("Goodbye!")
                     break
                 
-                self.process(user_input, auto_confirm=False)
+                # Check for dry run flag
+                dry_run = False
+                if user_input.startswith("--dry-run "):
+                    dry_run = True
+                    user_input = user_input[10:]  # Remove flag
+                
+                result = self.process(user_input, auto_confirm=False, dry_run=dry_run)
+                if result:
+                    print(f"\n{result}")
                 print()  # Blank line for readability
                 
+            except IntentTranslationError as e:
+                print(f"\nError: {e}\n")
+            except ExecutionError as e:
+                print(f"\nError: {e}\n")
+            except OrchestratorError as e:
+                print(f"\nError: {e}\n")
             except KeyboardInterrupt:
                 print("\n\nGoodbye!")
                 break
