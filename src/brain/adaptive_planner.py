@@ -184,57 +184,9 @@ class AdaptivePlanner:
         Returns adapted step or None if no adaptation possible
         """
         
-        # Build context for LLM
-        context = self._build_failure_context(failed_step, result, history)
-        
-        try:
-            # Ask LLM for corrective action
-            correction_prompt = f"""
-A step failed during execution. Suggest a corrective action.
-
-Failed step:
-- Tool: {failed_step.tool}
-- Action: {failed_step.action}
-- Args: {failed_step.args}
-- Error: {result.error}
-
-Previous steps that succeeded:
-{context}
-
-Suggest ONE corrective step that might resolve this failure.
-Output only valid JSON matching the Step schema.
-"""
-            
-            # Note: This is simplified. In production, we'd have a dedicated
-            # correction endpoint or use structured outputs
-            # For now, we'll return None (no adaptation) to keep it safe
-            
-            # TODO: Implement LLM-based correction once we validate the approach
-            return None
-            
-        except Exception as e:
-            print(f"  Could not adapt step: {e}")
-            return None
-    
-    def _build_failure_context(
-        self, 
-        failed_step: Step, 
-        result: ExecutionResult,
-        history: list
-    ) -> str:
-        """Build context string from execution history"""
-        
-        if not history:
-            return "None"
-        
-        lines = []
-        for entry in history[-3:]:  # Last 3 steps
-            step = entry["step"]
-            lines.append(
-                f"- {step.tool}.{step.action}({step.args}) -> {entry['result'].output}"
-            )
-        
-        return "\n".join(lines)
+        # For now, return None (no LLM-based adaptation yet)
+        # This will be enhanced in future iterations
+        return None
     
     def get_execution_summary(self) -> dict:
         """Get summary of execution for reporting"""

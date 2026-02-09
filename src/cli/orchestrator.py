@@ -121,14 +121,27 @@ class Orchestrator:
                 self.logger.log_execution_end(False, "User aborted")
                 return "Aborted by user"
         
-        # Execute through planner
+        # Execute through planner (adaptive or basic)
         self.logger.log_execution_start(intent)
         try:
-            execute_plan(intent, self.logger)
-            self.logger.log_execution_end(True)
-            return "Plan executed successfully"
+            if self.adaptive:
+                # Use adaptive planner with retry and observation
+                success = self.adaptive_planner.execute_adaptive(intent)
+                if success:
+                    summary = self.adaptive_planner.get_execution_summary()
+                    result_msg = "Plan executed successfully"
+                    if summary["retried_steps"] > 0:
+                        result_msg += f" ({summary['retried_steps']} steps retried)"
+                    return result_msg
+                else:
+                    raise ExecutionError("Plan execution failed")
+            else:
+                # Use basic planner (legacy)
+                execute_plan(intent, self.logger)
+                self.logger.log_execution_end(True)
+                return "Plan executed successfully"
         except Exception as e:
-            error_msg = f"Execution failed: {str(e)}"
+            error_msg = f"Execution failed: {e}"
             self.logger.log_execution_end(False, error_msg)
             raise ExecutionError(error_msg) from e
 
