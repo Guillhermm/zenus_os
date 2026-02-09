@@ -8,6 +8,7 @@ Ensures clear separation of concerns and deterministic flow.
 from typing import Optional
 from brain.llm.factory import get_llm
 from brain.planner import execute_plan
+from brain.adaptive_planner import AdaptivePlanner
 from brain.llm.schemas import IntentIR
 from audit.logger import get_logger
 
@@ -38,9 +39,12 @@ class Orchestrator:
     - Provide consistent interface for both interactive and direct modes
     """
 
-    def __init__(self):
+    def __init__(self, adaptive: bool = True):
         self.llm = get_llm()
         self.logger = get_logger()
+        self.adaptive = adaptive
+        if adaptive:
+            self.adaptive_planner = AdaptivePlanner(self.logger)
 
     def process(
         self, 
