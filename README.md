@@ -95,34 +95,175 @@ We should be able to "translate" voice into a single id, combined with passphras
 
 ## Setup
 
-Make it sure `python3` and `python3-venv` are installed:
+### Prerequisites
+
+Make sure `python3` and `python3-venv` are installed:
 
 ```bash
 sudo apt update
 sudo apt install python3 python3-venv
 ```
 
-Create a **virtual environment** on the project root and activate it (needed for every time):
+### Installation
+
+1. Clone the repository:
+
+```bash
+git clone <repository-url>
+cd zenus_os
+```
+
+2. Create and activate virtual environment:
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
 ```
 
-Install dependencies:
+3. Install dependencies:
 
 ```bash
-pip3 install -r requirements.txt
-pip3 install -r requirements-dev.txt # Dev env only
+pip install -r requirements.txt
+
+# For development (testing):
+pip install -r requirements-dev.txt
 ```
 
-## Run
-
-On root, run:
+4. Configure environment variables:
 
 ```bash
-python3 src/main.py
-
-# That will initialize Zenus OS CLI, so you can provide commands
-zenus > Organize my Downloads folder by file type, do not delete anything
+cp .env.example .env
+# Edit .env with your API keys
 ```
+
+### System-Wide Alias (Recommended)
+
+To run `zenus_os` from anywhere without manual activation:
+
+**For Bash** (add to `~/.bashrc`):
+
+```bash
+alias zenus_os='cd ~/projects/zenus_os && source .venv/bin/activate && python src/main.py'
+```
+
+**For Zsh** (add to `~/.zshrc`):
+
+```bash
+alias zenus_os='cd ~/projects/zenus_os && source .venv/bin/activate && python src/main.py'
+```
+
+**Apply changes:**
+
+```bash
+# For Bash
+source ~/.bashrc
+
+# For Zsh
+source ~/.zshrc
+```
+
+**Note:** Adjust `~/projects/zenus_os` to your actual installation path.
+
+### Verify Installation
+
+```bash
+# Using alias (if configured)
+zenus_os version
+zenus_os help
+
+# Or from project directory
+python src/main.py version
+```
+
+## Usage
+
+### Interactive Mode (REPL)
+
+```bash
+zenus_os
+
+# Or from project directory:
+python src/main.py
+```
+
+This starts an interactive shell:
+
+```
+zenus > Organize my Downloads folder by file type
+zenus > Show disk usage
+zenus > List top 10 processes
+zenus > exit
+```
+
+### Direct Execution
+
+Run commands directly from your shell:
+
+```bash
+zenus_os "organize my downloads by file type"
+zenus_os "show system memory usage"
+zenus_os "find processes named python"
+```
+
+### Dry-Run Mode
+
+Preview what Zenus will do without executing:
+
+```bash
+zenus_os --dry-run "delete all tmp files"
+
+# In interactive mode:
+zenus > --dry-run organize downloads
+```
+
+## Available Tools
+
+### FileOps
+- `scan`: List directory contents
+- `mkdir`: Create directories
+- `move`: Move files
+- `write_file`: Create files with content
+- `touch`: Create empty files
+
+### SystemOps
+- `disk_usage`: Show disk space
+- `memory_info`: Show memory usage
+- `cpu_info`: Show CPU usage
+- `list_processes`: List top processes
+- `uptime`: Show system uptime
+
+### ProcessOps
+- `find_by_name`: Find processes by name
+- `info`: Get process details
+- `kill`: Terminate processes (requires confirmation)
+
+## Development
+
+### Running Tests
+
+```bash
+pytest
+# or
+pytest -v  # verbose
+pytest --cov  # with coverage
+```
+
+### Project Structure
+
+```
+zenus_os/
+├── src/
+│   ├── brain/          # Intent translation and planning
+│   ├── cli/            # Command routing and orchestration
+│   ├── tools/          # Available operations
+│   ├── safety/         # Safety policies
+│   ├── audit/          # Audit logging
+│   └── zenusd/         # Main entry point
+├── tests/              # Test suite
+├── docs/               # Documentation
+└── README.md
+```
+
+## Logs
+
+All operations are logged to `~/.zenus/logs/` in JSONL format for audit and debugging.

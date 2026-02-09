@@ -4,6 +4,22 @@ All notable changes to Zenus OS will be documented in this file.
 
 ## [Unreleased]
 
+### 2026-02-09 19:15
+
+**Add system and process tools, update README with alias setup**
+
+- Add SystemOps tool: disk_usage, memory_info, cpu_info, list_processes, uptime
+- Add ProcessOps tool: find_by_name, info, kill
+- Register new tools in registry
+- Update LLM prompts (OpenAI and DeepSeek) with new tool capabilities
+- Add psutil dependency for system monitoring
+- Comprehensive README update with:
+  - Installation instructions
+  - System-wide alias setup for bash/zsh
+  - Usage examples (interactive, direct, dry-run)
+  - Tool reference
+  - Development guide
+
 ### 2026-02-09 19:00
 
 **Add comprehensive test suite**

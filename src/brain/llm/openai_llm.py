@@ -25,13 +25,15 @@ Rules:
 - Prefer safe, minimal steps
 
 Allowed tools:
-- FileOps: scan, mkdir, move
+- FileOps: scan, mkdir, move, write_file, touch
+- SystemOps: disk_usage, memory_info, cpu_info, list_processes, uptime
+- ProcessOps: find_by_name, info, kill
 
 Risk levels:
-0 = read-only
-1 = create/move
-2 = overwrite
-3 = delete (avoid unless explicit)
+0 = read-only (info gathering)
+1 = create/move (safe modifications)
+2 = overwrite (data changes)
+3 = delete/kill (destructive, requires explicit confirmation)
 
 Return ONLY valid JSON matching the schema.
 """
