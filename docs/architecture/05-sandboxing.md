@@ -1,231 +1,284 @@
-# Sandboxing Architecture
+# Sandboxing and Execution Safety
 
-## Problem Statement
+## Purpose
 
-Without sandboxing, tools can:
-- Access any file on the system
-- Run forever (resource exhaustion)
-- Make network requests
-- Execute arbitrary code
+Prevent tools from causing damage outside their intended scope, even if:
+- LLM generates incorrect plans
+- Tools have bugs
+- User makes mistakes
 
-For an OS-level system, this is unacceptable.
-
-## Sandboxing Strategy
+## Architecture
 
 ```mermaid
 graph TB
-    Step[Intent Step] --> Validate[Validate Paths]
-    Validate --> Sandbox{Within<br/>Sandbox?}
-    Sandbox -->|Yes| Execute[Execute Tool]
-    Sandbox -->|No| Deny[Deny Execution]
-    Execute --> Monitor[Monitor Resources]
-    Monitor --> Timeout{Timeout?}
-    Timeout -->|Yes| Kill[Kill Process]
-    Timeout -->|No| Return[Return Result]
+    Planner[Planner] --> Sandbox[Sandbox Executor]
+    Sandbox --> Constraints[Check Constraints]
+    Constraints --> Valid{Valid?}
+    Valid -->|Yes| Tool[Execute Tool]
+    Valid -->|No| Deny[Raise SandboxViolation]
+    Tool --> Result[Return Result]
     
-    style Sandbox fill:#ff6b6b
-    style Deny fill:#fa5252
-    style Kill fill:#fa5252
+    style Constraints fill:#ff6b6b
+    style Deny fill:#f03e3e
+    style Tool fill:#51cf66
 ```
 
-## Sandbox Layers
+## Constraint Types
 
-### Layer 1: Path Validation (Basic)
+### 1. Filesystem Constraints
 
-**Controls:** Filesystem access
+Control what paths can be read/written:
 
-**Mechanism:**
-- Whitelist of allowed paths (default: user home)
-- Blacklist of read-only paths (/usr, /lib, /bin)
-- Pre-execution validation
-
-**Example:**
 ```python
-sandbox = SandboxedExecutor()
-sandbox.validate_path_access("/home/user/file.txt", write=True)  # OK
-sandbox.validate_path_access("/etc/passwd", write=True)  # Denied
-```
-
-### Layer 2: Resource Limits (Intermediate)
-
-**Controls:** CPU, memory, time
-
-**Mechanism:**
-- Subprocess timeout (default: 30s)
-- Memory limits (default: 512MB)
-- Process monitoring
-
-**Example:**
-```python
-config = SandboxConfig(
-    max_cpu_seconds=30,
-    max_memory_mb=512
-)
-sandbox = SandboxedExecutor(config)
-```
-
-### Layer 3: Bubblewrap (Advanced)
-
-**Controls:** Full process isolation
-
-**Mechanism:**
-- Separate namespace
-- Private filesystem view
-- Network isolation
-- No privilege escalation
-
-**Requires:** `apt install bubblewrap`
-
-**Example:**
-```python
-sandbox = BubblewrapSandbox()
-sandbox.execute(
-    ["ls", "/"],
-    bind_paths={"/home/user/safe": "/workspace"}
+constraints = SandboxConstraints(
+    allowed_read_paths={"/home/user"},
+    allowed_write_paths={"/home/user/projects"},
+    forbidden_paths={"/etc", "/sys", "/proc"}
 )
 ```
 
-## Tool Wrapping
+**Validation:**
+- Convert all paths to absolute
+- Check if target path is under allowed parent
+- Forbidden paths override everything
 
-Every tool is wrapped with sandbox enforcement:
+### 2. Time Constraints
 
-```python
-class SandboxedTool:
-    def execute(self, step: Step):
-        # 1. Validate paths
-        self._validate_step_paths(step)
-        
-        # 2. Execute tool
-        result = self.tool.execute(step)
-        
-        # 3. Monitor completion
-        return result
-```
-
-## Sandbox Configuration
+Prevent operations from running forever:
 
 ```python
-SandboxConfig(
-    allowed_paths=[
-        "~/",              # User home
-        "/tmp/zenus_*"     # Temp workspaces
-    ],
-    read_only_paths=[
-        "/usr",
-        "/lib",
-        "/bin",
-        "/etc"
-    ],
-    max_cpu_seconds=30,    # Time limit
-    max_memory_mb=512,     # Memory limit
-    allow_network=False    # Network isolation
+constraints = SandboxConstraints(
+    max_execution_time=30  # seconds
 )
 ```
 
-## Temporary Workspaces
+**Implementation:**
+- Set SIGALRM signal handler
+- Raise SandboxTimeout if exceeded
+- Automatically cleaned up after execution
 
-For operations needing isolation:
+### 3. Resource Constraints
+
+Limit memory and file sizes (future):
 
 ```python
-sandbox = SandboxedExecutor()
-workspace = sandbox.create_temp_workspace()
-
-try:
-    # Do work in isolated temp directory
-    process_files(workspace)
-finally:
-    sandbox.cleanup_workspace(workspace)
+constraints = SandboxConstraints(
+    max_memory_mb=512,
+    max_file_size_mb=100
+)
 ```
 
-## Integration with Planner
+### 4. Network Constraints
+
+Control network access:
+
+```python
+constraints = SandboxConstraints(
+    allow_network=True,
+    allowed_hosts={"api.openai.com", "api.deepseek.com"}
+)
+```
+
+### 5. Subprocess Constraints
+
+Control process spawning:
+
+```python
+constraints = SandboxConstraints(
+    allow_subprocess=True,
+    max_subprocesses=5
+)
+```
+
+## Constraint Profiles
+
+Pre-defined constraint sets for common scenarios:
+
+### Safe Defaults
+```python
+get_safe_defaults()
+# Read: anywhere
+# Write: ~/home and /tmp
+# Network: no
+# Time: 30s
+```
+
+### Restricted
+```python
+get_restricted()
+# Read: ~/home only
+# Write: ~/.zenus/tmp only
+# Network: no
+# Time: 10s
+```
+
+### Permissive
+```python
+get_permissive()
+# Read: anywhere
+# Write: ~/home and /tmp
+# Network: yes
+# Time: 300s
+```
+
+### Filesystem Only
+```python
+get_filesystem_only()
+# Read/Write: ~/home only
+# Network: no
+# Subprocess: no
+```
+
+## Usage Example
+
+### Basic Sandboxed Execution
+
+```python
+from sandbox.executor import SandboxExecutor
+from sandbox.constraints import get_safe_defaults
+
+executor = SandboxExecutor(get_safe_defaults())
+
+# This will succeed
+result = executor.execute(
+    my_tool.scan,
+    path="/home/user/Downloads"
+)
+
+# This will raise SandboxViolation
+result = executor.execute(
+    my_tool.write,
+    path="/etc/important_config"  # forbidden!
+)
+```
+
+### Tool-Level Integration
+
+```python
+from sandbox.executor import SandboxedTool
+
+class SafeFileOps(SandboxedTool):
+    def __init__(self):
+        super().__init__(get_filesystem_only())
+    
+    def write_file(self, path, content):
+        # Automatically sandboxed
+        return self.execute_safe(
+            self._write_impl,
+            path, content
+        )
+```
+
+## Current vs Future Implementation
+
+### Current (Phase 1)
+
+**Validation Layer:**
+- Check paths against constraints
+- Timeout enforcement via signals
+- Raise exceptions on violations
+
+**Limitations:**
+- No process isolation
+- No memory limits (yet)
+- No network interception
+
+### Future (Phase 2+)
+
+**Process Isolation:**
+- Use bubblewrap, firejail, or containers
+- True filesystem namespaces
+- Network namespaces
+- cgroups for resource limits
+
+**Example future call:**
+```bash
+bwrap \
+  --ro-bind /usr /usr \
+  --bind ~/.zenus/tmp /tmp \
+  --unshare-net \
+  --die-with-parent \
+  -- zenus-tool-executor plan.json
+```
+
+## Safety Layers
+
+Zenus has multiple safety layers:
 
 ```mermaid
-sequenceDiagram
-    participant P as Planner
-    participant SW as SandboxedTool
-    participant S as Sandbox
-    participant T as Tool
+graph TB
+    Intent[User Intent] --> IR[Intent IR Validation]
+    IR --> Policy[Safety Policy Check]
+    Policy --> Sandbox[Sandbox Constraints]
+    Sandbox --> Tool[Tool Execution]
+    Tool --> Audit[Audit Log]
     
-    P->>SW: execute(step)
-    SW->>S: validate_path_access(args)
-    alt Path allowed
-        S->>SW: ✓ validated
-        SW->>T: execute(args)
-        T->>SW: result
-        SW->>P: result
-    else Path denied
-        S->>SW: SandboxViolation
-        SW->>P: error
-    end
+    style Policy fill:#ff6b6b
+    style Sandbox fill:#ff8787
+    style Audit fill:#ffd43b
 ```
 
-## Security Boundaries
+1. **Intent IR Schema:** Only valid operations allowed
+2. **Safety Policy:** Risk-based gates
+3. **Sandbox Constraints:** Filesystem/resource boundaries
+4. **Tool Implementation:** Defensive programming
+5. **Audit Logging:** Post-execution review
 
-| Boundary | Without Sandbox | With Sandbox |
-|----------|----------------|--------------|
-| Filesystem | Full access | Restricted paths |
-| Processes | Can spawn unlimited | Resource limited |
-| Network | Unrestricted | Isolated (optional) |
-| Time | Can run forever | Timeout enforced |
-| Memory | Can exhaust RAM | Capped |
+## When Sandboxing Triggers
 
-## Threat Model
+| Scenario | Constraint Violated | Result |
+|----------|---------------------|--------|
+| Write to `/etc/config` | Forbidden path | SandboxViolation |
+| Write to `/home/user/.ssh/` | Forbidden path | SandboxViolation |
+| Read `/home/user/file.txt` | Allowed read | ✓ Success |
+| Operation takes 60s | Time limit (30s) | SandboxTimeout |
+| Network request | Network disabled | SandboxViolation |
 
-**Threats Mitigated:**
-- Accidental file deletion
-- Resource exhaustion
-- Path traversal attacks
-- Privilege escalation
-- Runaway processes
+## Design Philosophy
 
-**Threats NOT Mitigated (yet):**
-- Malicious tool code
-- Kernel exploits
-- Hardware attacks
+**Fail-safe, not fail-secure:**
+- If uncertain → deny
+- If path resolution fails → deny
+- If time limit unclear → apply default
 
-## Future Enhancements
+**Defense in depth:**
+- Multiple validation layers
+- Assume every component can fail
+- Log all denials for analysis
 
-### 1. Capability-Based Security
+**User control:**
+- Constraints can be relaxed per-operation
+- User can override (with confirmation)
+- Audit trail shows what ran and under what constraints
 
-Instead of path whitelists, explicit capabilities:
+## Integration with Adaptive Planner
+
+Sandbox violations can trigger adaptation:
 
 ```python
-tool.requires = [
-    Capability.READ_FILES,
-    Capability.CREATE_DIRECTORIES,
-    Capability.NETWORK_HTTP
-]
-```
-
-### 2. SELinux Integration
-
-Use SELinux policies for kernel-level enforcement.
-
-### 3. Container-Based Execution
-
-Run each tool in lightweight container (Podman).
-
-### 4. Audit Trail
-
-Log all sandbox violations for security review.
-
-## Implementation Status
-
-```
-✓ Path validation (complete)
-✓ Resource limits (basic)
-✓ Bubblewrap integration (optional)
-✓ Tool wrapping (complete)
-○ Capability system (future)
-○ SELinux policies (future)
-○ Container execution (future)
+try:
+    executor.execute(tool.write, path="/etc/config")
+except SandboxViolation:
+    # Adapt: suggest alternative path
+    alternative = adapt_on_sandbox_violation(path)
+    executor.execute(tool.write, path=alternative)
 ```
 
 ## Why This Matters
 
-Sandboxing is what allows Zenus to be:
-- **Safe by default** - limits blast radius
-- **Auditable** - all boundaries are explicit
-- **OS-grade** - not just a script runner
+Without sandboxing:
+```
+User: "delete old logs"
+LLM: delete /var/log/* (wrong path!)
+Result: System broken ❌
+```
 
-Without sandboxing, Zenus is a liability. With it, Zenus is an operating system.
+With sandboxing:
+```
+User: "delete old logs"
+LLM: delete /var/log/*
+Sandbox: SandboxViolation (forbidden path)
+Result: Error, system safe ✓
+```
+
+Sandboxing is what makes autonomous execution safe.

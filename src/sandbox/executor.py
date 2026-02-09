@@ -1,262 +1,172 @@
 """
 Sandboxed Executor
 
-Executes tool actions with resource limits and filesystem isolation.
-Critical for OS-level safety.
+Executes operations within defined constraints.
+Currently provides constraint validation; future versions will
+add process isolation via containers/namespaces.
 """
 
-import os
-import subprocess
-import tempfile
-from typing import Optional, Dict, Any
-from pathlib import Path
-
-
-class SandboxConfig:
-    """Configuration for sandbox execution"""
-    
-    def __init__(
-        self,
-        allowed_paths: Optional[list] = None,
-        read_only_paths: Optional[list] = None,
-        max_cpu_seconds: int = 30,
-        max_memory_mb: int = 512,
-        allow_network: bool = False
-    ):
-        self.allowed_paths = allowed_paths or [os.path.expanduser("~")]
-        self.read_only_paths = read_only_paths or ["/usr", "/lib", "/bin"]
-        self.max_cpu_seconds = max_cpu_seconds
-        self.max_memory_mb = max_memory_mb
-        self.allow_network = allow_network
+import time
+import signal
+from typing import Callable, Any, Optional
+from contextlib import contextmanager
+from sandbox.constraints import SandboxConstraints, get_safe_defaults
 
 
 class SandboxViolation(Exception):
-    """Raised when sandbox boundary is violated"""
+    """Raised when operation violates sandbox constraints"""
     pass
 
 
-class SandboxedExecutor:
+class SandboxTimeout(SandboxViolation):
+    """Raised when operation exceeds time limit"""
+    pass
+
+
+class SandboxExecutor:
     """
-    Executes operations within sandbox constraints
+    Execute operations within sandbox constraints
     
-    Provides:
-    - Filesystem access controls
-    - Resource limits (CPU, memory)
-    - Network isolation
-    - Time limits
+    Current implementation: validation layer
+    Future: process isolation via firejail/bubblewrap/containers
     """
     
-    def __init__(self, config: Optional[SandboxConfig] = None):
-        self.config = config or SandboxConfig()
+    def __init__(self, constraints: Optional[SandboxConstraints] = None):
+        self.constraints = constraints or get_safe_defaults()
+        self.execution_start = None
     
-    def validate_path_access(self, path: str, write: bool = False) -> bool:
+    def execute(
+        self, 
+        func: Callable, 
+        *args,
+        check_paths: bool = True,
+        **kwargs
+    ) -> Any:
         """
-        Check if path access is allowed
+        Execute function within sandbox constraints
+        
+        Args:
+            func: Function to execute
+            *args, **kwargs: Function arguments
+            check_paths: Whether to validate path arguments
+        
+        Returns:
+            Function result
+        
+        Raises:
+            SandboxViolation: If constraints are violated
+        """
+        
+        # Pre-execution validation
+        if check_paths:
+            self._validate_path_arguments(args, kwargs)
+        
+        # Set up timeout if specified
+        if self.constraints.max_execution_time:
+            with self._timeout_context(self.constraints.max_execution_time):
+                return func(*args, **kwargs)
+        else:
+            return func(*args, **kwargs)
+    
+    def _validate_path_arguments(self, args: tuple, kwargs: dict):
+        """
+        Validate path arguments against constraints
+        
+        Looks for common path argument names and validates them
+        """
+        # Check common path parameter names
+        path_params = ["path", "source", "destination", "src", "dst", "file", "directory"]
+        
+        for param in path_params:
+            if param in kwargs:
+                path = kwargs[param]
+                if isinstance(path, str):
+                    # Determine if this is read or write operation
+                    # Heuristic: source/file -> read, destination/dst -> write
+                    is_write = param in ["destination", "dst"]
+                    self.validate_path_access(path, is_write)
+    
+    def validate_path_access(self, path: str, is_write: bool = False):
+        """
+        Validate that path access is allowed
         
         Args:
             path: Path to validate
-            write: True if write access needed
-        
-        Returns:
-            True if allowed
+            is_write: Whether this is a write operation
         
         Raises:
-            SandboxViolation if access denied
+            SandboxViolation: If access is not allowed
         """
+        if is_write:
+            if not self.constraints.can_write(path):
+                raise SandboxViolation(
+                    f"Write access denied: {path}\n"
+                    f"Allowed write paths: {self.constraints.allowed_write_paths}"
+                )
+        else:
+            if not self.constraints.can_read(path):
+                raise SandboxViolation(
+                    f"Read access denied: {path}\n"
+                    f"Allowed read paths: {self.constraints.allowed_read_paths or 'any'}"
+                )
+    
+    def validate_network_access(self, host: Optional[str] = None):
+        """Validate network access is allowed"""
+        if not self.constraints.allow_network:
+            raise SandboxViolation("Network access not allowed in this sandbox")
         
-        path = os.path.abspath(os.path.expanduser(path))
+        if host and self.constraints.allowed_hosts:
+            if host not in self.constraints.allowed_hosts:
+                raise SandboxViolation(
+                    f"Access to host {host} not allowed. "
+                    f"Allowed: {self.constraints.allowed_hosts}"
+                )
+    
+    def validate_subprocess(self):
+        """Validate subprocess execution is allowed"""
+        if not self.constraints.allow_subprocess:
+            raise SandboxViolation("Subprocess execution not allowed in this sandbox")
+    
+    @contextmanager
+    def _timeout_context(self, timeout_seconds: int):
+        """Context manager for execution timeout"""
         
-        # Check if path is within allowed directories
-        allowed = False
-        for allowed_path in self.config.allowed_paths:
-            allowed_path = os.path.abspath(os.path.expanduser(allowed_path))
-            if path.startswith(allowed_path):
-                allowed = True
-                break
-        
-        if not allowed:
-            raise SandboxViolation(
-                f"Path access denied: {path} not in allowed paths"
+        def timeout_handler(signum, frame):
+            raise SandboxTimeout(
+                f"Operation exceeded time limit of {timeout_seconds}s"
             )
         
-        # Check if write to read-only path
-        if write:
-            for ro_path in self.config.read_only_paths:
-                ro_path = os.path.abspath(ro_path)
-                if path.startswith(ro_path):
-                    raise SandboxViolation(
-                        f"Write access denied: {path} is read-only"
-                    )
-        
-        return True
-    
-    def execute_subprocess(
-        self, 
-        command: list,
-        cwd: Optional[str] = None,
-        env: Optional[Dict] = None
-    ) -> subprocess.CompletedProcess:
-        """
-        Execute command in sandboxed subprocess
-        
-        Args:
-            command: Command and arguments
-            cwd: Working directory
-            env: Environment variables
-        
-        Returns:
-            CompletedProcess result
-        
-        Raises:
-            SandboxViolation on timeout or resource limit
-        """
-        
-        if cwd:
-            self.validate_path_access(cwd, write=False)
+        # Set alarm
+        old_handler = signal.signal(signal.SIGALRM, timeout_handler)
+        signal.alarm(timeout_seconds)
         
         try:
-            # Execute with timeout
-            result = subprocess.run(
-                command,
-                cwd=cwd,
-                env=env,
-                capture_output=True,
-                text=True,
-                timeout=self.config.max_cpu_seconds
-            )
-            
-            return result
-            
-        except subprocess.TimeoutExpired:
-            raise SandboxViolation(
-                f"Command exceeded time limit: {self.config.max_cpu_seconds}s"
-            )
+            yield
+        finally:
+            # Cancel alarm
+            signal.alarm(0)
+            signal.signal(signal.SIGALRM, old_handler)
     
-    def create_temp_workspace(self) -> str:
-        """
-        Create temporary workspace for isolated operations
+    def get_remaining_time(self) -> Optional[float]:
+        """Get remaining execution time in seconds"""
+        if not self.constraints.max_execution_time or not self.execution_start:
+            return None
         
-        Returns:
-            Path to temporary directory
-        """
-        
-        temp_dir = tempfile.mkdtemp(prefix="zenus_sandbox_")
-        
-        # Add to allowed paths temporarily
-        self.config.allowed_paths.append(temp_dir)
-        
-        return temp_dir
-    
-    def cleanup_workspace(self, workspace_path: str):
-        """Clean up temporary workspace"""
-        
-        import shutil
-        
-        if os.path.exists(workspace_path):
-            shutil.rmtree(workspace_path)
-        
-        # Remove from allowed paths
-        if workspace_path in self.config.allowed_paths:
-            self.config.allowed_paths.remove(workspace_path)
+        elapsed = time.time() - self.execution_start
+        remaining = self.constraints.max_execution_time - elapsed
+        return max(0, remaining)
 
 
-class BubblewrapSandbox:
+class SandboxedTool:
     """
-    Advanced sandboxing using bubblewrap (bwrap)
+    Base class for sandboxed tools
     
-    Provides stronger isolation than SandboxedExecutor.
-    Requires bubblewrap installed: apt install bubblewrap
-    """
-    
-    def __init__(self, config: Optional[SandboxConfig] = None):
-        self.config = config or SandboxConfig()
-        self._check_bwrap()
-    
-    def _check_bwrap(self):
-        """Check if bubblewrap is available"""
-        
-        result = subprocess.run(
-            ["which", "bwrap"],
-            capture_output=True
-        )
-        
-        if result.returncode != 0:
-            raise RuntimeError(
-                "bubblewrap not found. Install: sudo apt install bubblewrap"
-            )
-    
-    def execute(
-        self,
-        command: list,
-        bind_paths: Optional[Dict[str, str]] = None
-    ) -> subprocess.CompletedProcess:
-        """
-        Execute command in bubblewrap sandbox
-        
-        Args:
-            command: Command and arguments
-            bind_paths: {host_path: container_path} mappings
-        
-        Returns:
-            CompletedProcess result
-        """
-        
-        bwrap_cmd = [
-            "bwrap",
-            "--ro-bind", "/usr", "/usr",
-            "--ro-bind", "/lib", "/lib",
-            "--ro-bind", "/lib64", "/lib64",
-            "--ro-bind", "/bin", "/bin",
-            "--ro-bind", "/sbin", "/sbin",
-            "--proc", "/proc",
-            "--dev", "/dev",
-            "--tmpfs", "/tmp"
-        ]
-        
-        # Add user-specified bind mounts
-        if bind_paths:
-            for host_path, container_path in bind_paths.items():
-                bwrap_cmd.extend(["--bind", host_path, container_path])
-        
-        # Network isolation (default: no network)
-        if not self.config.allow_network:
-            bwrap_cmd.append("--unshare-net")
-        
-        # Add the actual command
-        bwrap_cmd.extend(command)
-        
-        try:
-            result = subprocess.run(
-                bwrap_cmd,
-                capture_output=True,
-                text=True,
-                timeout=self.config.max_cpu_seconds
-            )
-            
-            return result
-            
-        except subprocess.TimeoutExpired:
-            raise SandboxViolation(
-                f"Command exceeded time limit: {self.config.max_cpu_seconds}s"
-            )
-
-
-def get_sandbox(advanced: bool = False) -> Any:
-    """
-    Factory function to get appropriate sandbox
-    
-    Args:
-        advanced: If True, use bubblewrap (requires install)
-    
-    Returns:
-        Sandbox executor instance
+    Tools that inherit from this get automatic sandboxing
     """
     
-    if advanced:
-        try:
-            return BubblewrapSandbox()
-        except RuntimeError:
-            print("Warning: bubblewrap not available, using basic sandbox")
-            return SandboxedExecutor()
-    else:
-        return SandboxedExecutor()
+    def __init__(self, constraints: Optional[SandboxConstraints] = None):
+        self.sandbox = SandboxExecutor(constraints)
+    
+    def execute_safe(self, method: Callable, *args, **kwargs) -> Any:
+        """Execute method with sandbox constraints"""
+        return self.sandbox.execute(method, *args, **kwargs)
