@@ -4,9 +4,19 @@ All notable changes to Zenus OS will be documented in this file.
 
 ## [Unreleased]
 
+### 2026-02-09 19:00
+
+**Add comprehensive test suite**
+
+- Add pytest configuration and test infrastructure
+- Add 42 tests covering all core modules
+- Tests for: router, planner, safety policy, schemas, file operations
+- 100% test coverage on critical paths
+- Add requirements-dev.txt with testing dependencies
+
 ### 2026-02-09 18:50
 
-**Add logging, dry-run mode, and improved error handling**
+**Add logging, dry-run mode, and error handling**
 
 - Add structured audit logging to ~/.zenus/logs/ (JSONL format)
 - Add dry-run mode: --dry-run flag to preview plans without executing
