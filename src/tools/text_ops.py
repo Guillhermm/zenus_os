@@ -32,17 +32,24 @@ class TextOps(Tool):
         
         return f"File content ({len(content)} chars):\n{content}"
     
-    def write(self, path: str, content: str) -> str:
+    def write(self, path: str, content: str, overwrite: bool = True) -> str:
         """Write content to text file"""
         full_path = os.path.expanduser(path)
         
+        # Check if file exists
+        if os.path.exists(full_path) and not overwrite:
+            raise FileExistsError(f"File exists: {path}. Use overwrite=true to replace.")
+        
         # Create parent directories
-        os.makedirs(os.path.dirname(full_path), exist_ok=True)
+        parent = os.path.dirname(full_path)
+        if parent:
+            os.makedirs(parent, exist_ok=True)
         
         with open(full_path, 'w', encoding='utf-8') as f:
             f.write(content)
         
-        return f"Wrote {len(content)} chars to {path}"
+        action = "Overwrote" if os.path.exists(full_path) else "Wrote"
+        return f"{action} {len(content)} chars to {path}"
     
     def append(self, path: str, content: str) -> str:
         """Append content to text file"""

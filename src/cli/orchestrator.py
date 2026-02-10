@@ -15,6 +15,8 @@ from audit.logger import get_logger
 from memory.session_memory import SessionMemory
 from memory.world_model import WorldModel
 from memory.intent_history import IntentHistory
+from cli.progress import ProgressIndicator
+from cli.feedback import FeedbackGenerator
 
 
 class OrchestratorError(Exception):
@@ -48,13 +50,15 @@ class Orchestrator:
         self, 
         adaptive: bool = True, 
         use_memory: bool = True,
-        use_sandbox: bool = True
+        use_sandbox: bool = True,
+        show_progress: bool = True
     ):
         self.llm = get_llm()
         self.logger = get_logger()
         self.adaptive = adaptive
         self.use_memory = use_memory
         self.use_sandbox = use_sandbox
+        self.show_progress = show_progress
         
         if adaptive:
             if use_sandbox:
@@ -68,6 +72,9 @@ class Orchestrator:
             self.session_memory = SessionMemory()
             self.world_model = WorldModel()
             self.intent_history = IntentHistory()
+        
+        self.progress = ProgressIndicator() if show_progress else None
+        self.feedback = FeedbackGenerator(self.llm)
 
     def process(
         self, 
@@ -94,13 +101,20 @@ class Orchestrator:
             
             # Step 2: Translate intent with context
             try:
-                # Note: LLM backends don't yet support context parameter
-                # For now, we'll enhance the user input with context
-                if context:
-                    enhanced_input = f"{user_input}\n{context}"
-                    intent = self.llm.translate_intent(enhanced_input)
+                # Show thinking indicator
+                if self.progress:
+                    with self.progress.thinking("Understanding your request"):
+                        if context:
+                            enhanced_input = f"{user_input}\n{context}"
+                            intent = self.llm.translate_intent(enhanced_input)
+                        else:
+                            intent = self.llm.translate_intent(user_input)
                 else:
-                    intent = self.llm.translate_intent(user_input)
+                    if context:
+                        enhanced_input = f"{user_input}\n{context}"
+                        intent = self.llm.translate_intent(enhanced_input)
+                    else:
+                        intent = self.llm.translate_intent(user_input)
             except Exception as e:
                 error_msg = f"Failed to understand command: {str(e)}"
                 self.logger.log_error(error_msg, {"user_input": user_input})
@@ -258,7 +272,8 @@ class Orchestrator:
     def interactive_shell(self):
         """Run interactive REPL mode"""
         print("Zenus OS Interactive Shell")
-        print("Type 'exit' or 'quit' to exit\n")
+        print("Type 'exit' or 'quit' to exit")
+        print("Special commands: status, memory, update\n")
         
         while True:
             try:
@@ -270,6 +285,24 @@ class Orchestrator:
                 if user_input in ("exit", "quit"):
                     print("Goodbye!")
                     break
+                
+                # Handle special commands
+                if user_input == "status":
+                    from cli.commands import handle_status_command
+                    handle_status_command(self)
+                    continue
+                
+                if user_input.startswith("memory"):
+                    from cli.commands import handle_memory_command
+                    parts = user_input.split()
+                    subcommand = parts[1] if len(parts) > 1 else "stats"
+                    handle_memory_command(self, subcommand)
+                    continue
+                
+                if user_input == "update":
+                    from cli.commands import handle_update_command
+                    handle_update_command()
+                    continue
                 
                 # Check for dry run flag
                 dry_run = False
