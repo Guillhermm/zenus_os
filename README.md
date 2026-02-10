@@ -58,36 +58,59 @@ pip install -r requirements-dev.txt
 
 ```bash
 cp .env.example .env
-# Edit .env with your configuration
+# Edit .env to choose your LLM backend
+```
+
+**Important:** Each line in `.env` must be on a separate line. Format:
+```
+ZENUS_LLM=ollama
+OLLAMA_MODEL=phi3:mini
+```
+
+**Not:**
+```
+ZENUS_LLM=ollamaOLLAMA_MODEL=phi3:mini  # Wrong!
 ```
 
 ### LLM Backend Options
 
-**Option 1: OpenAI (Cloud, requires API key)**
+**Option 1: Ollama (Local, FREE - Recommended)**
 ```bash
-ZENUS_LLM=openai
-OPENAI_API_KEY=sk-...
-```
-
-**Option 2: DeepSeek (Cloud, requires API key)**
-```bash
-ZENUS_LLM=deepseek
-DEEPSEEK_API_KEY=sk-...
-```
-
-**Option 3: Ollama (Local, no API key needed)**
-```bash
-# Install Ollama: https://ollama.com/download
+# 1. Install Ollama
 curl -fsSL https://ollama.com/install.sh | sh
 
-# Pull a model (choose one):
+# 2. Start Ollama service
+ollama serve
+# Or with systemd:
+# sudo systemctl enable ollama
+# sudo systemctl start ollama
+
+# 3. Pull a model
 ollama pull phi3:mini        # 3.8GB - Fast, efficient (recommended)
+# OR
 ollama pull llama3.2:3b      # 2GB - Lightweight
+# OR
 ollama pull qwen2.5:3b       # 2.3GB - Good reasoning
 
-# Configure Zenus
+# 4. Configure .env
 ZENUS_LLM=ollama
 OLLAMA_MODEL=phi3:mini
+```
+
+**Option 2: OpenAI (Cloud, requires API key)**
+```bash
+# Get API key: https://platform.openai.com/api-keys
+# Edit .env:
+ZENUS_LLM=openai
+OPENAI_API_KEY=sk-your-key-here
+```
+
+**Option 3: DeepSeek (Cloud, requires API key)**
+```bash
+# Get API key: https://platform.deepseek.com
+# Edit .env:
+ZENUS_LLM=deepseek
+DEEPSEEK_API_KEY=sk-your-key-here
 ```
 
 ### System-Wide Alias (Recommended)

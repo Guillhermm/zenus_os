@@ -57,10 +57,13 @@ echo ""
 
 read -p "Enter choice [1-3]: " llm_choice
 
-# Create .env if doesn't exist
-if [ ! -f ".env" ]; then
-    cp .env.example .env
+# Backup old .env if exists, create fresh
+if [ -f ".env" ]; then
+    mv .env .env.backup
+    echo "⚠️  Backed up existing .env to .env.backup"
 fi
+
+cp .env.example .env
 
 case $llm_choice in
     1)
@@ -118,8 +121,9 @@ case $llm_choice in
         echo "Pulling model $MODEL (this may take a few minutes)..."
         ollama pull $MODEL
         
-        echo "ZENUS_LLM=ollama" >> .env
-        echo "OLLAMA_MODEL=$MODEL" >> .env
+        # Update .env with proper format (sed to replace existing lines)
+        sed -i "s/^ZENUS_LLM=.*/ZENUS_LLM=ollama/" .env
+        sed -i "s/^OLLAMA_MODEL=.*/OLLAMA_MODEL=$MODEL/" .env
         
         echo "✓ Ollama configured with $MODEL"
         ;;
@@ -127,24 +131,24 @@ case $llm_choice in
     2)
         echo ""
         read -p "Enter your OpenAI API key: " api_key
-        echo "ZENUS_LLM=openai" >> .env
-        echo "OPENAI_API_KEY=$api_key" >> .env
+        sed -i "s/^ZENUS_LLM=.*/ZENUS_LLM=openai/" .env
+        sed -i "s/^# OPENAI_API_KEY=.*/OPENAI_API_KEY=$api_key/" .env
         echo "✓ OpenAI configured"
         ;;
         
     3)
         echo ""
         read -p "Enter your DeepSeek API key: " api_key
-        echo "ZENUS_LLM=deepseek" >> .env
-        echo "DEEPSEEK_API_KEY=$api_key" >> .env
+        sed -i "s/^ZENUS_LLM=.*/ZENUS_LLM=deepseek/" .env
+        sed -i "s/^# DEEPSEEK_API_KEY=.*/DEEPSEEK_API_KEY=$api_key/" .env
         echo "✓ DeepSeek configured"
         ;;
         
     *)
         echo "Invalid choice, defaulting to Ollama"
         ollama pull phi3:mini
-        echo "ZENUS_LLM=ollama" >> .env
-        echo "OLLAMA_MODEL=phi3:mini" >> .env
+        sed -i "s/^ZENUS_LLM=.*/ZENUS_LLM=ollama/" .env
+        sed -i "s/^OLLAMA_MODEL=.*/OLLAMA_MODEL=phi3:mini/" .env
         ;;
 esac
 

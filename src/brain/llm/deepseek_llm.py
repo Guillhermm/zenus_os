@@ -10,10 +10,10 @@ from brain.llm.schemas import IntentIR
 load_dotenv()
 
 
-DEEPSEEK_API_KEY=os.getenv("DEEPSEEK_API_KEY"),
-DEEPSEEK_API_URL=os.getenv("DEEPSEEK_API_BASE_URL")
-MODEL=os.getenv("LLM_MODEL")
-MAX_TOKENS=int(os.getenv("LLM_TOKENS"))
+DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY", "")
+DEEPSEEK_API_URL = os.getenv("DEEPSEEK_API_BASE_URL", "https://api.deepseek.com")
+MODEL = os.getenv("LLM_MODEL", "deepseek-chat")
+MAX_TOKENS = int(os.getenv("LLM_TOKENS", "8192"))
 
 client = OpenAI(
     api_key=os.getenv("DEEPSEEK_API_KEY"),
