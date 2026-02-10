@@ -2,96 +2,21 @@
 
 Zenus OS is a voice-first, AI-mediated operating system layer that replaces traditional user interfaces with intent-based interaction and bounded autonomy.
 
-This is, a full operating systems that can be controlled by voice, where AI:
+This is a full operating system that can be controlled by voice, where AI:
 
-- Understands complex user intent.
-- Plans and performs operations autonomously.
-- Interacts with system APIs to get things done.
-- Can talk back, ask clarifying questions, and learn from user behavior.
+- Understands complex user intent
+- Plans and performs operations autonomously
+- Interacts with system APIs to get things done
+- Can talk back, ask clarifying questions, and learn from user behavior
 
-Although there are research prototypes already in place, still there is no full voice controlled OS consumer-ready for end users. With this project, we aim to create voice-first AI assisted OS that is not just reactive, but autonomous, context aware, and capable of executing complex tasks based on natural language instructions.
+## Features
 
-What would be the impacts on user experience? Should we build a new concept of user interface, or the new concept is totally user customizable?
-
-Discussions over possible impacts and needed technology and scientific improvements can be found **[here](./docs/advances.md)**.
-
-## 1. Prototype
-
-### 1.1. System Architecture
-
-#### 1.1.1. AI Assistant Layer
-
-- LLM (Large Language Model) that interprets intent.
-- Is there another better way than LLM, more efficient that does not consume much from CPU, for the system core?
-- Options to consider are GPT, Mistral, LLaMa (local or cloud?).
-- Autonomous agent capabilities?
-- Maybe we can build this as a modular backend that sits between voice and the system APIs?
-
-#### 1.1.2. Voice Interface Layer
-
-- Voice-to-text: Whisper (local), Deepgram, or Google SST.
-- Text-to-voice: ElevenLabs, Piper, or built-in TTS engines.
-
-Natural conversion loop:
-
-```
-Wake word → voice capture → intent → action → AI response → spoken feedback
-```
-
-#### 1.1.3. OS Shell/Control Layer
-
-This layer connects AI actions to real system commands.
-
-**Options:**
-
-- Build a custom Linux distro with voice + AI shell (desirable by the end of the prototype).
-- Overlay it on existing OS (like a custom desktop environment).
-- Use an existing OS but control it fully via APIs/scripts
-
-Would we be able to fully control OS in second and third approaches?
-
-#### 1.1.4. Autonomous Task Engine
-
-AI should not just follow single commands, it should:
-
-- Decompose tasks.
-- Ask for clarification when needed.
-- Execute subtasks step by step.
-- Adapt to errors or unexpected results.
-
-#### 1.1.5. Security and Permissions
-
-A voice controlled OS must have strong authentication, especially for destructive actions.
-
-**Options:**
-
-- Voice ID or wake word auth.
-- Role-based task restrictions.
-- Confirmation layers for sensitive operations.
-
-We should be able to "translate" voice into a single id, combined with passphrase, for authentication. Passwords might be fallback. Instead of wake word, OS might recognize user voice timbre.
-
-## 2. Use Case Scenarios Examples
-
-### 2.1. Daily Tasks
-
-"Check my calendar and tell me what's coming up"
-
-"Organize my downloads by file type and delete duplicates"
-
-"Summarize latest posts from my social media"
-
-### 2.2. Autonomous Ops
-
-"Find the 5 largest files on my system, back them up, and free up space"
-
-"Setup a new dev environment with Python, Docker, and VS Code"
-
-### 2.3. Developer Mode
-
-"Create a Python script that monitors CPU usage and logs"
-
-"Download latest stable release of MySQL and configure it"
+- **CLI-First**: Direct execution, interactive shell, help system, dry-run mode
+- **Intent-Driven**: Natural language to validated structured commands
+- **Adaptive Execution**: Automatic retry with observation on failures
+- **Memory System**: Learns from usage, remembers context, tracks patterns
+- **OS-Grade Safety**: Path validation, resource limits, sandbox enforcement
+- **Local LLM Support**: Run on your hardware with Ollama (4-16GB RAM)
 
 ## Setup
 
@@ -133,12 +58,41 @@ pip install -r requirements-dev.txt
 
 ```bash
 cp .env.example .env
-# Edit .env with your API keys
+# Edit .env with your configuration
+```
+
+### LLM Backend Options
+
+**Option 1: OpenAI (Cloud, requires API key)**
+```bash
+ZENUS_LLM=openai
+OPENAI_API_KEY=sk-...
+```
+
+**Option 2: DeepSeek (Cloud, requires API key)**
+```bash
+ZENUS_LLM=deepseek
+DEEPSEEK_API_KEY=sk-...
+```
+
+**Option 3: Ollama (Local, no API key needed)**
+```bash
+# Install Ollama: https://ollama.com/download
+curl -fsSL https://ollama.com/install.sh | sh
+
+# Pull a model (choose one):
+ollama pull phi3:mini        # 3.8GB - Fast, efficient (recommended)
+ollama pull llama3.2:3b      # 2GB - Lightweight
+ollama pull qwen2.5:3b       # 2.3GB - Good reasoning
+
+# Configure Zenus
+ZENUS_LLM=ollama
+OLLAMA_MODEL=phi3:mini
 ```
 
 ### System-Wide Alias (Recommended)
 
-To run `zenus_os` from anywhere without manual activation:
+To run `zenus_os` from anywhere:
 
 **For Bash** (add to `~/.bashrc`):
 
@@ -189,9 +143,10 @@ python src/main.py
 This starts an interactive shell:
 
 ```
-zenus > Organize my Downloads folder by file type
-zenus > Show disk usage
-zenus > List top 10 processes
+zenus > organize my Downloads folder by file type
+zenus > show disk usage
+zenus > list top 10 processes
+zenus > read my notes.txt file
 zenus > exit
 ```
 
@@ -203,6 +158,7 @@ Run commands directly from your shell:
 zenus_os "organize my downloads by file type"
 zenus_os "show system memory usage"
 zenus_os "find processes named python"
+zenus_os "read ~/Documents/notes.txt"
 ```
 
 ### Dry-Run Mode
@@ -225,6 +181,15 @@ zenus > --dry-run organize downloads
 - `write_file`: Create files with content
 - `touch`: Create empty files
 
+### TextOps
+- `read`: Read text file contents
+- `write`: Write text file
+- `append`: Append to text file
+- `search`: Search for pattern in file
+- `count_lines`: Count lines in file
+- `head`: Show first N lines
+- `tail`: Show last N lines
+
 ### SystemOps
 - `disk_usage`: Show disk space
 - `memory_info`: Show memory usage
@@ -236,6 +201,19 @@ zenus > --dry-run organize downloads
 - `find_by_name`: Find processes by name
 - `info`: Get process details
 - `kill`: Terminate processes (requires confirmation)
+
+## Memory System
+
+Zenus learns from usage through three memory layers:
+
+- **Session Memory**: Current context (paths, references)
+- **World Model**: Learned preferences and frequent paths
+- **Intent History**: Complete audit trail
+
+Memory stored in `~/.zenus/`:
+- `logs/` - Execution audit logs (JSONL)
+- `history/` - Intent history
+- `world_model.json` - Learned knowledge
 
 ## Development
 
@@ -256,7 +234,9 @@ zenus_os/
 │   ├── brain/          # Intent translation and planning
 │   ├── cli/            # Command routing and orchestration
 │   ├── tools/          # Available operations
+│   ├── memory/         # Session, world model, history
 │   ├── safety/         # Safety policies
+│   ├── sandbox/        # Sandbox enforcement
 │   ├── audit/          # Audit logging
 │   └── zenusd/         # Main entry point
 ├── tests/              # Test suite
@@ -264,6 +244,57 @@ zenus_os/
 └── README.md
 ```
 
-## Logs
+## Architecture
 
-All operations are logged to `~/.zenus/logs/` in JSONL format for audit and debugging.
+Zenus operates through a formal Intent IR (Intermediate Representation):
+
+```
+User Input → LLM → Intent IR → Validation → Adaptive Execution → Results
+```
+
+Every operation is:
+- **Validated**: Schema-checked before execution
+- **Logged**: Complete audit trail
+- **Sandboxed**: Path and resource constraints
+- **Adaptive**: Auto-retry on transient failures
+
+## Comparison with OpenClaw
+
+| Feature | OpenClaw | Zenus OS |
+|---------|----------|----------|
+| Philosophy | Flexible agent | Deterministic OS layer |
+| Safety | Plugin marketplace | Formal contracts |
+| Memory | Vector + markdown | Three-layer system |
+| Execution | Async messaging | Validated pipeline |
+| Focus | Task automation | System control |
+
+Zenus prioritizes correctness and safety over flexibility.
+
+## Documentation
+
+- [Architecture Overview](docs/architecture/01-system-overview.md)
+- [Intent IR Specification](docs/architecture/02-intent-ir.md)
+- [Adaptive Execution](docs/architecture/03-adaptive-execution.md)
+- [Memory System](docs/architecture/04-memory-system.md)
+- [Sandboxing](docs/architecture/05-sandboxing.md)
+- [Development Progress](docs/PROGRESS.md)
+- [Current Status](docs/STATUS.md)
+
+## Roadmap
+
+- ✅ Foundation: CLI, Intent IR, Tools, Memory, Sandbox
+- ✅ Integration: Memory + Sandbox + Orchestrator
+- 🔄 Next: Voice interface (Whisper + TTS)
+- 📋 Future: Vector search, learning, custom distro
+
+## License
+
+[To be determined]
+
+## Contributing
+
+[To be determined]
+
+---
+
+**Zenus OS: Computing should understand intent, not just commands.** ⚡
