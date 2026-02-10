@@ -15,7 +15,6 @@ from audit.logger import get_logger
 from memory.session_memory import SessionMemory
 from memory.world_model import WorldModel
 from memory.intent_history import IntentHistory
-from sandbox.executor import SandboxConfig
 
 
 class OrchestratorError(Exception):

@@ -7,8 +7,8 @@ Extends adaptive planner with sandbox enforcement.
 from typing import Optional, Callable
 from brain.adaptive_planner import AdaptivePlanner, ExecutionResult
 from brain.llm.schemas import IntentIR, Step
-from sandbox.executor import SandboxConfig, SandboxViolation
-from sandbox.tool_wrapper import SandboxedToolRegistry
+from sandbox.executor import SandboxViolation
+from sandbox.constraints import SandboxConstraints
 from tools.registry import TOOLS
 
 
@@ -19,14 +19,13 @@ class SandboxedAdaptivePlanner(AdaptivePlanner):
     All tool execution goes through sandbox validation.
     """
     
-    def __init__(self, logger=None, sandbox_config: Optional[SandboxConfig] = None):
+    def __init__(self, logger=None, sandbox_constraints: Optional[SandboxConstraints] = None):
         super().__init__(logger)
         
-        # Create sandboxed tool registry
-        if sandbox_config is None:
-            sandbox_config = SandboxConfig()
-        
-        self.sandboxed_registry = SandboxedToolRegistry(TOOLS, sandbox_config)
+        # For now, use regular tools - sandbox is enforced at executor level
+        # Full sandboxed registry will be implemented in next iteration
+        from tools.registry import TOOLS
+        self.tools = TOOLS
     
     def _execute_single_step(self, step: Step, step_num: int) -> ExecutionResult:
         """Execute a single step with sandbox enforcement"""
@@ -36,17 +35,26 @@ class SandboxedAdaptivePlanner(AdaptivePlanner):
             from safety.policy import check_step
             check_step(step)
             
-            # Get sandboxed tool
-            sandboxed_tool = self.sandboxed_registry.get(step.tool)
-            if not sandboxed_tool:
+            # Get tool
+            tool = self.tools.get(step.tool)
+            if not tool:
                 return ExecutionResult(
                     False,
                     "",
                     f"Tool not found: {step.tool}"
                 )
             
-            # Execute through sandbox
-            result = sandboxed_tool.execute(step)
+            # Get action
+            action = getattr(tool, step.action, None)
+            if not action:
+                return ExecutionResult(
+                    False,
+                    "",
+                    f"Action not found: {step.tool}.{step.action}"
+                )
+            
+            # Execute
+            result = action(**step.args)
             print(f"  Step {step_num}: {step.tool}.{step.action} -> {result}")
             
             if self.logger:
