@@ -26,8 +26,11 @@ def handle_status_command(orchestrator):
     
     # World model stats
     if orchestrator.use_memory:
-        world_summary = orchestrator.world_model.get_summary()
-        print(world_summary)
+        try:
+            world_summary = orchestrator.world_model.get_summary()
+            print(world_summary)
+        except Exception as e:
+            print(f"World model: Error loading ({e})")
         print()
     
     # LLM backend

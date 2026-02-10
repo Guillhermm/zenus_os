@@ -298,14 +298,14 @@ class Orchestrator:
             # readline not available (Windows without pyreadline)
             pass
         
-        console.print("[bold cyan]Zenus OS Interactive Shell[/bold cyan]")
+        console.print("\n[bold cyan]Zenus OS Interactive Shell[/bold cyan]")
         console.print("Type 'exit' or 'quit' to exit")
         console.print("Special commands: status, memory, update, explain")
         console.print("Use ↑↓ arrows for command history\n")
         
         while True:
             try:
-                user_input = console.input("[bold green]zenus >[/bold green] ").strip()
+                user_input = input("\nzenus > ").strip()
                 
                 if not user_input:
                     continue
