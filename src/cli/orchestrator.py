@@ -9,11 +9,13 @@ from typing import Optional
 from brain.llm.factory import get_llm
 from brain.planner import execute_plan
 from brain.adaptive_planner import AdaptivePlanner
+from brain.sandboxed_planner import SandboxedAdaptivePlanner
 from brain.llm.schemas import IntentIR
 from audit.logger import get_logger
 from memory.session_memory import SessionMemory
 from memory.world_model import WorldModel
 from memory.intent_history import IntentHistory
+from sandbox.executor import SandboxConfig
 
 
 class OrchestratorError(Exception):
@@ -43,14 +45,25 @@ class Orchestrator:
     - Provide consistent interface for both interactive and direct modes
     """
 
-    def __init__(self, adaptive: bool = True, use_memory: bool = True):
+    def __init__(
+        self, 
+        adaptive: bool = True, 
+        use_memory: bool = True,
+        use_sandbox: bool = True
+    ):
         self.llm = get_llm()
         self.logger = get_logger()
         self.adaptive = adaptive
         self.use_memory = use_memory
+        self.use_sandbox = use_sandbox
         
         if adaptive:
-            self.adaptive_planner = AdaptivePlanner(self.logger)
+            if use_sandbox:
+                # Use sandboxed adaptive planner
+                self.adaptive_planner = SandboxedAdaptivePlanner(self.logger)
+            else:
+                # Use basic adaptive planner
+                self.adaptive_planner = AdaptivePlanner(self.logger)
         
         if use_memory:
             self.session_memory = SessionMemory()
