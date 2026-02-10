@@ -87,12 +87,16 @@ No markdown, no explanations, just JSON."""
                     "model": self.model,
                     "prompt": prompt,
                     "stream": False,
+                    "format": "json",  # Force JSON output
                     "options": {
-                        "temperature": 0,
-                        "num_predict": 512
+                        "temperature": 0.1,      # More deterministic
+                        "num_predict": 2048,     # Allow longer responses
+                        "num_ctx": 8192,         # Larger context window
+                        "top_k": 10,
+                        "top_p": 0.9
                     }
                 },
-                timeout=30
+                timeout=300  # 5 minutes (was 30s)
             )
             
             if response.status_code != 200:
