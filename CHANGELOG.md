@@ -4,6 +4,17 @@ All notable changes to Zenus OS will be documented in this file.
 
 ## [Unreleased]
 
+### 2026-02-09 22:10
+
+**Integrate memory and sandbox into orchestrator**
+
+- Memory system now integrated: context building, path tracking, history recording
+- Session memory tracks recent activity and provides context
+- World model learns frequent paths automatically
+- Intent history records all executions for analysis
+- Sandboxed planner added (simplified initial implementation)
+- All features enabled by default in orchestrator
+
 ### 2026-02-09 20:15
 
 **Implement sandboxed execution with resource limits**
