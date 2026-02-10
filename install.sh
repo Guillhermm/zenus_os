@@ -74,6 +74,32 @@ case $llm_choice in
         fi
         
         echo "✓ Ollama installed"
+        
+        # Start Ollama service
+        echo "Starting Ollama service..."
+        
+        # Try systemctl first (most common)
+        if command -v systemctl &> /dev/null; then
+            sudo systemctl start ollama 2>/dev/null || true
+            sudo systemctl enable ollama 2>/dev/null || true
+        fi
+        
+        # Start manually if service not available
+        if ! pgrep -x ollama &> /dev/null; then
+            echo "Starting Ollama in background..."
+            nohup ollama serve > /dev/null 2>&1 &
+            sleep 2  # Give it time to start
+        fi
+        
+        # Verify it's running
+        if ! curl -s http://localhost:11434/api/tags &> /dev/null; then
+            echo "⚠️  Ollama service didn't start automatically"
+            echo "Please run: ollama serve"
+            echo "Then run this installer again"
+            exit 1
+        fi
+        
+        echo "✓ Ollama service running"
         echo ""
         echo "Choose a model:"
         echo "1) phi3:mini (3.8GB) - Recommended, fast and efficient"
