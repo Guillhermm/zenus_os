@@ -1,105 +1,95 @@
-# Changelog
+# Zenus OS Changelog
 
-All notable changes to Zenus OS will be documented in this file.
+## [Unreleased] - 2026-02-10
 
-## [Unreleased]
+### Added - Semantic Memory & Explain Mode
+- **Semantic Search**: sentence-transformers integration for finding similar past commands
+  - Embeddings cached in `~/.zenus/semantic_cache/`
+  - Cosine similarity search with configurable threshold
+  - Success rate tracking per command type
+- **Explain Mode**: `--explain` flag shows reasoning before execution
+  - Display similar past commands
+  - Show success probability
+  - Require confirmation before proceeding
+  - Detailed step-by-step breakdown
+- **Visual Improvements**: Rich library for beautiful CLI output
+  - Color-coded output: green (success), red (error), yellow (warning), cyan (info)
+  - Risk levels with emoji: 🟢 (read), 🔵 (create), 🟡 (modify), 🔴 (delete)
+  - Formatted tables and panels
+  - Syntax highlighting for code/JSON
+  - Bold/italic/underline support
+- **Readline Support**: Arrow keys for command history
+  - History saved to `~/.zenus/history.txt`
+  - 1000 commands stored
+  - Persists across sessions
 
-### 2026-02-09 22:10
+### Fixed
+- **Ollama Timeout**: Increased from 30s to 300s (5 minutes)
+- **Token Limits**: Increased from 512 to 2048 tokens for longer responses
+- **Context Window**: Added 8192 token context window
+- **Lazy Loading**: Fixed API key errors when using Ollama
+- **Text Operations**: Fixed write() detection for new vs existing files
+- **.env Parsing**: Fixed corruption issues in installer
+- **Module Imports**: Moved OpenAI imports inside __init__ to prevent eager loading
 
-**Integrate memory and sandbox into orchestrator**
-
-- Memory system now integrated: context building, path tracking, history recording
-- Session memory tracks recent activity and provides context
-- World model learns frequent paths automatically
-- Intent history records all executions for analysis
-- Sandboxed planner added (simplified initial implementation)
-- All features enabled by default in orchestrator
-
-### 2026-02-09 20:15
-
-**Implement sandboxed execution with resource limits**
-
-- SandboxedExecutor: path validation and resource limits
-- BubblewrapSandbox: advanced isolation (optional, requires bubblewrap)
-- SandboxedTool: wraps tools with sandbox enforcement
-- Temp workspace creation for isolated operations
-- Enforces filesystem boundaries and prevents resource exhaustion
-- Foundation for OS-grade security
-
-### 2026-02-09 20:00
-
-**Implement three-layer memory system**
-
-- SessionMemory: short-term context within current session
-- WorldModel: persistent system and user knowledge
-- IntentHistory: complete audit trail with search capability
-- Enables context-aware intent translation and learning
-- Storage at ~/.zenus/ in JSON/JSONL formats
-- Privacy controls and data ownership
-
-### 2026-02-09 19:45
-
-**Implement adaptive execution with retry and observation**
-
-- AdaptivePlanner with step-level retry capability
-- Execute with observation and failure detection
-- Track execution history for debugging and reporting
-- Integrate adaptive planner into orchestrator by default
-- Enables autonomous recovery from transient failures
-
-### 2026-02-09 19:30
-
-**Add system architecture documentation with Mermaid diagrams**
-
-- Core architecture overview with component responsibilities
-- Intent IR specification and validation rules
-- Data flow diagrams for execution pipeline
-- Comparison with OpenClaw approach
-- Adaptive execution architecture
-- Memory system architecture
-- Sandboxing architecture
-
-### 2026-02-09 19:15
-
-**Add system and process tools with README alias setup**
-
-- Add SystemOps tool: disk_usage, memory_info, cpu_info, list_processes, uptime
-- Add ProcessOps tool: find_by_name, info, kill
-- Register new tools in registry
-- Update LLM prompts (OpenAI and DeepSeek) with new tool capabilities
-- Add psutil dependency for system monitoring
-- Comprehensive README update with installation guide and alias setup
-
-### 2026-02-09 19:00
-
-**Add comprehensive test suite**
-
-- Add pytest configuration and test infrastructure
-- Add 42 tests covering all core modules
-- Tests for: router, planner, safety policy, schemas, file operations
-- 100% test coverage on critical paths
-- Add requirements-dev.txt with testing dependencies
-
-### 2026-02-09 18:50
-
-**Add logging, dry-run mode, and error handling**
-
-- Add structured audit logging to ~/.zenus/logs/ (JSONL format)
-- Add dry-run mode: --dry-run flag to preview plans without executing
-- Add custom exception types: SafetyError, IntentTranslationError, ExecutionError
-- Improve error messages throughout the pipeline
-- Update .gitignore with comprehensive patterns
-
-### 2026-02-09 18:40
-
-**Introduce CLI command router and intent pipeline**
-
-- Add proper CLI routing with help/version/shell/direct modes
-- Separate parsing, orchestration, and execution layers
-- Foundation for logging and automation
-
----
+### Changed
+- All execution steps now print with formatted output
+- Success/failure automatically tracked in semantic index
+- Orchestrator integrated with new formatter and explain mode
 
 ## [0.1.0-alpha] - 2026-02-09
 
-Initial prototype with basic intent to plan to execute flow.
+### Added - Foundation
+- **CLI Routing**: help, version, shell, direct command modes
+- **Intent IR Schema**: Formal contract between LLM and execution
+- **LLM Backends**: OpenAI, DeepSeek, Ollama (local) support
+- **Audit Logging**: JSONL logs to `~/.zenus/logs/`
+- **Dry-run Mode**: `--dry-run` flag for safe preview
+- **Adaptive Planner**: Retry with observation on failure
+- **Three-layer Memory**: Session (RAM), World (persistent), History (audit)
+- **Sandboxing**: Path validation and resource limits
+- **Tools**: FileOps, TextOps, SystemOps, ProcessOps
+- **Progress Indicators**: Spinner with elapsed time
+- **Built-in Commands**: status, memory, update
+
+### Documentation
+- README.md - Installation and usage
+- CONFIGURATION.md - LLM backend setup
+- TROUBLESHOOTING.md - Common issues
+- OLLAMA_TUNING.md - Model optimization
+- STATUS.md - Project status and roadmap
+
+### Tests
+- 57 test cases covering all core modules
+- 100% passing test suite
+
+## Roadmap
+
+### Next (Phase 2: Reliability)
+- [ ] Execution traces with detailed error messages
+- [ ] Better Ollama prompt engineering
+- [ ] Fallback strategies for failed commands
+- [ ] Success metrics dashboard
+
+### Future (Phase 3: Enhancement)
+- [ ] Voice interface (Whisper STT + Piper TTS)
+- [ ] Code editing tools
+- [ ] Git operations
+- [ ] Project scaffolding
+- [ ] Task decomposition for complex workflows
+
+---
+
+**Installation:**
+```bash
+git clone <repo>
+cd zenus_os
+./install.sh
+```
+
+**Usage:**
+```bash
+./zenus.sh                    # Interactive mode
+./zenus.sh "list files"       # Direct command
+./zenus.sh --explain "task"   # Show explanation first
+```
