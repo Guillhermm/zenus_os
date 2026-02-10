@@ -7,10 +7,17 @@ Enables learning from previous interactions.
 
 import os
 import json
-import numpy as np
 from typing import List, Dict, Optional
-from sentence_transformers import SentenceTransformer
 from pathlib import Path
+
+try:
+    import numpy as np
+    from sentence_transformers import SentenceTransformer
+    SEMANTIC_SEARCH_AVAILABLE = True
+except ImportError:
+    SEMANTIC_SEARCH_AVAILABLE = False
+    np = None
+    SentenceTransformer = None
 
 
 class SemanticSearch:
@@ -27,7 +34,17 @@ class SemanticSearch:
         
         Args:
             model_name: Sentence transformer model (default is lightweight)
+        
+        Raises:
+            ImportError: If sentence-transformers not installed
         """
+        if not SEMANTIC_SEARCH_AVAILABLE:
+            raise ImportError(
+                "Semantic search requires sentence-transformers. Install with:\n"
+                "  pip install -r requirements-ml.txt\n"
+                "Warning: Downloads ~800MB of ML dependencies"
+            )
+        
         self.model = SentenceTransformer(model_name)
         self.cache_dir = Path.home() / ".zenus" / "semantic_cache"
         self.cache_dir.mkdir(parents=True, exist_ok=True)

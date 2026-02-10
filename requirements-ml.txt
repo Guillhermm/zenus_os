@@ -1,0 +1,6 @@
+# Optional: ML features (semantic search)
+# Install with: pip install -r requirements-ml.txt
+# Warning: Downloads ~800MB of dependencies (PyTorch, etc)
+
+sentence-transformers>=2.2.2
+numpy>=1.24.0

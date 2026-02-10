@@ -3,9 +3,5 @@ python-dotenv>=1.0.0
 requests>=2.31.0
 openai>=1.0.0
 
-# Semantic search
-sentence-transformers>=2.2.2
-numpy>=1.24.0
-
 # CLI colors and formatting
 rich>=13.7.0
