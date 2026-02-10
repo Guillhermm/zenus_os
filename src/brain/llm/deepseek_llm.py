@@ -119,14 +119,32 @@ def extract_json(text: str) -> dict:
 
 
 class DeepSeekLLM:
+    def __init__(self):
+        """Initialize DeepSeek client lazily"""
+        api_key = os.getenv("DEEPSEEK_API_KEY")
+        base_url = os.getenv("DEEPSEEK_API_BASE_URL", "https://api.deepseek.com")
+        
+        if not api_key:
+            raise ValueError(
+                "DEEPSEEK_API_KEY not set. "
+                "Please set it in .env or run: ./install.sh"
+            )
+        
+        self.client = OpenAI(
+            api_key=api_key,
+            base_url=base_url
+        )
+        self.model = os.getenv("LLM_MODEL", "deepseek-chat")
+        self.max_tokens = int(os.getenv("LLM_TOKENS", "8192"))
+    
     def translate_intent(self, user_input: str) -> IntentIR:
-        response = client.chat.completions.parse(
-            model=MODEL,
+        response = self.client.chat.completions.parse(
+            model=self.model,
             messages=[
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": user_input},
             ],
-            max_tokens=MAX_TOKENS*1024
+            max_tokens=self.max_tokens
         )
 
         content = response.choices[0].message.content

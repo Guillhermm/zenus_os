@@ -8,12 +8,6 @@ from brain.llm.schemas import IntentIR
 load_dotenv()
 
 
-client = OpenAI(
-    api_key=os.getenv("OPENAI_API_KEY"),
-    base_url=os.getenv("OPENAI_API_BASE_URL")
-)
-
-
 SYSTEM_PROMPT = """
 You are an operating system intent compiler.
 
@@ -41,8 +35,24 @@ Return ONLY valid JSON matching the schema.
 
 
 class OpenAILLM:
+    def __init__(self):
+        """Initialize OpenAI client lazily"""
+        api_key = os.getenv("OPENAI_API_KEY")
+        base_url = os.getenv("OPENAI_API_BASE_URL")
+        
+        if not api_key:
+            raise ValueError(
+                "OPENAI_API_KEY not set. "
+                "Please set it in .env or run: ./install.sh"
+            )
+        
+        self.client = OpenAI(
+            api_key=api_key,
+            base_url=base_url
+        )
+    
     def translate_intent(self, user_input: str) -> IntentIR:
-        response = client.chat.completions.parse(
+        response = self.client.chat.completions.parse(
             model="gpt-4o-mini",
             messages=[
                 {"role": "system", "content": SYSTEM_PROMPT},
