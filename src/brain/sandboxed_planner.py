@@ -7,7 +7,7 @@ Extends adaptive planner with sandbox enforcement.
 from typing import Optional, Callable
 from brain.adaptive_planner import AdaptivePlanner, ExecutionResult
 from brain.llm.schemas import IntentIR, Step
-from sandbox.executor import SandboxedExecutor, SandboxViolation, SandboxConfig
+from sandbox.executor import SandboxConfig, SandboxViolation
 from sandbox.tool_wrapper import SandboxedToolRegistry
 from tools.registry import TOOLS
 
