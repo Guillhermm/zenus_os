@@ -29,11 +29,13 @@ class SandboxedAdaptivePlanner(AdaptivePlanner):
     
     def execute_with_retry(self, intent: IntentIR, max_retries: int = 2) -> List[str]:
         """
-        Execute plan with retry logic (inherited from parent)
+        Execute plan with retry logic
         
-        Delegates to parent's execute_with_retry which handles observation and retry.
+        Uses parent's adaptive retry logic.
         """
-        return super().execute_with_retry(intent, max_retries)
+        # Parent class uses 'execute' method, not 'execute_with_retry'
+        # The adaptive logic is already in the parent
+        return self.execute(intent, max_retries=max_retries)
     
     def _execute_single_step(self, step: Step, step_num: int) -> ExecutionResult:
         """Execute a single step with sandbox enforcement"""
