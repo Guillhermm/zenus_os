@@ -25,7 +25,6 @@ from cli.formatter import (
     print_success, print_error, print_goal, 
     print_step, console
 )
-from memory.semantic_search import SemanticSearch
 
 
 class IntentTranslationError(Exception):
@@ -80,13 +79,17 @@ class Orchestrator:
         self.progress = ProgressIndicator() if show_progress else None
         self.feedback = FeedbackGenerator(self.llm)
         
-        # Semantic search for command history
+        # Semantic search for command history (lazy import)
+        self.semantic_search = None
         try:
+            from memory.semantic_search import SemanticSearch
             self.semantic_search = SemanticSearch()
+        except ImportError as e:
+            # sentence-transformers not installed, semantic search disabled
+            pass
         except Exception as e:
-            # If sentence-transformers not available, disable semantic search
+            # Other error, log it
             self.logger.log_error(f"Semantic search unavailable: {e}")
-            self.semantic_search = None
         
         self.explain_mode = ExplainMode(self.semantic_search)
     
