@@ -22,22 +22,24 @@ class SessionMemory:
     
     def __init__(self, max_history: int = 10):
         self.max_history = max_history
-        self.intent_history: List[Dict] = []
+        self.intents: List = []  # Store Intent objects
+        self.intent_history: List[Dict] = []  # Store history dicts
         self.context_refs: Dict[str, str] = {}
         self.session_start = datetime.now()
     
-    def add_intent(self, user_input: str, intent: IntentIR, result: str):
+    def add_intent(self, intent, user_input: str = None, result: str = None):
         """Record an intent and its result"""
         
         entry = {
             "timestamp": datetime.now().isoformat(),
-            "user_input": user_input,
-            "goal": intent.goal,
-            "steps_count": len(intent.steps),
-            "result": result,
+            "user_input": user_input or "",
+            "goal": intent.goal if hasattr(intent, 'goal') else str(intent),
+            "steps_count": len(intent.steps) if hasattr(intent, 'steps') else 0,
+            "result": result or "",
             "duration_seconds": 0
         }
         
+        self.intents.append(intent)  # Store the actual intent object
         self.intent_history.append(entry)
         
         # Keep only recent history
