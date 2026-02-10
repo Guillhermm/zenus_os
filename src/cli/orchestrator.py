@@ -1,8 +1,11 @@
 """
-CLI Orchestrator
+Command Orchestrator
 
-Manages the full pipeline: CLI input to Intent to Plan to Execution.
-Ensures clear separation of concerns and deterministic flow.
+High-level orchestration of:
+- Intent translation
+- Memory management  
+- Plan execution
+- Audit logging
 """
 
 from typing import Optional
@@ -25,33 +28,28 @@ from cli.formatter import (
 from memory.semantic_search import SemanticSearch
 
 
+class IntentTranslationError(Exception):
+    """Raised when LLM fails to translate user intent"""
+    pass
+
+
 class OrchestratorError(Exception):
-    """Base exception for orchestrator errors"""
-    pass
-
-
-class IntentTranslationError(OrchestratorError):
-    """Failed to translate user input to intent"""
-    pass
-
-
-class ExecutionError(OrchestratorError):
-    """Failed to execute plan"""
+    """Raised for orchestration failures"""
     pass
 
 
 class Orchestrator:
     """
-    Orchestrates the intent to plan to execution pipeline
+    Orchestrates the full Zenus pipeline
     
     Responsibilities:
-    - Translate natural language to IntentIR
-    - Execute plans through the planner
-    - Manage memory and context
-    - Log all operations for audit
-    - Provide consistent interface for both interactive and direct modes
+    1. Translate natural language → Intent IR
+    2. Build context from memory
+    3. Execute plan (with retry if adaptive)
+    4. Update memory with results
+    5. Log everything for audit
     """
-
+    
     def __init__(
         self, 
         adaptive: bool = True, 
@@ -91,29 +89,29 @@ class Orchestrator:
             self.semantic_search = None
         
         self.explain_mode = ExplainMode(self.semantic_search)
-
-    def process(
+    
+    def execute_command(
         self, 
         user_input: str, 
-        auto_confirm: bool = False,
-        dry_run: bool = False
-    ) -> Optional[str]:
+        dry_run: bool = False,
+        explain: bool = False
+    ) -> str:
         """
-        Process a single user command through the full pipeline
+        Execute a natural language command
         
         Args:
             user_input: Natural language command
-            auto_confirm: If True, skip confirmation prompts (for direct CLI mode)
-            dry_run: If True, show plan but do not execute
+            dry_run: If True, show plan without executing
+            explain: If True, show detailed explanation before executing
         
         Returns:
-            Status message or None
+            Human-readable result
         """
         try:
-            # Step 1: Get context (if memory enabled)
-            context = None
+            # Step 1: Build context from memory
+            context = ""
             if self.use_memory:
-                context = self._build_context()
+                context = self._build_context(user_input)
             
             # Step 2: Translate intent with context
             try:
@@ -136,155 +134,139 @@ class Orchestrator:
                 self.logger.log_error(error_msg, {"user_input": user_input})
                 raise IntentTranslationError(error_msg) from e
             
-            # Log intent
-            mode = "direct" if auto_confirm else "interactive"
+            # Step 3: Show explanation if requested
+            if explain:
+                self.explain_mode.explain(user_input, intent)
+                
+                # Ask for confirmation
+                if not self.explain_mode.confirm():
+                    return "Execution cancelled by user"
+            
+            # Step 4: Log intent
+            self.logger.log_intent(user_input, intent)
+            
+            # Step 5: Store context in memory
+            if self.use_memory:
+                self.session_memory.add_intent(intent)
+            
+            # Step 6: Execute plan
             if dry_run:
-                mode = f"{mode}_dry_run"
-            self.logger.log_intent(user_input, intent, mode)
+                return self._format_dry_run(intent)
             
-            # Step 3: Show plan and execute
-            result = self._execute_with_confirmation(
-                intent, 
-                auto_confirm, 
-                dry_run
-            )
+            # Show goal
+            print_goal(intent.goal)
             
-            # Step 4: Update memory with results
-            if self.use_memory and not dry_run:
-                self._update_memory(user_input, intent, result)
+            execution_success = False
+            step_results = []
             
-            return result
+            if self.adaptive:
+                step_results = self.adaptive_planner.execute_with_retry(
+                    intent, max_retries=2
+                )
+                execution_success = True
+            else:
+                step_results = execute_plan(intent, self.logger)
+                execution_success = True
             
-        except OrchestratorError:
-            # Re-raise our own errors
-            raise
+            # Print steps with formatting
+            for i, (step, result) in enumerate(zip(intent.steps, step_results), 1):
+                print_step(i, step.tool, step.action, step.risk, result)
+            
+            # Step 7: Update memory with results
+            if self.use_memory:
+                # Extract paths from results
+                for result in step_results:
+                    if "path" in str(result).lower():
+                        # Simple heuristic: extract file paths
+                        words = str(result).split()
+                        for word in words:
+                            if "/" in word and not word.startswith("http"):
+                                self.world_model.update_path_frequency(word)
+                
+                self.intent_history.record(user_input, intent, step_results)
+            
+            # Step 8: Add to semantic search
+            if self.semantic_search and execution_success:
+                try:
+                    self.semantic_search.add_command(
+                        user_input=user_input,
+                        goal=intent.goal,
+                        steps=[s.model_dump() for s in intent.steps],
+                        success=True
+                    )
+                except Exception as e:
+                    # Non-critical, just log
+                    self.logger.log_error(f"Failed to add to semantic search: {e}")
+            
+            print_success("Plan executed successfully")
+            return "Plan executed successfully"
+        
+        except IntentTranslationError as e:
+            error_msg = str(e)
+            self.logger.log_error(error_msg, {"user_input": user_input})
+            
+            # Record failure in semantic search
+            if self.semantic_search:
+                try:
+                    self.semantic_search.add_command(
+                        user_input=user_input,
+                        goal="Translation failed",
+                        steps=[],
+                        success=False
+                    )
+                except:
+                    pass
+            
+            print_error(f"Failed to understand command: {error_msg}")
+            return f"Error: {error_msg}"
+        
         except Exception as e:
             error_msg = f"Unexpected error: {str(e)}"
             self.logger.log_error(error_msg, {"user_input": user_input})
-            raise OrchestratorError(error_msg) from e
-
-    def _execute_with_confirmation(
-        self, 
-        intent: IntentIR, 
-        auto_confirm: bool,
-        dry_run: bool
-    ) -> str:
-        """Execute plan with optional confirmation"""
-        
-        # Display plan
-        print(f"\nGoal: {intent.goal}\n")
-        for i, step in enumerate(intent.steps, 1):
-            risk_labels = ["READ", "CREATE", "MODIFY", "DELETE"]
-            risk_label = risk_labels[step.risk] if step.risk < len(risk_labels) else "UNKNOWN"
-            print(f"  [{risk_label}] Step {i}: {step.tool}.{step.action} {step.args}")
-        
-        # Dry run mode stops here
-        if dry_run:
-            print("\n[DRY RUN] Plan not executed")
-            return "Dry run complete"
-        
-        # Confirmation handling
-        if intent.requires_confirmation and not auto_confirm:
-            confirm = input("\nExecute this plan? (y/n): ")
-            if confirm.lower() != "y":
-                self.logger.log_execution_end(False, "User aborted")
-                return "Aborted by user"
-        
-        # Execute through planner (adaptive or basic)
-        try:
-            if self.adaptive:
-                # Use adaptive planner with retry and observation
-                success = self.adaptive_planner.execute_adaptive(intent)
-                if success:
-                    summary = self.adaptive_planner.get_execution_summary()
-                    result_msg = "Plan executed successfully"
-                    if summary["retried_steps"] > 0:
-                        result_msg += f" ({summary['retried_steps']} steps retried)"
-                    return result_msg
-                else:
-                    raise ExecutionError("Plan execution failed")
-            else:
-                # Use basic planner (legacy)
-                self.logger.log_execution_start(intent)
-                execute_plan(intent, self.logger)
-                self.logger.log_execution_end(True)
-                return "Plan executed successfully"
-        except ExecutionError:
-            raise
-        except Exception as e:
-            error_msg = f"Execution failed: {str(e)}"
-            self.logger.log_execution_end(False, error_msg)
-            raise ExecutionError(error_msg) from e
-
-    def _build_context(self) -> str:
-        """
-        Build context string from memory for LLM
-        
-        Returns:
-            Context string to inject into LLM prompt
-        """
-        
+            
+            # Record failure in semantic search
+            if self.semantic_search:
+                try:
+                    self.semantic_search.add_command(
+                        user_input=user_input,
+                        goal="Execution failed",
+                        steps=[],
+                        success=False
+                    )
+                except:
+                    pass
+            
+            print_error(error_msg)
+            return error_msg
+    
+    def _build_context(self, user_input: str) -> str:
+        """Build context string from memory"""
         context_parts = []
         
-        # Session context
-        session_context = self.session_memory.get_context_summary()
-        if session_context and "No recent activity" not in session_context:
-            context_parts.append(session_context)
+        # Recent intents
+        summary = self.session_memory.get_context_summary(max_intents=3)
+        if summary:
+            context_parts.append(f"Recent activity: {summary}")
         
-        # Frequent paths
-        frequent_paths = self.world_model.get_frequent_paths(limit=5)
-        if frequent_paths:
-            context_parts.append(
-                f"Frequently accessed paths: {', '.join(frequent_paths)}"
+        # Frequent paths (if query mentions files/directories)
+        if any(word in user_input.lower() for word in ["file", "folder", "directory", "path"]):
+            frequent_paths = self.world_model.get_frequent_paths(limit=5)
+            if frequent_paths:
+                context_parts.append(f"Frequent paths: {', '.join(frequent_paths)}")
+        
+        return "\n".join(context_parts)
+    
+    def _format_dry_run(self, intent: IntentIR) -> str:
+        """Format dry-run output"""
+        output = [f"DRY RUN - Would execute: {intent.goal}\n"]
+        
+        for i, step in enumerate(intent.steps, 1):
+            output.append(
+                f"{i}. {step.tool}.{step.action}({step.args}) [risk={step.risk}]"
             )
         
-        # User preferences
-        backup_location = self.world_model.get_preference("backup_location")
-        if backup_location:
-            context_parts.append(f"Backup location: {backup_location}")
-        
-        if not context_parts:
-            return ""
-        
-        return "\n\nContext:\n" + "\n".join(context_parts)
+        return "\n".join(output)
     
-    def _update_memory(self, user_input: str, intent: IntentIR, result: str):
-        """
-        Update all memory layers after successful execution
-        
-        Args:
-            user_input: Original user command
-            intent: Executed intent
-            result: Execution result
-        """
-        
-        # Update session memory
-        self.session_memory.add_intent(user_input, intent, result)
-        
-        # Extract and track paths from intent
-        self._track_paths_from_intent(intent)
-        
-        # Record in intent history
-        success = "success" in result.lower() or "executed" in result.lower()
-        self.intent_history.record(
-            user_input,
-            intent.goal,
-            len(intent.steps),
-            success,
-            0  # TODO: track actual duration
-        )
-    
-    def _track_paths_from_intent(self, intent: IntentIR):
-        """Extract and track file paths from intent steps"""
-        
-        for step in intent.steps:
-            # Look for path arguments
-            for arg_name in ["path", "source", "destination", "src", "dst"]:
-                if arg_name in step.args:
-                    path = step.args[arg_name]
-                    if isinstance(path, str) and not path.startswith("$"):
-                        self.world_model.add_frequent_path(path)
-
     def interactive_shell(self):
         """Run interactive REPL mode"""
         # Enable readline for command history and arrow keys
@@ -313,20 +295,20 @@ class Orchestrator:
             # readline not available (Windows without pyreadline)
             pass
         
-        print("Zenus OS Interactive Shell")
-        print("Type 'exit' or 'quit' to exit")
-        print("Special commands: status, memory, update")
-        print("Use ↑↓ arrows for command history\n")
+        console.print("[bold cyan]Zenus OS Interactive Shell[/bold cyan]")
+        console.print("Type 'exit' or 'quit' to exit")
+        console.print("Special commands: status, memory, update, explain")
+        console.print("Use ↑↓ arrows for command history\n")
         
         while True:
             try:
-                user_input = input("zenus > ").strip()
+                user_input = console.input("[bold green]zenus >[/bold green] ").strip()
                 
                 if not user_input:
                     continue
                 
                 if user_input in ("exit", "quit"):
-                    print("Goodbye!")
+                    console.print("[dim]Goodbye![/dim]")
                     break
                 
                 # Handle special commands
@@ -347,26 +329,20 @@ class Orchestrator:
                     handle_update_command()
                     continue
                 
-                # Check for dry run flag
-                dry_run = False
-                if user_input.startswith("--dry-run "):
-                    dry_run = True
-                    user_input = user_input[10:]  # Remove flag
+                # Check for --explain flag
+                explain = False
+                if "--explain" in user_input:
+                    explain = True
+                    user_input = user_input.replace("--explain", "").strip()
                 
-                result = self.process(user_input, auto_confirm=False, dry_run=dry_run)
-                if result:
-                    print(f"\n{result}")
-                print()  # Blank line for readability
+                # Execute command
+                result = self.execute_command(user_input, explain=explain)
                 
-            except IntentTranslationError as e:
-                print(f"\nError: {e}\n")
-            except ExecutionError as e:
-                print(f"\nError: {e}\n")
-            except OrchestratorError as e:
-                print(f"\nError: {e}\n")
             except KeyboardInterrupt:
-                print("\n\nGoodbye!")
-                break
+                console.print("\n[dim]Use 'exit' to quit[/dim]")
+                continue
             except EOFError:
-                print("\nGoodbye!")
+                console.print("\n[dim]Goodbye![/dim]")
                 break
+            except Exception as e:
+                print_error(f"Shell error: {e}")
