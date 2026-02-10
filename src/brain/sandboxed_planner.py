@@ -4,7 +4,7 @@ Sandboxed Adaptive Planner
 Extends adaptive planner with sandbox enforcement.
 """
 
-from typing import Optional, Callable
+from typing import Optional, List
 from brain.adaptive_planner import AdaptivePlanner, ExecutionResult
 from brain.llm.schemas import IntentIR, Step
 from sandbox.executor import SandboxViolation
@@ -26,6 +26,14 @@ class SandboxedAdaptivePlanner(AdaptivePlanner):
         # Full sandboxed registry will be implemented in next iteration
         from tools.registry import TOOLS
         self.tools = TOOLS
+    
+    def execute_with_retry(self, intent: IntentIR, max_retries: int = 2) -> List[str]:
+        """
+        Execute plan with retry logic (inherited from parent)
+        
+        Delegates to parent's execute_with_retry which handles observation and retry.
+        """
+        return super().execute_with_retry(intent, max_retries)
     
     def _execute_single_step(self, step: Step, step_num: int) -> ExecutionResult:
         """Execute a single step with sandbox enforcement"""
