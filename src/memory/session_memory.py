@@ -63,7 +63,7 @@ class SessionMemory:
         """Get N most recent intents"""
         return self.intent_history[-count:]
     
-    def get_context_summary(self) -> str:
+    def get_context_summary(self, max_intents: int = 3) -> str:
         """
         Get a text summary of current session context
         
