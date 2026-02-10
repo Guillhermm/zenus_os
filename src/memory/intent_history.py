@@ -36,28 +36,27 @@ class IntentHistory:
     def record(
         self, 
         user_input: str, 
-        goal: str, 
-        steps_count: int,
-        success: bool,
-        duration_seconds: float = 0
+        intent, 
+        results: List[str],
+        success: bool = True
     ):
         """
         Record an intent execution
         
         Args:
             user_input: Original user command
-            goal: Intent goal description
-            steps_count: Number of steps in plan
+            intent: The IntentIR object
+            results: List of step results
             success: Whether execution succeeded
-            duration_seconds: Execution time
         """
         entry = {
             "timestamp": datetime.now().isoformat(),
             "user_input": user_input,
-            "goal": goal,
-            "steps_count": steps_count,
+            "goal": intent.goal if hasattr(intent, 'goal') else str(intent),
+            "steps_count": len(intent.steps) if hasattr(intent, 'steps') else 0,
             "success": success,
-            "duration_seconds": duration_seconds
+            "duration_seconds": 0,
+            "results": results
         }
         
         with open(self.current_file, "a") as f:
