@@ -1,6 +1,4 @@
 from dotenv import load_dotenv # type: ignore
-from openai import OpenAI # type: ignore
-
 import os
 from brain.llm.schemas import IntentIR
 
@@ -36,14 +34,16 @@ Return ONLY valid JSON matching the schema.
 
 class OpenAILLM:
     def __init__(self):
-        """Initialize OpenAI client lazily"""
+        """Initialize OpenAI client lazily - only when this backend is selected"""
+        from openai import OpenAI
+        
         api_key = os.getenv("OPENAI_API_KEY")
         base_url = os.getenv("OPENAI_API_BASE_URL")
         
         if not api_key:
             raise ValueError(
                 "OPENAI_API_KEY not set. "
-                "Please set it in .env or run: ./install.sh"
+                "Add it to .env or run: ./install.sh"
             )
         
         self.client = OpenAI(
@@ -60,6 +60,5 @@ class OpenAILLM:
             ],
             response_format=IntentIR,
         )
-
 
         return response.choices[0].message.parsed

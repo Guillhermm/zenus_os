@@ -1,24 +1,10 @@
-
 from dotenv import load_dotenv # type: ignore
-from openai import OpenAI # type: ignore
-
 import json
 import os
 from brain.llm.schemas import IntentIR
 
 
 load_dotenv()
-
-
-DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY", "")
-DEEPSEEK_API_URL = os.getenv("DEEPSEEK_API_BASE_URL", "https://api.deepseek.com")
-MODEL = os.getenv("LLM_MODEL", "deepseek-chat")
-MAX_TOKENS = int(os.getenv("LLM_TOKENS", "8192"))
-
-client = OpenAI(
-    api_key=os.getenv("DEEPSEEK_API_KEY"),
-    base_url=os.getenv("DEEPSEEK_API_BASE_URL")
-)
 
 
 SYSTEM_PROMPT = """
@@ -31,7 +17,7 @@ You MUST output a JSON object that EXACTLY matches this schema:
   "requires_confirmation": true | false, // true if filesystem changes occur
   "steps": [
     {
-      "tool": "FileOps" | "SystemOps" | "ProcessOps",
+      "tool": "FileOps" | "SystemOps" | "ProcessOps" | "TextOps",
       "action": string,
       "args": object,
       "risk": 0 | 1 | 2 | 3
@@ -109,25 +95,28 @@ Return ONLY valid JSON matching the schema.
 
 
 def extract_json(text: str) -> dict:
-  start = text.find("{")
-  end = text.rfind("}")
-  if start == -1 or end == -1:
-      raise RuntimeError("No JSON object found in model output")
-
-  snippet = text[start:end + 1]
-  return json.loads(snippet)
+    """Extract JSON from text that might have markdown or extra content"""
+    start = text.find("{")
+    end = text.rfind("}")
+    if start == -1 or end == -1:
+        raise RuntimeError("No JSON object found in model output")
+    
+    snippet = text[start:end + 1]
+    return json.loads(snippet)
 
 
 class DeepSeekLLM:
     def __init__(self):
-        """Initialize DeepSeek client lazily"""
+        """Initialize DeepSeek client lazily - only when this backend is selected"""
+        from openai import OpenAI
+        
         api_key = os.getenv("DEEPSEEK_API_KEY")
         base_url = os.getenv("DEEPSEEK_API_BASE_URL", "https://api.deepseek.com")
         
         if not api_key:
             raise ValueError(
                 "DEEPSEEK_API_KEY not set. "
-                "Please set it in .env or run: ./install.sh"
+                "Add it to .env or run: ./install.sh"
             )
         
         self.client = OpenAI(
