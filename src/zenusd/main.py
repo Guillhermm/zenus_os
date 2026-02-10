@@ -32,11 +32,10 @@ def main():
             orchestrator.interactive_shell()
         
         elif command.mode == "direct":
-            # Direct execution (auto-confirm for non-interactive use)
+            # Direct execution
             dry_run = command.flags.get("dry_run", False)
-            result = orchestrator.process(
+            result = orchestrator.execute_command(
                 command.input_text, 
-                auto_confirm=True,
                 dry_run=dry_run
             )
             if result:
