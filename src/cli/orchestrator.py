@@ -271,9 +271,36 @@ class Orchestrator:
 
     def interactive_shell(self):
         """Run interactive REPL mode"""
+        # Enable readline for command history and arrow keys
+        try:
+            import readline
+            import os
+            
+            # Set up history file
+            history_file = os.path.expanduser("~/.zenus/history.txt")
+            os.makedirs(os.path.dirname(history_file), exist_ok=True)
+            
+            # Load history if exists
+            try:
+                readline.read_history_file(history_file)
+            except FileNotFoundError:
+                pass
+            
+            # Set history size
+            readline.set_history_length(1000)
+            
+            # Save history on exit
+            import atexit
+            atexit.register(readline.write_history_file, history_file)
+            
+        except ImportError:
+            # readline not available (Windows without pyreadline)
+            pass
+        
         print("Zenus OS Interactive Shell")
         print("Type 'exit' or 'quit' to exit")
-        print("Special commands: status, memory, update\n")
+        print("Special commands: status, memory, update")
+        print("Use ↑↓ arrows for command history\n")
         
         while True:
             try:
