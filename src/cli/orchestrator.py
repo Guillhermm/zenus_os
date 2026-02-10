@@ -17,6 +17,12 @@ from memory.world_model import WorldModel
 from memory.intent_history import IntentHistory
 from cli.progress import ProgressIndicator
 from cli.feedback import FeedbackGenerator
+from cli.explain import ExplainMode
+from cli.formatter import (
+    print_success, print_error, print_goal, 
+    print_step, console
+)
+from memory.semantic_search import SemanticSearch
 
 
 class OrchestratorError(Exception):
@@ -75,6 +81,16 @@ class Orchestrator:
         
         self.progress = ProgressIndicator() if show_progress else None
         self.feedback = FeedbackGenerator(self.llm)
+        
+        # Semantic search for command history
+        try:
+            self.semantic_search = SemanticSearch()
+        except Exception as e:
+            # If sentence-transformers not available, disable semantic search
+            self.logger.log_error(f"Semantic search unavailable: {e}")
+            self.semantic_search = None
+        
+        self.explain_mode = ExplainMode(self.semantic_search)
 
     def process(
         self, 
