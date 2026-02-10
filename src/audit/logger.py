@@ -26,7 +26,7 @@ class AuditLogger:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         self.session_file = self.log_dir / f"session_{timestamp}.jsonl"
 
-    def log_intent(self, user_input: str, intent: IntentIR, mode: str):
+    def log_intent(self, user_input: str, intent: IntentIR, mode: str = "execution"):
         """Log intent translation"""
         entry = {
             "timestamp": datetime.now().isoformat(),

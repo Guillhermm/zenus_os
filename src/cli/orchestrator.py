@@ -305,7 +305,10 @@ class Orchestrator:
         
         while True:
             try:
-                user_input = input("\nzenus > ").strip()
+                # Use ANSI codes with readline escape sequences
+                # \001 and \002 mark non-printing characters for readline
+                prompt = "\n\001\033[1;32m\002zenus >\001\033[0m\002 "
+                user_input = input(prompt).strip()
                 
                 if not user_input:
                     continue

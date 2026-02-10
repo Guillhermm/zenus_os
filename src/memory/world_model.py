@@ -47,6 +47,7 @@ class WorldModel:
         """Create default world model structure"""
         
         return {
+            "paths": {},  # Changed from frequent_paths for consistency
             "frequent_paths": {},
             "preferences": {},
             "applications": {},
