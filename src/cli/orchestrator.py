@@ -237,11 +237,11 @@ class Orchestrator:
         # Record in intent history
         success = "success" in result.lower() or "executed" in result.lower()
         self.intent_history.record(
-            user_input=user_input,
-            goal=intent.goal,
-            steps_count=len(intent.steps),
-            success=success,
-            duration_seconds=0  # TODO: track actual duration
+            user_input,
+            intent.goal,
+            len(intent.steps),
+            success,
+            0  # TODO: track actual duration
         )
     
     def _track_paths_from_intent(self, intent: IntentIR):

@@ -26,6 +26,7 @@ Rules:
 
 Allowed tools:
 - FileOps: scan, mkdir, move, write_file, touch
+- TextOps: read, write, append, search, count_lines, head, tail
 - SystemOps: disk_usage, memory_info, cpu_info, list_processes, uptime
 - ProcessOps: find_by_name, info, kill
 

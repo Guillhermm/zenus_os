@@ -66,6 +66,15 @@ FileOps:
 - write_file(path: string, content: string): create file with content
 - touch(path: string): create empty file
 
+TextOps:
+- read(path: string): read text file
+- write(path: string, content: string): write text file
+- append(path: string, content: string): append to file
+- search(path: string, pattern: string): search in file
+- count_lines(path: string): count lines
+- head(path: string, lines: int): show first lines
+- tail(path: string, lines: int): show last lines
+
 SystemOps:
 - disk_usage(path: string = "/"): show disk space
 - memory_info(): show memory usage
