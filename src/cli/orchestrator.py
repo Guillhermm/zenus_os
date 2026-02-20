@@ -15,8 +15,10 @@ from brain.adaptive_planner import AdaptivePlanner
 from brain.sandboxed_planner import SandboxedAdaptivePlanner
 from brain.task_analyzer import TaskAnalyzer
 from brain.failure_analyzer import FailureAnalyzer
+from brain.dependency_analyzer import DependencyAnalyzer
 from brain.llm.schemas import IntentIR
 from memory.action_tracker import get_action_tracker
+from execution.parallel_executor import get_parallel_executor
 from audit.logger import get_logger
 from memory.session_memory import SessionMemory
 from memory.world_model import WorldModel
@@ -58,7 +60,8 @@ class Orchestrator:
         adaptive: bool = True, 
         use_memory: bool = True,
         use_sandbox: bool = True,
-        show_progress: bool = True
+        show_progress: bool = True,
+        enable_parallel: bool = True
     ):
         self.llm = get_llm()
         self.logger = get_logger()
@@ -84,6 +87,9 @@ class Orchestrator:
         self.feedback = FeedbackGenerator(self.llm)
         self.failure_analyzer = FailureAnalyzer()
         self.action_tracker = get_action_tracker()
+        self.enable_parallel = enable_parallel
+        self.dependency_analyzer = DependencyAnalyzer() if enable_parallel else None
+        self.parallel_executor = get_parallel_executor() if enable_parallel else None
         
         # Semantic search for command history (lazy import)
         self.semantic_search = None
