@@ -51,7 +51,8 @@ class GoalTracker:
         self,
         user_goal: str,
         original_intent: IntentIR,
-        observations: List[str]
+        observations: List[str],
+        stream: bool = False
     ) -> GoalStatus:
         """
         Check if goal has been achieved
@@ -92,7 +93,8 @@ class GoalTracker:
             reflection = self.llm.reflect_on_goal(
                 reflection_prompt,
                 user_goal,
-                observations
+                observations,
+                stream=stream
             )
             
             return self._parse_reflection(reflection)

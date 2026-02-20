@@ -373,12 +373,13 @@ class Orchestrator:
                     self.intent_history.record(user_input, intent, step_results)
                 
                 # Step 5: Check if goal achieved
-                console.print("\n[dim]Reflecting on progress...[/dim]")
+                console.print("\n")  # Blank line before reflection
                 
                 goal_status = goal_tracker.check_goal(
                     user_goal=user_input,
                     original_intent=intent,
-                    observations=iteration_observations
+                    observations=iteration_observations,
+                    stream=True  # Enable streaming for real-time reflection
                 )
                 
                 # Display reflection

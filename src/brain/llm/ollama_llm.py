@@ -45,7 +45,7 @@ class OllamaLLM:
                 "Install from: https://ollama.com/download"
             )
     
-    def translate_intent(self, user_input: str) -> IntentIR:
+    def translate_intent(self, user_input: str, stream: bool = False) -> IntentIR:
         """Translate user input to Intent IR using Ollama"""
         
         system_prompt = """You are an OS intent compiler. Convert user commands to structured JSON.
@@ -147,7 +147,8 @@ No markdown, no explanations, just JSON."""
         self,
         reflection_prompt: str,
         user_goal: str,
-        observations: list
+        observations: list,
+        stream: bool = False
     ) -> str:
         """
         Reflect on whether a goal has been achieved
@@ -155,26 +156,66 @@ No markdown, no explanations, just JSON."""
         Returns structured text with ACHIEVED, CONFIDENCE, REASONING, NEXT_STEPS
         """
         try:
-            response = requests.post(
-                f"{self.base_url}/api/generate",
-                json={
-                    "model": self.model,
-                    "prompt": reflection_prompt,
-                    "stream": False,
-                    "options": {
-                        "temperature": 0.3,
-                        "num_predict": 1024,
-                        "num_ctx": 8192
-                    }
-                },
-                timeout=60
-            )
-            
-            if response.status_code != 200:
-                raise RuntimeError(f"Ollama error: {response.status_code}")
-            
-            result = response.json()
-            return result.get("response", "")
+            if stream:
+                # Streaming mode
+                from cli.streaming import get_stream_handler
+                from rich.console import Console
+                handler = get_stream_handler()
+                console = Console()
+                
+                console.print("[cyan]Reflecting: [/cyan]", end="")
+                
+                response = requests.post(
+                    f"{self.base_url}/api/generate",
+                    json={
+                        "model": self.model,
+                        "prompt": reflection_prompt,
+                        "stream": True,
+                        "options": {
+                            "temperature": 0.3,
+                            "num_predict": 1024,
+                            "num_ctx": 8192
+                        }
+                    },
+                    timeout=60,
+                    stream=True
+                )
+                
+                complete_text = ""
+                for line in response.iter_lines():
+                    if line:
+                        chunk = json.loads(line)
+                        if "response" in chunk:
+                            token = chunk["response"]
+                            console.print(token, end="")
+                            complete_text += token
+                        if chunk.get("done", False):
+                            break
+                
+                console.print()  # New line
+                return complete_text
+            else:
+                # Non-streaming mode
+                response = requests.post(
+                    f"{self.base_url}/api/generate",
+                    json={
+                        "model": self.model,
+                        "prompt": reflection_prompt,
+                        "stream": False,
+                        "options": {
+                            "temperature": 0.3,
+                            "num_predict": 1024,
+                            "num_ctx": 8192
+                        }
+                    },
+                    timeout=60
+                )
+                
+                if response.status_code != 200:
+                    raise RuntimeError(f"Ollama error: {response.status_code}")
+                
+                result = response.json()
+                return result.get("response", "")
             
         except requests.exceptions.Timeout:
             raise RuntimeError("Ollama reflection timed out")

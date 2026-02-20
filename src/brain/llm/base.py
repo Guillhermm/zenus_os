@@ -1,11 +1,21 @@
 from abc import ABC, abstractmethod
-from typing import List
+from typing import List, Optional, Iterator
 from brain.llm.schemas import IntentIR
 
 
 class LLM(ABC):
     @abstractmethod
-    def translate_intent(self, user_input: str) -> IntentIR:
+    def translate_intent(self, user_input: str, stream: bool = False) -> IntentIR:
+        """
+        Translate user input to Intent IR
+        
+        Args:
+            user_input: Natural language command
+            stream: Enable streaming output (if supported)
+        
+        Returns:
+            IntentIR object
+        """
         pass
     
     @abstractmethod

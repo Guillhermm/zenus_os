@@ -63,7 +63,7 @@ class OpenAILLM:
             base_url=base_url
         )
     
-    def translate_intent(self, user_input: str) -> IntentIR:
+    def translate_intent(self, user_input: str, stream: bool = False) -> IntentIR:
         response = self.client.chat.completions.parse(
             model="gpt-4o-mini",
             messages=[
@@ -79,27 +79,53 @@ class OpenAILLM:
         self,
         reflection_prompt: str,
         user_goal: str,
-        observations: list
+        observations: list,
+        stream: bool = False
     ) -> str:
         """
         Reflect on whether a goal has been achieved
         
         Returns structured text with ACHIEVED, CONFIDENCE, REASONING, NEXT_STEPS
         """
-        response = self.client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {
-                    "role": "system",
-                    "content": "You are a goal achievement evaluator. Analyze observations and determine if a user's goal has been achieved."
-                },
-                {
-                    "role": "user",
-                    "content": reflection_prompt
-                }
-            ],
-            max_tokens=1024,
-            temperature=0.3
-        )
-        
-        return response.choices[0].message.content
+        if stream:
+            # Streaming mode
+            from cli.streaming import get_stream_handler
+            handler = get_stream_handler()
+            
+            response = self.client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {
+                        "role": "system",
+                        "content": "You are a goal achievement evaluator. Analyze observations and determine if a user's goal has been achieved."
+                    },
+                    {
+                        "role": "user",
+                        "content": reflection_prompt
+                    }
+                ],
+                max_tokens=1024,
+                temperature=0.3,
+                stream=True
+            )
+            
+            return handler.stream_llm_tokens(response, prefix="Reflecting: ")
+        else:
+            # Non-streaming mode
+            response = self.client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {
+                        "role": "system",
+                        "content": "You are a goal achievement evaluator. Analyze observations and determine if a user's goal has been achieved."
+                    },
+                    {
+                        "role": "user",
+                        "content": reflection_prompt
+                    }
+                ],
+                max_tokens=1024,
+                temperature=0.3
+            )
+            
+            return response.choices[0].message.content
