@@ -160,12 +160,32 @@ class Orchestrator:
                 self.logger.log_error(error_msg, {"user_input": user_input})
                 raise IntentTranslationError(error_msg) from e
             
+            # Auto-explain high-risk operations
+            if not explain:
+                max_risk = max([step.risk for step in intent.steps])
+                if max_risk >= 3 and not dry_run:
+                    console.print("\n[yellow]⚠️  High-risk operation detected[/yellow]")
+                    from cli.explainer import get_explainer
+                    explainer = get_explainer()
+                    explainer.explain_intent(user_input, intent)
+                    
+                    if not explainer.confirm("This operation is destructive. Proceed?"):
+                        return "Execution cancelled by user (high-risk operation)"
+            
             # Step 3: Show explanation if requested
             if explain:
-                self.explain_mode.explain(user_input, intent)
+                from cli.explainer import get_explainer
+                explainer = get_explainer()
+                
+                # Show detailed explanation
+                explainer.explain_intent(user_input, intent)
+                
+                # Show environmental context
+                ctx_mgr = get_context_manager()
+                explainer.explain_context(ctx_mgr.get_full_context())
                 
                 # Ask for confirmation
-                if not self.explain_mode.confirm():
+                if not explainer.confirm():
                     return "Execution cancelled by user"
             
             # Step 4: Log intent
