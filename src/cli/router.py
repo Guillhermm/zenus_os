@@ -34,6 +34,8 @@ class CommandRouter:
         - No args or 'shell' -> interactive REPL
         - 'help' / '--help' / '-h' -> help message
         - 'version' / '--version' / '-v' -> version info
+        - 'rollback' -> rollback commands
+        - 'history' -> history commands
         - '--dry-run <text>' -> show plan but do not execute
         - Direct text -> immediate intent execution
         """
@@ -62,6 +64,19 @@ class CommandRouter:
         if args[0] in ("version", "--version", "-v"):
             return CLICommand(mode="version")
         
+        if args[0] == "rollback":
+            return CLICommand(
+                mode="rollback",
+                input_text=" ".join(args[1:]) if len(args) > 1 else None,
+                flags={"dry_run": dry_run}
+            )
+        
+        if args[0] == "history":
+            return CLICommand(
+                mode="history",
+                input_text=" ".join(args[1:]) if len(args) > 1 else None
+            )
+        
         # Everything else is a direct command
         input_text = " ".join(args)
         return CLICommand(
@@ -83,6 +98,8 @@ COMMANDS:
     shell               Start interactive REPL (default)
     help                Show this help message
     version             Show version information
+    rollback [N]        Rollback last N actions (default: 1)
+    history             Show command history and failures
     <direct command>    Execute command immediately
 
 OPTIONS:

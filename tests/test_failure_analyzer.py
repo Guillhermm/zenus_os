@@ -108,7 +108,8 @@ def test_analyze_before_execution_no_history(analyzer):
     """Test pre-execution analysis with no failure history"""
     intent = IntentIR(
         goal="Read file",
-        steps=[Step(tool="FileOps", action="read_file", params={"path": "test.txt"}, risk=0)]
+        requires_confirmation=False,
+        steps=[Step(tool="FileOps", action="read_file", args={"path": "test.txt"}, risk=0)]
     )
     
     analysis = analyzer.analyze_before_execution("read test.txt", intent)
@@ -133,7 +134,8 @@ def test_analyze_before_execution_with_history(analyzer):
     # Analyze new similar command
     intent = IntentIR(
         goal="Install packages",
-        steps=[Step(tool="PackageOps", action="install", params={"package": "react"}, risk=1)]
+        requires_confirmation=False,
+        steps=[Step(tool="PackageOps", action="install", args={"package": "react"}, risk=1)]
     )
     
     analysis = analyzer.analyze_before_execution("npm install react", intent)

@@ -16,6 +16,7 @@ from brain.sandboxed_planner import SandboxedAdaptivePlanner
 from brain.task_analyzer import TaskAnalyzer
 from brain.failure_analyzer import FailureAnalyzer
 from brain.llm.schemas import IntentIR
+from memory.action_tracker import get_action_tracker
 from audit.logger import get_logger
 from memory.session_memory import SessionMemory
 from memory.world_model import WorldModel
@@ -82,6 +83,7 @@ class Orchestrator:
         self.progress = ProgressIndicator() if show_progress else None
         self.feedback = FeedbackGenerator(self.llm)
         self.failure_analyzer = FailureAnalyzer()
+        self.action_tracker = get_action_tracker()
         
         # Semantic search for command history (lazy import)
         self.semantic_search = None
@@ -230,17 +232,39 @@ class Orchestrator:
             # Show goal
             print_goal(intent.goal)
             
+            # Start transaction for rollback capability
+            transaction_id = self.action_tracker.start_transaction(user_input, intent.goal)
+            
             execution_success = False
             step_results = []
             
-            if self.adaptive:
-                step_results = self.adaptive_planner.execute_with_retry(
-                    intent, max_retries=2
-                )
-                execution_success = True
-            else:
-                step_results = execute_plan(intent, self.logger)
-                execution_success = True
+            try:
+                if self.adaptive:
+                    step_results = self.adaptive_planner.execute_with_retry(
+                        intent, max_retries=2
+                    )
+                    execution_success = True
+                else:
+                    step_results = execute_plan(intent, self.logger)
+                    execution_success = True
+                
+                # Track each action for rollback
+                for step, result in zip(intent.steps, step_results):
+                    self.action_tracker.track_action(
+                        tool=step.tool,
+                        operation=step.action,
+                        params=step.args,
+                        result=result,
+                        transaction_id=transaction_id
+                    )
+                
+                # End transaction successfully
+                self.action_tracker.end_transaction(transaction_id, "completed")
+            
+            except Exception as e:
+                # End transaction with failure status
+                self.action_tracker.end_transaction(transaction_id, "failed")
+                raise
             
             # Print steps with formatting
             for i, (step, result) in enumerate(zip(intent.steps, step_results), 1):
