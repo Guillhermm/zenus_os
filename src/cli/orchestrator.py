@@ -16,6 +16,7 @@ from brain.sandboxed_planner import SandboxedAdaptivePlanner
 from brain.task_analyzer import TaskAnalyzer
 from brain.failure_analyzer import FailureAnalyzer
 from brain.dependency_analyzer import DependencyAnalyzer
+from brain.suggestion_engine import get_suggestion_engine
 from brain.llm.schemas import IntentIR
 from memory.action_tracker import get_action_tracker
 from execution.parallel_executor import get_parallel_executor
@@ -90,6 +91,7 @@ class Orchestrator:
         self.enable_parallel = enable_parallel
         self.dependency_analyzer = DependencyAnalyzer() if enable_parallel else None
         self.parallel_executor = get_parallel_executor() if enable_parallel else None
+        self.suggestion_engine = get_suggestion_engine()
         
         # Semantic search for command history (lazy import)
         self.semantic_search = None
@@ -195,6 +197,24 @@ class Orchestrator:
                         response = console.input("\n[bold]Proceed anyway?[/bold] (y/n): ")
                         if response.lower() not in ('y', 'yes'):
                             return "Execution cancelled due to high failure risk"
+            
+            # Step 2.7: Show proactive suggestions
+            ctx_mgr = get_context_manager()
+            suggestions = self.suggestion_engine.analyze(
+                user_input, 
+                intent, 
+                ctx_mgr.get_full_context()
+            )
+            
+            if suggestions and not dry_run:
+                # Filter to only high-confidence suggestions
+                shown_suggestions = [s for s in suggestions if self.suggestion_engine.should_show(s)]
+                
+                if shown_suggestions:
+                    console.print("\n[cyan]💡 Suggestions:[/cyan]")
+                    for suggestion in shown_suggestions:
+                        console.print(f"  {self.suggestion_engine.format_suggestion(suggestion)}")
+                    console.print()  # Blank line for spacing
             
             # Auto-explain high-risk operations
             if not explain:
