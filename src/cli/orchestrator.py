@@ -504,8 +504,17 @@ class Orchestrator:
                     explain = True
                     user_input = user_input.replace("--explain", "").strip()
                 
+                # Check for --iterative flag
+                iterative = False
+                if "--iterative" in user_input:
+                    iterative = True
+                    user_input = user_input.replace("--iterative", "").strip()
+                
                 # Execute command
-                result = self.execute_command(user_input, explain=explain)
+                if iterative:
+                    result = self.execute_iterative(user_input)
+                else:
+                    result = self.execute_command(user_input, explain=explain)
                 
             except KeyboardInterrupt:
                 console.print("\n[dim]Use 'exit' to quit[/dim]")

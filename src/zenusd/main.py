@@ -34,10 +34,22 @@ def main():
         elif command.mode == "direct":
             # Direct execution
             dry_run = command.flags.get("dry_run", False)
-            result = orchestrator.execute_command(
-                command.input_text, 
-                dry_run=dry_run
-            )
+            iterative = command.flags.get("iterative", False)
+            
+            if iterative:
+                # Use iterative ReAct loop for complex tasks
+                result = orchestrator.execute_iterative(
+                    command.input_text,
+                    max_iterations=10,
+                    dry_run=dry_run
+                )
+            else:
+                # Standard one-shot execution
+                result = orchestrator.execute_command(
+                    command.input_text, 
+                    dry_run=dry_run
+                )
+            
             if result:
                 print(result)
     

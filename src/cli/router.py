@@ -40,11 +40,14 @@ class CommandRouter:
         
         # Check for flags
         dry_run = False
+        iterative = False
         filtered_args = []
         
         for arg in args:
             if arg == "--dry-run":
                 dry_run = True
+            elif arg == "--iterative":
+                iterative = True
             else:
                 filtered_args.append(arg)
         
@@ -64,7 +67,7 @@ class CommandRouter:
         return CLICommand(
             mode="direct", 
             input_text=input_text,
-            flags={"dry_run": dry_run}
+            flags={"dry_run": dry_run, "iterative": iterative}
         )
 
     def show_help(self):
@@ -84,6 +87,7 @@ COMMANDS:
 
 OPTIONS:
     --dry-run           Show plan but do not execute
+    --iterative         Use iterative ReAct loop (for complex tasks)
 
 EXAMPLES:
     zenus                                    # Start interactive shell
@@ -91,9 +95,11 @@ EXAMPLES:
     zenus "list files in ~/Documents"        # Direct execution
     zenus organize my downloads by type      # Direct execution (no quotes)
     zenus --dry-run "delete all tmp files"   # Preview without executing
+    zenus --iterative "read LaTeX project and improve chapter 3"  # Multi-step execution
 
 INTERACTIVE MODE:
     zenus > --dry-run organize my downloads  # Preview in shell mode
+    zenus > --iterative read project         # Iterative mode in shell
     zenus > organize my downloads            # Execute in shell mode
 
 ENVIRONMENT:
