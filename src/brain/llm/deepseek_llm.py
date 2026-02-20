@@ -90,6 +90,32 @@ IMPORTANT:
 - FileOps.move is ONLY for moving existing files
 - If content is provided, the action MUST be FileOps.write_file
 
+PERFORMANCE & BATCH OPERATIONS (CRITICAL):
+- ALWAYS use wildcards and patterns instead of individual file operations
+- Example: To move PDF files, use move("*.pdf", "PDFs/") NOT individual moves
+- Example: To organize by type, group all files of same type in ONE move operation
+- For file organization: scan ONCE, then plan batch moves by extension
+- Minimize tool calls: 1 scan + N batch moves (by type) >> N individual moves
+- Use shell patterns: *.pdf, *.jpg, *.txt, file_*
+- NEVER iterate over individual files when batch operations are possible
+
+BAD EXAMPLE (DO NOT DO THIS):
+{
+  "steps": [
+    {"tool": "FileOps", "action": "move", "args": {"source": "file1.pdf", "destination": "PDFs/"}},
+    {"tool": "FileOps", "action": "move", "args": {"source": "file2.pdf", "destination": "PDFs/"}},
+    {"tool": "FileOps", "action": "move", "args": {"source": "file3.pdf", "destination": "PDFs/"}}
+  ]
+}
+
+GOOD EXAMPLE (DO THIS):
+{
+  "steps": [
+    {"tool": "FileOps", "action": "mkdir", "args": {"path": "PDFs"}},
+    {"tool": "FileOps", "action": "move", "args": {"source": "*.pdf", "destination": "PDFs/"}}
+  ]
+}
+
 Return ONLY valid JSON matching the schema.
 """
 

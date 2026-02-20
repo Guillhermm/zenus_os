@@ -28,6 +28,12 @@ Risk levels:
 2 = overwrite (data changes)
 3 = delete/kill (destructive, requires explicit confirmation)
 
+PERFORMANCE (CRITICAL):
+- Use wildcards and batch operations instead of individual files
+- Example: move("*.pdf", "PDFs/") NOT individual file moves
+- Minimize tool calls by grouping operations
+- Use patterns: *.pdf, *.jpg, *.txt
+
 Return ONLY valid JSON matching the schema.
 """
 

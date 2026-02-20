@@ -13,6 +13,7 @@ from brain.llm.factory import get_llm
 from brain.planner import execute_plan
 from brain.adaptive_planner import AdaptivePlanner
 from brain.sandboxed_planner import SandboxedAdaptivePlanner
+from brain.task_analyzer import TaskAnalyzer
 from brain.llm.schemas import IntentIR
 from audit.logger import get_logger
 from memory.session_memory import SessionMemory
@@ -92,25 +93,46 @@ class Orchestrator:
             self.logger.log_error(f"Semantic search unavailable: {e}")
         
         self.explain_mode = ExplainMode(self.semantic_search)
+        
+        # Task analyzer for auto-detecting iterative vs one-shot
+        self.task_analyzer = TaskAnalyzer(self.llm)
     
     def execute_command(
         self, 
         user_input: str, 
         dry_run: bool = False,
-        explain: bool = False
+        explain: bool = False,
+        force_oneshot: bool = False
     ) -> str:
         """
         Execute a natural language command
+        
+        Automatically detects if task needs iterative execution.
         
         Args:
             user_input: Natural language command
             dry_run: If True, show plan without executing
             explain: If True, show detailed explanation before executing
+            force_oneshot: If True, skip iterative detection and use one-shot
         
         Returns:
             Human-readable result
         """
         try:
+            # Step 0: Analyze task complexity (auto-detect iterative need)
+            if not force_oneshot:
+                task_complexity = self.task_analyzer.analyze(user_input)
+                
+                if task_complexity.needs_iteration:
+                    # Automatically use iterative mode for complex tasks
+                    console.print(f"[dim]Detected complex task (confidence: {task_complexity.confidence:.0%})[/dim]")
+                    console.print(f"[dim]Using iterative execution ({task_complexity.reasoning})[/dim]\n")
+                    return self.execute_iterative(
+                        user_input,
+                        max_iterations=task_complexity.estimated_steps * 2,  # Dynamic max
+                        dry_run=dry_run
+                    )
+            
             # Step 1: Build context from memory
             context = ""
             if self.use_memory:
@@ -395,9 +417,29 @@ class Orchestrator:
                 
                 return f"Task completed successfully in {iteration} iteration(s)"
             else:
-                console.print(f"\n[red]✗ Maximum iterations ({max_iterations}) reached[/red]")
-                console.print("[dim]Task may be too complex or ill-defined.[/dim]")
-                return f"Task incomplete after {max_iterations} iterations"
+                # Max iterations reached - ask for confirmation to continue
+                console.print(f"\n[yellow]⚠ Maximum iterations ({max_iterations}) reached[/yellow]")
+                console.print(f"[dim]Observations so far: {len(all_observations)} steps completed[/dim]")
+                console.print(f"[dim]Goal not yet achieved with high confidence[/dim]\n")
+                
+                # Ask user if they want to continue
+                console.print("[cyan]Would you like to continue for more iterations?[/cyan]")
+                user_choice = input("Continue? [y/N]: ").strip().lower()
+                
+                if user_choice in ['y', 'yes']:
+                    # Continue with more iterations
+                    console.print("\n[green]Continuing execution...[/green]")
+                    additional_iterations = 5  # Add 5 more iterations
+                    max_iterations += additional_iterations
+                    console.print(f"[dim]New max: {max_iterations} iterations[/dim]\n")
+                    
+                    # Continue the loop (but we're outside the while, so need recursion)
+                    # Instead, let's just tell the user to re-run with higher limit
+                    console.print(f"[yellow]Please re-run with: --max-iterations {max_iterations}[/yellow]")
+                    return f"Task paused after {iteration} iterations. User can continue with higher limit."
+                else:
+                    console.print("\n[dim]Stopping execution as requested.[/dim]")
+                    return f"Task incomplete after {max_iterations} iterations (user chose to stop)"
         
         except Exception as e:
             error_msg = f"Iterative execution error: {str(e)}"

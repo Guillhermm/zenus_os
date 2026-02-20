@@ -62,6 +62,9 @@ Risk levels:
 2 = overwrite
 3 = delete (requires confirmation)
 
+PERFORMANCE: Use wildcards and batch operations.
+Example: move("*.pdf", "PDFs/") NOT individual moves.
+
 Output ONLY valid JSON matching this schema:
 {
   "goal": "brief description",
