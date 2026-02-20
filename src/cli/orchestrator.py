@@ -19,6 +19,7 @@ from audit.logger import get_logger
 from memory.session_memory import SessionMemory
 from memory.world_model import WorldModel
 from memory.intent_history import IntentHistory
+from context.context_manager import get_context_manager
 from cli.progress import ProgressIndicator
 from cli.feedback import FeedbackGenerator
 from cli.explain import ExplainMode
@@ -449,19 +450,28 @@ class Orchestrator:
             return error_msg
     
     def _build_context(self, user_input: str) -> str:
-        """Build context string from memory"""
+        """Build context string from memory and environment"""
         context_parts = []
         
+        # Environmental context (new!)
+        ctx_mgr = get_context_manager()
+        env_context = ctx_mgr.get_contextual_prompt()
+        if env_context:
+            context_parts.append("=== Current Environment ===")
+            context_parts.append(env_context)
+        
         # Recent intents
-        summary = self.session_memory.get_context_summary(max_intents=3)
-        if summary:
-            context_parts.append(f"Recent activity: {summary}")
+        if self.use_memory:
+            summary = self.session_memory.get_context_summary(max_intents=3)
+            if summary:
+                context_parts.append(f"\n=== Recent Activity ===\n{summary}")
         
         # Frequent paths (if query mentions files/directories)
         if any(word in user_input.lower() for word in ["file", "folder", "directory", "path"]):
-            frequent_paths = self.world_model.get_frequent_paths(limit=5)
-            if frequent_paths:
-                context_parts.append(f"Frequent paths: {', '.join(frequent_paths)}")
+            if self.use_memory:
+                frequent_paths = self.world_model.get_frequent_paths(limit=5)
+                if frequent_paths:
+                    context_parts.append(f"\n=== Frequent Paths ===\n{', '.join(frequent_paths)}")
         
         return "\n".join(context_parts)
     
