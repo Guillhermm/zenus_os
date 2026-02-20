@@ -14,6 +14,7 @@ from brain.planner import execute_plan
 from brain.adaptive_planner import AdaptivePlanner
 from brain.sandboxed_planner import SandboxedAdaptivePlanner
 from brain.task_analyzer import TaskAnalyzer
+from brain.failure_analyzer import FailureAnalyzer
 from brain.llm.schemas import IntentIR
 from audit.logger import get_logger
 from memory.session_memory import SessionMemory
@@ -80,6 +81,7 @@ class Orchestrator:
         
         self.progress = ProgressIndicator() if show_progress else None
         self.feedback = FeedbackGenerator(self.llm)
+        self.failure_analyzer = FailureAnalyzer()
         
         # Semantic search for command history (lazy import)
         self.semantic_search = None
@@ -159,6 +161,32 @@ class Orchestrator:
                 error_msg = f"Failed to understand command: {str(e)}"
                 self.logger.log_error(error_msg, {"user_input": user_input})
                 raise IntentTranslationError(error_msg) from e
+            
+            # Step 2.5: Analyze for potential failures (learning from past mistakes)
+            pre_analysis = self.failure_analyzer.analyze_before_execution(user_input, intent)
+            
+            if pre_analysis["has_warnings"] and not dry_run:
+                console.print("\n[yellow]📚 Learning from past experience:[/yellow]")
+                
+                # Show warnings
+                for warning in pre_analysis["warnings"]:
+                    console.print(f"  {warning}")
+                
+                # Show suggestions
+                if pre_analysis["suggestions"]:
+                    console.print("\n[cyan]💡 Suggestions based on past failures:[/cyan]")
+                    for suggestion in pre_analysis["suggestions"]:
+                        console.print(f"  • {suggestion}")
+                
+                # Show success probability
+                prob = pre_analysis["success_probability"]
+                if prob < 0.7:
+                    console.print(f"\n  [yellow]Success probability: {prob:.0%}[/yellow]")
+                    
+                    if not explain:  # If not already in explain mode, ask for confirmation
+                        response = console.input("\n[bold]Proceed anyway?[/bold] (y/n): ")
+                        if response.lower() not in ('y', 'yes'):
+                            return "Execution cancelled due to high failure risk"
             
             # Auto-explain high-risk operations
             if not explain:
@@ -269,6 +297,39 @@ class Orchestrator:
         except Exception as e:
             error_msg = f"Unexpected error: {str(e)}"
             self.logger.log_error(error_msg, {"user_input": user_input})
+            
+            # Analyze failure and provide intelligent suggestions
+            ctx_mgr = get_context_manager()
+            failure_analysis = self.failure_analyzer.analyze_failure(
+                user_input=user_input,
+                intent_goal=intent.goal if 'intent' in locals() else "Unknown",
+                tool="orchestrator",
+                error_message=str(e),
+                context=ctx_mgr.get_full_context()
+            )
+            
+            # Show intelligent error message
+            console.print(f"\n[red]❌ Execution failed:[/red] {error_msg}")
+            
+            # Show recovery suggestions
+            if failure_analysis["suggestions"]:
+                console.print("\n[cyan]💡 Suggestions to fix this:[/cyan]")
+                for i, suggestion in enumerate(failure_analysis["suggestions"], 1):
+                    console.print(f"  {i}. {suggestion}")
+            
+            # Show similar failures
+            if failure_analysis["is_recurring"]:
+                console.print("\n[yellow]⚠️  This failure has occurred before[/yellow]")
+                console.print("  Consider reviewing the suggestions above carefully")
+            
+            # Show recovery plan if available
+            if failure_analysis["similar_failures"]:
+                from cli.formatter import console
+                most_recent = failure_analysis["similar_failures"][0]
+                recovery_plan = self.failure_analyzer.generate_recovery_plan(most_recent)
+                if recovery_plan:
+                    console.print("\n[cyan]📋 Recovery plan:[/cyan]")
+                    console.print(f"  {recovery_plan}")
             
             # Record failure in semantic search
             if self.semantic_search:
