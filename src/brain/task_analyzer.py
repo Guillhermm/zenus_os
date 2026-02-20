@@ -136,7 +136,7 @@ class TaskAnalyzer:
         complexity_score = 0
         
         # Iterative keywords add to complexity
-        complexity_score += iterative_score * 2
+        complexity_score += iterative_score * 3  # Increased weight
         
         # One-shot keywords reduce complexity
         complexity_score -= oneshot_score * 3
@@ -156,19 +156,21 @@ class TaskAnalyzer:
         word_count = len(user_input.split())
         if word_count > 15:
             complexity_score += 2
+        elif word_count > 10:
+            complexity_score += 1
         
-        # Determine if needs iteration
-        needs_iteration = complexity_score >= 3
+        # Determine if needs iteration (lowered threshold)
+        needs_iteration = complexity_score >= 2  # Was 3, now 2 for better sensitivity
         
         # Estimate confidence
-        if complexity_score >= 6:
-            confidence = 0.9
-        elif complexity_score >= 3:
-            confidence = 0.7
+        if complexity_score >= 5:
+            confidence = 0.9  # Very complex
+        elif complexity_score >= 2:
+            confidence = 0.75  # Moderately complex
         elif complexity_score <= -2:
             confidence = 0.85  # Very confident it's simple
         else:
-            confidence = 0.5  # Uncertain
+            confidence = 0.6  # Slightly uncertain
         
         # Estimate steps
         estimated_steps = max(1, min(10, complexity_score + 1))
