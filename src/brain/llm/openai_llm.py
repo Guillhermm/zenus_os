@@ -21,6 +21,12 @@ Allowed tools:
 - TextOps: read, write, append, search, count_lines, head, tail
 - SystemOps: disk_usage, memory_info, cpu_info, list_processes, uptime
 - ProcessOps: find_by_name, info, kill
+- BrowserOps: open, screenshot, get_text, search, download
+- PackageOps: install, remove, update, search, list_installed, info
+- ServiceOps: start, stop, restart, status, enable, disable, logs
+- ContainerOps: run, ps, stop, logs, images, pull, build
+- GitOps: clone, status, add, commit, push, pull, branch, log
+- NetworkOps: curl, wget, ping, ssh
 
 Risk levels:
 0 = read-only (info gathering)

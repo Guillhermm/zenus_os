@@ -17,7 +17,7 @@ You MUST output a JSON object that EXACTLY matches this schema:
   "requires_confirmation": true | false, // true if filesystem changes occur
   "steps": [
     {
-      "tool": "FileOps" | "SystemOps" | "ProcessOps" | "TextOps",
+      "tool": "FileOps" | "SystemOps" | "ProcessOps" | "TextOps" | "BrowserOps" | "PackageOps" | "ServiceOps" | "ContainerOps" | "GitOps" | "NetworkOps",
       "action": string,
       "args": object,
       "risk": 0 | 1 | 2 | 3
@@ -72,6 +72,55 @@ ProcessOps:
 - find_by_name(name: string): find processes by name
 - info(pid: int): get process details
 - kill(pid: int, force: bool = false): terminate process (risk=3)
+
+BrowserOps:
+- open(url: string, browser: string = "chromium", headless: bool = false): open URL in browser
+- screenshot(url: string, output_path: string, full_page: bool = false): take webpage screenshot
+- get_text(url: string, selector: string = null): extract text from webpage
+- search(query: string, engine: string = "google"): search on search engine
+- download(url: string, output_dir: string = "~/Downloads"): download file from URL
+
+PackageOps:
+- install(package: string, confirm: bool = false): install system package
+- remove(package: string, confirm: bool = false): remove system package
+- update(upgrade: bool = false): update package lists or upgrade packages
+- search(query: string): search for packages
+- list_installed(pattern: string = null): list installed packages
+- info(package: string): show package information
+
+ServiceOps:
+- start(service: string): start a system service
+- stop(service: string): stop a system service
+- restart(service: string): restart a system service
+- status(service: string): check service status
+- enable(service: string): enable service at boot
+- disable(service: string): disable service at boot
+- logs(service: string, lines: int = 50): view service logs
+
+ContainerOps:
+- run(image: string, name: string = null, ports: string = null, detach: bool = false): run container
+- ps(all: bool = false): list containers
+- stop(container: string): stop container
+- logs(container: string, lines: int = 50): view container logs
+- images(): list container images
+- pull(image: string): pull container image
+- build(path: string, tag: string): build image from Dockerfile
+
+GitOps:
+- clone(url: string, directory: string = null): clone repository
+- status(path: string = "."): check repo status
+- add(files: string, path: string = "."): stage files for commit
+- commit(message: string, path: string = "."): commit changes
+- push(remote: string = "origin", branch: string = null, path: string = "."): push to remote
+- pull(remote: string = "origin", branch: string = null, path: string = "."): pull from remote
+- branch(name: string = null, delete: bool = false, path: string = "."): manage branches
+- log(lines: int = 10, path: string = "."): view commit history
+
+NetworkOps:
+- curl(url: string, method: string = "GET", headers: object = null, data: string = null): HTTP request
+- wget(url: string, output: string = null): download file
+- ping(host: string, count: int = 4): ping a host
+- ssh(host: string, command: string, user: string = null, port: int = 22): execute SSH command
 
 PROJECT CREATION RULES:
 - A project consists of:
