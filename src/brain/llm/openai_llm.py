@@ -62,3 +62,32 @@ class OpenAILLM:
         )
 
         return response.choices[0].message.parsed
+    
+    def reflect_on_goal(
+        self,
+        reflection_prompt: str,
+        user_goal: str,
+        observations: list
+    ) -> str:
+        """
+        Reflect on whether a goal has been achieved
+        
+        Returns structured text with ACHIEVED, CONFIDENCE, REASONING, NEXT_STEPS
+        """
+        response = self.client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {
+                    "role": "system",
+                    "content": "You are a goal achievement evaluator. Analyze observations and determine if a user's goal has been achieved."
+                },
+                {
+                    "role": "user",
+                    "content": reflection_prompt
+                }
+            ],
+            max_tokens=1024,
+            temperature=0.3
+        )
+        
+        return response.choices[0].message.content

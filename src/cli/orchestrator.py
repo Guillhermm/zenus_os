@@ -242,6 +242,169 @@ class Orchestrator:
             print_error(error_msg)
             return error_msg
     
+    def execute_iterative(
+        self,
+        user_input: str,
+        max_iterations: int = 10,
+        dry_run: bool = False
+    ) -> str:
+        """
+        Execute a command with iterative ReAct loop
+        
+        This method implements the ReAct (Reasoning + Acting) pattern:
+        1. Plan based on current context
+        2. Execute plan
+        3. Observe results
+        4. Check if goal achieved
+        5. If not, re-plan with new observations
+        6. Repeat until goal achieved or max iterations
+        
+        Args:
+            user_input: Natural language command
+            max_iterations: Maximum iterations to prevent infinite loops
+            dry_run: If True, show plan without executing
+        
+        Returns:
+            Human-readable result
+        """
+        from brain.goal_tracker import GoalTracker
+        
+        # Initialize goal tracker
+        goal_tracker = GoalTracker(max_iterations=max_iterations)
+        
+        # Accumulator for observations
+        all_observations = []
+        
+        # Initial context from memory
+        context = ""
+        if self.use_memory:
+            context = self._build_context(user_input)
+        
+        print_goal(f"Starting iterative execution: {user_input}")
+        console.print(f"[dim]Max iterations: {max_iterations}[/dim]\n")
+        
+        iteration = 0
+        goal_achieved = False
+        
+        try:
+            while not goal_achieved and iteration < max_iterations:
+                iteration += 1
+                console.print(f"\n[bold cyan]═══ Iteration {iteration}/{max_iterations} ═══[/bold cyan]")
+                
+                # Build enhanced input with context and observations
+                enhanced_input = user_input
+                if context:
+                    enhanced_input += f"\n\nContext: {context}"
+                if all_observations:
+                    obs_text = "\n".join([f"- {obs}" for obs in all_observations[-5:]])  # Last 5 observations
+                    enhanced_input += f"\n\nPrevious observations:\n{obs_text}"
+                
+                # Step 1: Translate intent with accumulated context
+                if self.progress:
+                    with self.progress.thinking("Planning next steps"):
+                        intent = self.llm.translate_intent(enhanced_input)
+                else:
+                    intent = self.llm.translate_intent(enhanced_input)
+                
+                # Log intent
+                self.logger.log_intent(user_input, intent)
+                
+                # Show goal for this iteration
+                console.print(f"[yellow]→ Goal:[/yellow] {intent.goal}")
+                
+                if dry_run:
+                    console.print(self._format_dry_run(intent))
+                    continue
+                
+                # Step 2: Execute plan
+                step_results = []
+                iteration_observations = []
+                
+                if self.adaptive:
+                    step_results = self.adaptive_planner.execute_with_retry(
+                        intent, max_retries=2
+                    )
+                else:
+                    step_results = execute_plan(intent, self.logger)
+                
+                # Step 3: Collect observations
+                for i, (step, result) in enumerate(zip(intent.steps, step_results), 1):
+                    print_step(i, step.tool, step.action, step.risk, result)
+                    
+                    # Create observation
+                    observation = f"{step.tool}.{step.action} → {str(result)[:200]}"  # Truncate long results
+                    iteration_observations.append(observation)
+                
+                # Add to all observations
+                all_observations.extend(iteration_observations)
+                
+                # Step 4: Update memory
+                if self.use_memory:
+                    self.session_memory.add_intent(intent)
+                    for result in step_results:
+                        if "path" in str(result).lower():
+                            words = str(result).split()
+                            for word in words:
+                                if "/" in word and not word.startswith("http"):
+                                    self.world_model.update_path_frequency(word)
+                    
+                    self.intent_history.record(user_input, intent, step_results)
+                
+                # Step 5: Check if goal achieved
+                console.print("\n[dim]Reflecting on progress...[/dim]")
+                
+                goal_status = goal_tracker.check_goal(
+                    user_goal=user_input,
+                    original_intent=intent,
+                    observations=iteration_observations
+                )
+                
+                # Display reflection
+                if goal_status.achieved:
+                    console.print(f"\n[bold green]✓ Goal Achieved![/bold green]")
+                    console.print(f"[dim]{goal_status.reasoning}[/dim]")
+                    goal_achieved = True
+                else:
+                    console.print(f"\n[yellow]⟳ Goal not yet achieved[/yellow]")
+                    console.print(f"[dim]Confidence: {goal_status.confidence:.0%}[/dim]")
+                    console.print(f"[dim]Reasoning: {goal_status.reasoning}[/dim]")
+                    
+                    if goal_status.next_steps:
+                        console.print(f"\n[cyan]Next steps suggested:[/cyan]")
+                        for step in goal_status.next_steps:
+                            console.print(f"  • {step}")
+                    
+                    # Update context for next iteration
+                    context = f"Previous attempt: {intent.goal}. Observations: {', '.join(iteration_observations[-3:])}"
+            
+            # Final result
+            if goal_achieved:
+                print_success(f"Task completed in {iteration} iteration(s)")
+                
+                # Add to semantic search
+                if self.semantic_search:
+                    try:
+                        self.semantic_search.add_command(
+                            user_input=user_input,
+                            goal=intent.goal,
+                            steps=[s.model_dump() for s in intent.steps],
+                            success=True
+                        )
+                    except:
+                        pass
+                
+                return f"Task completed successfully in {iteration} iteration(s)"
+            else:
+                console.print(f"\n[red]✗ Maximum iterations ({max_iterations}) reached[/red]")
+                console.print("[dim]Task may be too complex or ill-defined.[/dim]")
+                return f"Task incomplete after {max_iterations} iterations"
+        
+        except Exception as e:
+            error_msg = f"Iterative execution error: {str(e)}"
+            self.logger.log_error(error_msg, {"user_input": user_input})
+            print_error(error_msg)
+            return error_msg
+    
     def _build_context(self, user_input: str) -> str:
         """Build context string from memory"""
         context_parts = []

@@ -133,3 +133,41 @@ No markdown, no explanations, just JSON."""
             return text
         
         return text[start:end]
+    
+    def reflect_on_goal(
+        self,
+        reflection_prompt: str,
+        user_goal: str,
+        observations: list
+    ) -> str:
+        """
+        Reflect on whether a goal has been achieved
+        
+        Returns structured text with ACHIEVED, CONFIDENCE, REASONING, NEXT_STEPS
+        """
+        try:
+            response = requests.post(
+                f"{self.base_url}/api/generate",
+                json={
+                    "model": self.model,
+                    "prompt": reflection_prompt,
+                    "stream": False,
+                    "options": {
+                        "temperature": 0.3,
+                        "num_predict": 1024,
+                        "num_ctx": 8192
+                    }
+                },
+                timeout=60
+            )
+            
+            if response.status_code != 200:
+                raise RuntimeError(f"Ollama error: {response.status_code}")
+            
+            result = response.json()
+            return result.get("response", "")
+            
+        except requests.exceptions.Timeout:
+            raise RuntimeError("Ollama reflection timed out")
+        except Exception as e:
+            raise RuntimeError(f"Ollama reflection failed: {e}")
