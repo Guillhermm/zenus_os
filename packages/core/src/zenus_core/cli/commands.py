@@ -82,6 +82,7 @@ def handle_memory_command(orchestrator, subcommand: str = "stats"):
 def handle_update_command():
     """Update Zenus OS"""
     import subprocess
+    import os
     
     print("\n🔄 Updating Zenus OS...")
     print()
@@ -89,18 +90,33 @@ def handle_update_command():
     # Update git repo
     print("Pulling latest changes...")
     try:
-        subprocess.run(["git", "pull"], check=True)
-    except:
-        print("⚠️  Not a git repository, skipping git pull")
+        result = subprocess.run(["git", "pull"], capture_output=True, text=True)
+        print(result.stdout.strip())
+    except Exception as e:
+        print(f"⚠️  Git pull failed: {e}")
     
-    # Update dependencies
-    print("Updating Python dependencies...")
-    subprocess.run(
-        ["pip", "install", "-q", "--upgrade", "-r", "requirements.txt"],
-        check=True
-    )
+    # Update dependencies via Poetry
+    print("\nUpdating Python dependencies...")
+    try:
+        # Get the project root (2 levels up from core package)
+        project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../.."))
+        
+        # Update core package
+        core_dir = os.path.join(project_root, "packages/core")
+        if os.path.exists(core_dir):
+            print("  → Updating zenus-core...")
+            subprocess.run(["poetry", "install"], cwd=core_dir, check=True, capture_output=True)
+        
+        # Update CLI package
+        cli_dir = os.path.join(project_root, "packages/cli")
+        if os.path.exists(cli_dir):
+            print("  → Updating zenus-cli...")
+            subprocess.run(["poetry", "install"], cwd=cli_dir, check=True, capture_output=True)
+        
+        print("✓ Dependencies updated")
+    except Exception as e:
+        print(f"⚠️  Dependency update failed: {e}")
     
-    print()
-    print("✓ Update complete!")
+    print("\n✓ Update complete!")
     print("  Restart Zenus to apply changes")
     print()
