@@ -687,6 +687,13 @@ class Orchestrator:
                     handle_update_command()
                     continue
                 
+                if user_input.startswith("explain"):
+                    from zenus_core.cli.commands import handle_explain_command
+                    parts = user_input.split()
+                    arg = parts[1] if len(parts) > 1 else "last"
+                    handle_explain_command(self, arg)
+                    continue
+                
                 # Check for --explain flag
                 explain = False
                 if "--explain" in user_input:

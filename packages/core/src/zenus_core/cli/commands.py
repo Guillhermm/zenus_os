@@ -120,3 +120,22 @@ def handle_update_command():
     print("\n✓ Update complete!")
     print("  Restart Zenus to apply changes")
     print()
+
+
+def handle_explain_command(orchestrator, arg: str = "last"):
+    """Explain a past execution"""
+    from zenus_core.cli.explainability import get_explainability_dashboard
+    
+    dashboard = get_explainability_dashboard()
+    
+    if arg == "last":
+        dashboard.explain_last(verbose=True)
+    elif arg == "history":
+        dashboard.show_history(limit=20)
+    elif arg.isdigit():
+        index = -int(arg)
+        dashboard.explain_execution(index, verbose=True)
+    else:
+        print(f"Unknown explain command: {arg}")
+        print("Usage: explain [last|history|N]")
+
