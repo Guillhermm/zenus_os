@@ -656,7 +656,7 @@ class Orchestrator:
         
         console.print("\n[bold cyan]Zenus OS Interactive Shell[/bold cyan]")
         console.print("Type 'exit' or 'quit' to exit")
-        console.print("Special commands: status, memory, update, explain")
+        console.print("Special commands: status, memory, update, explain, workflow")
         if enhanced_shell:
             console.print("Enhanced mode: Tab completion, Ctrl+R search, multi-line (Esc+Enter)")
         else:
@@ -731,10 +731,24 @@ class Orchestrator:
                     user_input = user_input.replace("--iterative", "").strip()
                 
                 # Execute command
+                import time
+                start_time = time.time()
+                
                 if iterative:
                     result = self.execute_iterative(user_input)
                 else:
                     result = self.execute_command(user_input, explain=explain)
+                
+                execution_time = time.time() - start_time
+                
+                # Record step if workflow recording is active
+                try:
+                    from zenus_core.workflows import get_workflow_recorder
+                    recorder = get_workflow_recorder()
+                    if recorder.recording:
+                        recorder.record_step(user_input, str(result), execution_time)
+                except:
+                    pass
                 
                 # Check for patterns periodically
                 command_count += 1

@@ -8,6 +8,7 @@ from zenus_core.tools.service_ops import ServiceOps
 from zenus_core.tools.container_ops import ContainerOps
 from zenus_core.tools.git_ops import GitOps
 from zenus_core.tools.network_ops import NetworkOps
+from zenus_core.tools.vision_ops import VisionOps
 
 TOOLS = {
     # Core tools
@@ -22,5 +23,6 @@ TOOLS = {
     "ServiceOps": ServiceOps(),
     "ContainerOps": ContainerOps(),
     "GitOps": GitOps(),
-    "NetworkOps": NetworkOps()
+    "NetworkOps": NetworkOps(),
+    "VisionOps": VisionOps()
 }
