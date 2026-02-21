@@ -274,3 +274,7 @@ def get_streaming_display() -> StreamingDisplay:
     if _streaming_display is None:
         _streaming_display = StreamingDisplay()
     return _streaming_display
+
+
+# Backward compatibility alias
+ProgressIndicator = ProgressTracker
