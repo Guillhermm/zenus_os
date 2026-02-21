@@ -139,3 +139,82 @@ def handle_explain_command(orchestrator, arg: str = "last"):
         print(f"Unknown explain command: {arg}")
         print("Usage: explain [last|history|N]")
 
+
+
+def check_and_suggest_patterns(orchestrator):
+    """
+    Check for patterns and suggest automation
+    
+    Should be called periodically in interactive mode
+    (e.g., every 10 commands)
+    """
+    from zenus_core.brain.pattern_detector import get_pattern_detector
+    from zenus_core.memory.intent_history import IntentHistory
+    from rich.console import Console
+    from rich.panel import Panel
+    
+    console = Console()
+    
+    # Get pattern detector
+    detector = get_pattern_detector()
+    
+    # Get execution history
+    history = IntentHistory()
+    
+    try:
+        # Load history records
+        history_records = []
+        for record in history.history:
+            history_records.append({
+                'user_input': record.get('user_input', ''),
+                'timestamp': record.get('timestamp', ''),
+                'intent': record.get('intent', {})
+            })
+        
+        # Detect patterns
+        patterns = detector.detect_patterns(history_records, lookback_days=30)
+        
+        # Filter to high-confidence patterns we haven't suggested yet
+        high_confidence = [p for p in patterns if p.confidence >= 0.8]
+        
+        if not high_confidence:
+            return
+        
+        # Show first pattern suggestion
+        pattern = high_confidence[0]
+        
+        if pattern.pattern_type == 'recurring' and pattern.suggested_cron:
+            console.print()
+            console.print(Panel.fit(
+                f"[cyan]💡 Pattern Detected[/cyan]\n\n"
+                f"I noticed {pattern.description}.\n\n"
+                f"Would you like me to set up an automatic {pattern.frequency} task?",
+                border_style="cyan",
+                title="[bold]Suggestion[/bold]"
+            ))
+            
+            choice = input("\n[Y]es / [N]o / [S]how more: ").strip().lower()
+            
+            if choice == 'y':
+                # Create cron job
+                cmd = pattern.commands[-1] if pattern.commands else pattern.description
+                
+                console.print(f"\n[green]Creating cron job:[/green]")
+                console.print(f"  Schedule: {pattern.suggested_cron}")
+                console.print(f"  Command: {cmd}")
+                console.print(f"\n[dim]Note: Cron integration coming soon![/dim]")
+                console.print(f"[dim]For now, you can manually add this to your crontab.[/dim]")
+            
+            elif choice == 's':
+                # Show all patterns
+                console.print("\n[cyan]Detected Patterns:[/cyan]\n")
+                for i, p in enumerate(high_confidence[:5], 1):
+                    console.print(f"{i}. {p.description}")
+                    console.print(f"   [dim]Confidence: {p.confidence:.0%}, Occurrences: {p.occurrences}[/dim]")
+                    if p.suggested_cron:
+                        console.print(f"   [dim]Cron: {p.suggested_cron}[/dim]")
+                    console.print()
+    
+    except Exception as e:
+        # Silently fail - pattern detection is optional
+        pass

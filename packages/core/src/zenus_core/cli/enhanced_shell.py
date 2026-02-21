@@ -161,16 +161,21 @@ class EnhancedShell:
         
         return kb
     
-    def prompt(self, message: str = "zenus > ") -> str:
+    def prompt(self, message: str = None) -> str:
         """
         Show prompt and get user input
         
         Args:
-            message: Prompt message
+            message: Prompt message (None = use default styled prompt)
         
         Returns:
             User input (stripped)
         """
+        # Use styled prompt by default
+        if message is None:
+            from prompt_toolkit.formatted_text import HTML
+            message = HTML('\n<ansigreen><b>zenus ></b></ansigreen> ')
+        
         try:
             result = self.session.prompt(
                 message,

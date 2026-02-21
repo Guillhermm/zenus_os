@@ -265,13 +265,25 @@ class Orchestrator:
             step_results = []
             
             try:
-                if self.adaptive:
-                    step_results = self.adaptive_planner.execute_with_retry(
-                        intent, max_retries=2
-                    )
+                # Show execution progress
+                if self.progress and len(intent.steps) > 1:
+                    with self.progress.step(f"Executing {len(intent.steps)} steps", total=len(intent.steps)) as update:
+                        if self.adaptive:
+                            step_results = self.adaptive_planner.execute_with_retry(
+                                intent, max_retries=2
+                            )
+                        else:
+                            step_results = execute_plan(intent, self.logger)
+                        update(len(intent.steps))  # Mark all complete
                     execution_success = True
                 else:
-                    step_results = execute_plan(intent, self.logger)
+                    # Single step or no progress - execute directly
+                    if self.adaptive:
+                        step_results = self.adaptive_planner.execute_with_retry(
+                            intent, max_retries=2
+                        )
+                    else:
+                        step_results = execute_plan(intent, self.logger)
                     execution_success = True
                 
                 # Track each action for rollback
@@ -651,11 +663,15 @@ class Orchestrator:
             console.print("Use ↑↓ arrows for command history")
         console.print()
         
+        # Track commands for pattern detection
+        command_count = 0
+        
         while True:
             try:
                 # Get user input (enhanced or basic)
                 if enhanced_shell:
-                    user_input = enhanced_shell.prompt("\n[1;32mzenus >[0m ")
+                    # Enhanced shell prompt (uses prompt_toolkit styling)
+                    user_input = enhanced_shell.prompt()
                 else:
                     # Use ANSI codes with readline escape sequences
                     # \001 and \002 mark non-printing characters for readline
@@ -711,6 +727,15 @@ class Orchestrator:
                     result = self.execute_iterative(user_input)
                 else:
                     result = self.execute_command(user_input, explain=explain)
+                
+                # Check for patterns periodically
+                command_count += 1
+                if command_count % 10 == 0:
+                    try:
+                        from zenus_core.cli.commands import check_and_suggest_patterns
+                        check_and_suggest_patterns(self)
+                    except:
+                        pass  # Silently fail if pattern detection fails
                 
             except KeyboardInterrupt:
                 console.print("\n[dim]Use 'exit' to quit[/dim]")
