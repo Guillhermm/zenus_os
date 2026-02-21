@@ -77,6 +77,10 @@ class WorldModel:
         
         self.save()
     
+    def update_path_frequency(self, path: str):
+        """Alias for add_frequent_path (for backward compatibility)"""
+        self.add_frequent_path(path, access_count=1)
+    
     def get_frequent_paths(self, limit: int = 10) -> List[str]:
         """Get most frequently accessed paths"""
         
