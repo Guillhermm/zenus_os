@@ -15,13 +15,6 @@ import os
 import base64
 from io import BytesIO
 from typing import Optional, Dict, List, Tuple
-from PIL import Image, ImageGrab
-import pyautogui
-
-
-# Disable pyautogui fail-safe for automation
-pyautogui.FAILSAFE = True
-pyautogui.PAUSE = 0.5  # 500ms between actions
 
 
 class VisionOps:
@@ -33,7 +26,49 @@ class VisionOps:
     
     def __init__(self):
         self.last_screenshot = None
-        self.screen_size = pyautogui.size()
+        self._pyautogui = None
+        self._pil_image = None
+        self._pil_imagegrab = None
+    
+    @property
+    def pyautogui(self):
+        """Lazy-load pyautogui"""
+        if self._pyautogui is None:
+            try:
+                import pyautogui
+                self.pyautogui.FAILSAFE = True
+                self.pyautogui.PAUSE = 0.5
+                self._pyautogui = pyautogui
+            except Exception as e:
+                raise RuntimeError(f"PyAutoGUI not available: {e}")
+        return self._pyautogui
+    
+    @property
+    def PIL_Image(self):
+        """Lazy-load PIL Image"""
+        if self._pil_image is None:
+            try:
+                from PIL import Image
+                self._pil_image = Image
+            except Exception as e:
+                raise RuntimeError(f"PIL not available: {e}")
+        return self._pil_image
+    
+    @property
+    def PIL_ImageGrab(self):
+        """Lazy-load PIL ImageGrab"""
+        if self._pil_imagegrab is None:
+            try:
+                from PIL import ImageGrab
+                self._pil_imagegrab = ImageGrab
+            except Exception as e:
+                raise RuntimeError(f"PIL not available: {e}")
+        return self._pil_imagegrab
+    
+    @property
+    def screen_size(self):
+        """Get screen size"""
+        return self.self.pyautogui.size()
     
     # ====================
     # Screenshot Operations
@@ -57,9 +92,9 @@ class VisionOps:
         """
         try:
             if region:
-                screenshot = pyautogui.screenshot(region=region)
+                screenshot = self.pyautogui.screenshot(region=region)
             else:
-                screenshot = pyautogui.screenshot()
+                screenshot = self.pyautogui.screenshot()
             
             self.last_screenshot = screenshot
             
@@ -94,7 +129,7 @@ class VisionOps:
         # Load screenshot
         if screenshot_path:
             try:
-                image = Image.open(screenshot_path)
+                image = self.PIL_Image.open(screenshot_path)
             except Exception as e:
                 return f"Failed to load image: {str(e)}"
         elif self.last_screenshot:
@@ -175,7 +210,7 @@ class VisionOps:
                 return f"Found: {location}. Parsing coordinates not yet implemented."
             
             elif x is not None and y is not None:
-                pyautogui.click(x, y)
+                self.pyautogui.click(x, y)
                 return f"Clicked at ({x}, {y})"
             
             else:
@@ -187,7 +222,7 @@ class VisionOps:
     def double_click(self, x: int, y: int) -> str:
         """Double-click at location"""
         try:
-            pyautogui.doubleClick(x, y)
+            self.pyautogui.doubleClick(x, y)
             return f"Double-clicked at ({x}, {y})"
         except Exception as e:
             return f"Double-click failed: {str(e)}"
@@ -195,7 +230,7 @@ class VisionOps:
     def right_click(self, x: int, y: int) -> str:
         """Right-click at location"""
         try:
-            pyautogui.rightClick(x, y)
+            self.pyautogui.rightClick(x, y)
             return f"Right-clicked at ({x}, {y})"
         except Exception as e:
             return f"Right-click failed: {str(e)}"
@@ -203,7 +238,7 @@ class VisionOps:
     def move_to(self, x: int, y: int, duration: float = 0.5) -> str:
         """Move mouse to location"""
         try:
-            pyautogui.moveTo(x, y, duration=duration)
+            self.pyautogui.moveTo(x, y, duration=duration)
             return f"Moved to ({x}, {y})"
         except Exception as e:
             return f"Move failed: {str(e)}"
@@ -211,8 +246,8 @@ class VisionOps:
     def drag(self, x1: int, y1: int, x2: int, y2: int, duration: float = 1.0) -> str:
         """Drag from (x1, y1) to (x2, y2)"""
         try:
-            pyautogui.moveTo(x1, y1)
-            pyautogui.drag(x2 - x1, y2 - y1, duration=duration)
+            self.pyautogui.moveTo(x1, y1)
+            self.pyautogui.drag(x2 - x1, y2 - y1, duration=duration)
             return f"Dragged from ({x1}, {y1}) to ({x2}, {y2})"
         except Exception as e:
             return f"Drag failed: {str(e)}"
@@ -233,7 +268,7 @@ class VisionOps:
             Result message
         """
         try:
-            pyautogui.write(text, interval=interval)
+            self.pyautogui.write(text, interval=interval)
             return f"Typed: {text[:50]}..."
         except Exception as e:
             return f"Type failed: {str(e)}"
@@ -241,7 +276,7 @@ class VisionOps:
     def press_key(self, key: str) -> str:
         """Press keyboard key"""
         try:
-            pyautogui.press(key)
+            self.pyautogui.press(key)
             return f"Pressed key: {key}"
         except Exception as e:
             return f"Key press failed: {str(e)}"
@@ -249,7 +284,7 @@ class VisionOps:
     def hotkey(self, *keys: str) -> str:
         """Press key combination"""
         try:
-            pyautogui.hotkey(*keys)
+            self.pyautogui.hotkey(*keys)
             return f"Pressed hotkey: {'+'.join(keys)}"
         except Exception as e:
             return f"Hotkey failed: {str(e)}"
