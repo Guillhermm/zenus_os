@@ -1,0 +1,25 @@
+[tool.poetry]
+name = "zenus-tui"
+version = "0.3.0"
+description = "Zenus OS - Text-based User Interface"
+authors = ["Zenus Team"]
+readme = "README.md"
+license = "MIT"
+packages = [{include = "zenus_tui", from = "src"}]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+zenus-core = {path = "../core", develop = true}
+textual = "^0.47.0"
+rich = "^13.7.0"
+
+[tool.poetry.scripts]
+zenus-tui = "zenus_tui.main:main"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.0.0"
+pytest-cov = "^4.1.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

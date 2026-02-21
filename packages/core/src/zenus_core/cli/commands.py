@@ -229,3 +229,132 @@ def check_and_suggest_patterns(orchestrator):
     except Exception as e:
         # Silently fail - pattern detection is optional
         pass
+
+
+def handle_workflow_command(orchestrator, subcommand: str = "list", *args):
+    """
+    Workflow management commands
+    
+    Subcommands:
+    - list: Show all workflows
+    - record <name>: Start recording
+    - stop: Stop recording
+    - replay <name>: Replay workflow
+    - info <name>: Show workflow details
+    - delete <name>: Delete workflow
+    """
+    from zenus_core.workflows import get_workflow_recorder
+    from rich.console import Console
+    from rich.table import Table
+    
+    console = Console()
+    recorder = get_workflow_recorder()
+    
+    if subcommand == "list":
+        workflows = recorder.list_workflows()
+        
+        if not workflows:
+            console.print("[yellow]No workflows saved yet[/yellow]")
+            console.print("\n[dim]Start recording with: workflow record <name>[/dim]")
+            return
+        
+        console.print("\n[bold cyan]Saved Workflows:[/bold cyan]\n")
+        
+        table = Table(show_header=True, header_style="bold cyan")
+        table.add_column("Name", style="cyan")
+        table.add_column("Steps", justify="right")
+        table.add_column("Used", justify="right")
+        table.add_column("Description")
+        
+        for name in workflows:
+            info = recorder.get_workflow_info(name)
+            if info:
+                table.add_row(
+                    name,
+                    str(info['steps']),
+                    str(info['use_count']),
+                    info['description'][:50] if info['description'] else '-'
+                )
+        
+        console.print(table)
+    
+    elif subcommand == "record":
+        if not args:
+            console.print("[red]Error: Provide workflow name[/red]")
+            console.print("[dim]Usage: workflow record <name> [description][/dim]")
+            return
+        
+        name = args[0]
+        description = " ".join(args[1:]) if len(args) > 1 else ""
+        
+        result = recorder.start_recording(name, description)
+        console.print(f"\n[green]{result}[/green]")
+        console.print("[dim]Type commands, then: workflow stop[/dim]\n")
+    
+    elif subcommand == "stop":
+        result = recorder.stop_recording()
+        console.print(f"\n[green]{result}[/green]\n")
+    
+    elif subcommand == "cancel":
+        result = recorder.cancel_recording()
+        console.print(f"\n[yellow]{result}[/yellow]\n")
+    
+    elif subcommand == "replay":
+        if not args:
+            console.print("[red]Error: Provide workflow name[/red]")
+            console.print("[dim]Usage: workflow replay <name>[/dim]")
+            return
+        
+        name = args[0]
+        commands = recorder.replay_workflow(name, dry_run=False)
+        
+        if commands and "not found" in commands[0].lower():
+            console.print(f"\n[red]{commands[0]}[/red]\n")
+            return
+        
+        console.print(f"\n[cyan]Replaying workflow: {name}[/cyan]\n")
+        
+        # Execute each command
+        for i, cmd in enumerate(commands, 1):
+            console.print(f"[dim]Step {i}:[/dim] {cmd}")
+            try:
+                orchestrator.execute_command(cmd)
+            except Exception as e:
+                console.print(f"[red]Error: {e}[/red]")
+                break
+    
+    elif subcommand == "info":
+        if not args:
+            console.print("[red]Error: Provide workflow name[/red]")
+            return
+        
+        name = args[0]
+        info = recorder.get_workflow_info(name)
+        
+        if not info:
+            console.print(f"\n[red]Workflow not found: {name}[/red]\n")
+            return
+        
+        console.print(f"\n[bold cyan]Workflow: {name}[/bold cyan]\n")
+        console.print(f"Description: {info['description'] or '-'}")
+        console.print(f"Steps: {info['steps']}")
+        console.print(f"Created: {info['created']}")
+        console.print(f"Used: {info['use_count']} times")
+        if info['last_used']:
+            console.print(f"Last used: {info['last_used']}")
+        if info['parameters']:
+            console.print(f"Parameters: {', '.join(info['parameters'])}")
+        console.print()
+    
+    elif subcommand == "delete":
+        if not args:
+            console.print("[red]Error: Provide workflow name[/red]")
+            return
+        
+        name = args[0]
+        result = recorder.delete_workflow(name)
+        console.print(f"\n{result}\n")
+    
+    else:
+        console.print(f"[red]Unknown subcommand: {subcommand}[/red]")
+        console.print("\n[dim]Available: list, record, stop, replay, info, delete[/dim]\n")

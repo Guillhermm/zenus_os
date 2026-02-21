@@ -710,6 +710,14 @@ class Orchestrator:
                     handle_explain_command(self, arg)
                     continue
                 
+                if user_input.startswith("workflow"):
+                    from zenus_core.cli.commands import handle_workflow_command
+                    parts = user_input.split()
+                    subcommand = parts[1] if len(parts) > 1 else "list"
+                    args = parts[2:] if len(parts) > 2 else []
+                    handle_workflow_command(self, subcommand, *args)
+                    continue
+                
                 # Check for --explain flag
                 explain = False
                 if "--explain" in user_input:

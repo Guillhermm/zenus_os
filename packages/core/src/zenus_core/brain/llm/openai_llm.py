@@ -129,3 +129,41 @@ class OpenAILLM:
             )
             
             return response.choices[0].message.content
+
+
+    def analyze_image(self, image_base64: str, prompt: str) -> str:
+        """
+        Analyze image using GPT-4 Vision
+        
+        Args:
+            image_base64: Base64 encoded image
+            prompt: Analysis prompt
+        
+        Returns:
+            Analysis result
+        """
+        try:
+            response = self.client.chat.completions.create(
+                model="gpt-4-vision-preview",  # or gpt-4o which has vision
+                messages=[
+                    {
+                        "role": "user",
+                        "content": [
+                            {"type": "text", "text": prompt},
+                            {
+                                "type": "image_url",
+                                "image_url": {
+                                    "url": f"data:image/png;base64,{image_base64}"
+                                }
+                            }
+                        ]
+                    }
+                ],
+                max_tokens=500
+            )
+            
+            return response.choices[0].message.content
+        
+        except Exception as e:
+            return f"Vision analysis failed: {str(e)}"
+
