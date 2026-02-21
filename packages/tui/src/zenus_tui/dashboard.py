@@ -126,15 +126,20 @@ class ExecutionLog(Container):
     """Live execution log viewer with real-time updates"""
     
     def compose(self) -> ComposeResult:
-        with Horizontal():
-            yield Label("Recent Executions", id="log-title")
-            yield LoadingIndicator(id="execution-spinner")
-        yield RichLog(id="execution-log", highlight=True, markup=True)
+        with Vertical():
+            with Horizontal():
+                yield Label("Recent Executions", id="log-title")
+                yield LoadingIndicator(id="execution-spinner")
+            yield RichLog(id="execution-log", highlight=True, markup=True)
     
     def on_mount(self):
         """Hide spinner initially"""
         spinner = self.query_one("#execution-spinner", LoadingIndicator)
         spinner.display = False
+        
+        # Add welcome message
+        log = self.query_one("#execution-log", RichLog)
+        log.write("[dim]Execution log ready. Enter a command below to get started.[/dim]")
     
     def show_spinner(self):
         """Show loading spinner"""
@@ -154,14 +159,24 @@ class ExecutionLog(Container):
         status_icon = "✓" if success else "✗"
         status_style = "green" if success else "red"
         
+        # Main execution line
         log.write(f"[dim][{timestamp}][/dim] [cyan]{command}[/cyan] [{status_style}]{status_icon}[/{status_style}] [dim]{duration:.1f}s[/dim]")
         
         # Show result summary (first few lines)
         if result:
-            lines = result.split('\n')[:3]  # First 3 lines
+            lines = result.split('\n')[:5]  # First 5 lines
             for line in lines:
                 if line.strip():
-                    log.write(f"  [dim]→[/dim] {line[:100]}")
+                    log.write(f"  [dim]→[/dim] {line[:120]}")
+        else:
+            # No result - show indicator
+            if success:
+                log.write(f"  [dim]→ (completed successfully, no output)[/dim]")
+            else:
+                log.write(f"  [red]→ (failed, no error message)[/red]")
+        
+        # Add blank line for readability
+        log.write("")
     
     def add_progress(self, message: str):
         """Add progress message during execution"""
@@ -391,6 +406,13 @@ class ZenusDashboard(App):
     #execution-log-container {
         height: 60%;
         border: solid $primary;
+        padding: 1;
+    }
+    
+    #execution-log {
+        height: 1fr;
+        min-height: 10;
+        background: $surface;
     }
     
     #execution-spinner {

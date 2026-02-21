@@ -63,10 +63,11 @@ class PatternDetector:
         
         # Filter to lookback period
         cutoff_date = datetime.now() - timedelta(days=lookback_days)
-        recent_history = [
-            h for h in history
-            if self._parse_timestamp(h.get('timestamp', '')) > cutoff_date
-        ]
+        recent_history = []
+        for h in history:
+            ts = self._parse_timestamp(h.get('timestamp', ''))
+            if ts and ts > cutoff_date:
+                recent_history.append(h)
         
         if len(recent_history) < self.min_occurrences:
             return patterns
