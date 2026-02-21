@@ -403,18 +403,26 @@ class ZenusDashboard(App):
         result = ""
         
         try:
-            # Execute via orchestrator
+            # Execute via orchestrator (run in thread pool to avoid blocking)
+            loop = asyncio.get_event_loop()
+            
             if iterative:
-                result = self.orchestrator.execute_iterative(
-                    command,
-                    max_iterations=12,
-                    dry_run=dry_run
+                result = await loop.run_in_executor(
+                    None,  # Use default executor
+                    lambda: self.orchestrator.execute_iterative(
+                        command,
+                        max_iterations=12,
+                        dry_run=dry_run
+                    )
                 )
             else:
-                result = self.orchestrator.execute_command(
-                    command,
-                    dry_run=dry_run,
-                    force_oneshot=True
+                result = await loop.run_in_executor(
+                    None,
+                    lambda: self.orchestrator.execute_command(
+                        command,
+                        dry_run=dry_run,
+                        force_oneshot=True
+                    )
                 )
             
             success = True
@@ -429,8 +437,8 @@ class ZenusDashboard(App):
             # Calculate duration
             duration = (datetime.now() - start_time).total_seconds()
             
-            # Update UI on main thread
-            self.call_from_thread(self._update_after_execution, command, result, duration, success)
+            # Update UI directly (we're already in async context on event loop)
+            self._update_after_execution(command, result, duration, success)
     
     def _update_after_execution(self, command: str, result: str, duration: float, success: bool):
         """Update UI after command execution (on main thread)"""
