@@ -158,7 +158,7 @@ No markdown, no explanations, just JSON."""
         try:
             if stream:
                 # Streaming mode
-                from cli.streaming import get_stream_handler
+                from zenus_core.cli.streaming import get_stream_handler
                 from rich.console import Console
                 handler = get_stream_handler()
                 console = Console()

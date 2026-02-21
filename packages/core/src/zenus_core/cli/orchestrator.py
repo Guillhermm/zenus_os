@@ -221,7 +221,7 @@ class Orchestrator:
                 max_risk = max([step.risk for step in intent.steps])
                 if max_risk >= 3 and not dry_run:
                     console.print("\n[yellow]⚠️  High-risk operation detected[/yellow]")
-                    from cli.explainer import get_explainer
+                    from zenus_core.cli.explainer import get_explainer
                     explainer = get_explainer()
                     explainer.explain_intent(user_input, intent)
                     
@@ -230,7 +230,7 @@ class Orchestrator:
             
             # Step 3: Show explanation if requested
             if explain:
-                from cli.explainer import get_explainer
+                from zenus_core.cli.explainer import get_explainer
                 explainer = get_explainer()
                 
                 # Show detailed explanation
@@ -665,19 +665,19 @@ class Orchestrator:
                 
                 # Handle special commands
                 if user_input == "status":
-                    from cli.commands import handle_status_command
+                    from zenus_core.cli.commands import handle_status_command
                     handle_status_command(self)
                     continue
                 
                 if user_input.startswith("memory"):
-                    from cli.commands import handle_memory_command
+                    from zenus_core.cli.commands import handle_memory_command
                     parts = user_input.split()
                     subcommand = parts[1] if len(parts) > 1 else "stats"
                     handle_memory_command(self, subcommand)
                     continue
                 
                 if user_input == "update":
-                    from cli.commands import handle_update_command
+                    from zenus_core.cli.commands import handle_update_command
                     handle_update_command()
                     continue
                 

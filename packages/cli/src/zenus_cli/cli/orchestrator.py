@@ -9,21 +9,21 @@ High-level orchestration of:
 """
 
 from typing import Optional
-from brain.llm.factory import get_llm
-from brain.planner import execute_plan
-from brain.adaptive_planner import AdaptivePlanner
-from brain.sandboxed_planner import SandboxedAdaptivePlanner
-from brain.task_analyzer import TaskAnalyzer
-from brain.failure_analyzer import FailureAnalyzer
-from brain.dependency_analyzer import DependencyAnalyzer
-from brain.suggestion_engine import get_suggestion_engine
-from brain.llm.schemas import IntentIR
-from memory.action_tracker import get_action_tracker
+from zenus_core.brain.llm.factory import get_llm
+from zenus_core.brain.planner import execute_plan
+from zenus_core.brain.adaptive_planner import AdaptivePlanner
+from zenus_core.brain.sandboxed_planner import SandboxedAdaptivePlanner
+from zenus_core.brain.task_analyzer import TaskAnalyzer
+from zenus_core.brain.failure_analyzer import FailureAnalyzer
+from zenus_core.brain.dependency_analyzer import DependencyAnalyzer
+from zenus_core.brain.suggestion_engine import get_suggestion_engine
+from zenus_core.brain.llm.schemas import IntentIR
+from zenus_core.memory.action_tracker import get_action_tracker
 from execution.parallel_executor import get_parallel_executor
 from audit.logger import get_logger
-from memory.session_memory import SessionMemory
-from memory.world_model import WorldModel
-from memory.intent_history import IntentHistory
+from zenus_core.memory.session_memory import SessionMemory
+from zenus_core.memory.world_model import WorldModel
+from zenus_core.memory.intent_history import IntentHistory
 from context.context_manager import get_context_manager
 from zenus_core.cli.progress import ProgressIndicator
 from zenus_core.cli.feedback import FeedbackGenerator
@@ -96,7 +96,7 @@ class Orchestrator:
         # Semantic search for command history (lazy import)
         self.semantic_search = None
         try:
-            from memory.semantic_search import SemanticSearch
+            from zenus_core.memory.semantic_search import SemanticSearch
             self.semantic_search = SemanticSearch()
         except ImportError as e:
             # sentence-transformers not installed, semantic search disabled
@@ -221,7 +221,7 @@ class Orchestrator:
                 max_risk = max([step.risk for step in intent.steps])
                 if max_risk >= 3 and not dry_run:
                     console.print("\n[yellow]⚠️  High-risk operation detected[/yellow]")
-                    from cli.explainer import get_explainer
+                    from zenus_cli.cli.explainer import get_explainer
                     explainer = get_explainer()
                     explainer.explain_intent(user_input, intent)
                     
@@ -230,7 +230,7 @@ class Orchestrator:
             
             # Step 3: Show explanation if requested
             if explain:
-                from cli.explainer import get_explainer
+                from zenus_cli.cli.explainer import get_explainer
                 explainer = get_explainer()
                 
                 # Show detailed explanation
@@ -420,7 +420,7 @@ class Orchestrator:
         Returns:
             Human-readable result
         """
-        from brain.goal_tracker import GoalTracker
+        from zenus_core.brain.goal_tracker import GoalTracker
         
         # Initialize goal tracker
         goal_tracker = GoalTracker(max_iterations=max_iterations)
@@ -665,19 +665,19 @@ class Orchestrator:
                 
                 # Handle special commands
                 if user_input == "status":
-                    from cli.commands import handle_status_command
+                    from zenus_cli.cli.commands import handle_status_command
                     handle_status_command(self)
                     continue
                 
                 if user_input.startswith("memory"):
-                    from cli.commands import handle_memory_command
+                    from zenus_cli.cli.commands import handle_memory_command
                     parts = user_input.split()
                     subcommand = parts[1] if len(parts) > 1 else "stats"
                     handle_memory_command(self, subcommand)
                     continue
                 
                 if user_input == "update":
-                    from cli.commands import handle_update_command
+                    from zenus_cli.cli.commands import handle_update_command
                     handle_update_command()
                     continue
                 

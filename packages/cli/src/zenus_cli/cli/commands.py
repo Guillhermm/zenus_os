@@ -5,9 +5,9 @@ Built-in commands that don't go through intent translation.
 """
 
 import sys
-from memory.session_memory import SessionMemory
-from memory.world_model import WorldModel
-from memory.intent_history import IntentHistory
+from zenus_core.memory.session_memory import SessionMemory
+from zenus_core.memory.world_model import WorldModel
+from zenus_core.memory.intent_history import IntentHistory
 
 
 def handle_status_command(orchestrator):

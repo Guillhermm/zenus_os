@@ -89,7 +89,7 @@ class OpenAILLM:
         """
         if stream:
             # Streaming mode
-            from cli.streaming import get_stream_handler
+            from zenus_core.cli.streaming import get_stream_handler
             handler = get_stream_handler()
             
             response = self.client.chat.completions.create(
