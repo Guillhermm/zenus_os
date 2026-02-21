@@ -606,43 +606,61 @@ class Orchestrator:
     
     def interactive_shell(self):
         """Run interactive REPL mode"""
-        # Enable readline for command history and arrow keys
+        # Try to use enhanced shell (with tab completion, syntax highlighting)
+        enhanced_shell = None
         try:
-            import readline
-            import os
-            
-            # Set up history file
-            history_file = os.path.expanduser("~/.zenus/history.txt")
-            os.makedirs(os.path.dirname(history_file), exist_ok=True)
-            
-            # Load history if exists
-            try:
-                readline.read_history_file(history_file)
-            except FileNotFoundError:
-                pass
-            
-            # Set history size
-            readline.set_history_length(1000)
-            
-            # Save history on exit
-            import atexit
-            atexit.register(readline.write_history_file, history_file)
-            
+            from zenus_core.cli.enhanced_shell import create_enhanced_shell
+            enhanced_shell = create_enhanced_shell()
         except ImportError:
-            # readline not available (Windows without pyreadline)
+            # Enhanced shell not available - fall back to basic readline
             pass
+        
+        # Fallback to basic readline if enhanced shell not available
+        if enhanced_shell is None:
+            try:
+                import readline
+                import os
+                
+                # Set up history file
+                history_file = os.path.expanduser("~/.zenus/history.txt")
+                os.makedirs(os.path.dirname(history_file), exist_ok=True)
+                
+                # Load history if exists
+                try:
+                    readline.read_history_file(history_file)
+                except FileNotFoundError:
+                    pass
+                
+                # Set history size
+                readline.set_history_length(1000)
+                
+                # Save history on exit
+                import atexit
+                atexit.register(readline.write_history_file, history_file)
+                
+            except ImportError:
+                # readline not available (Windows without pyreadline)
+                pass
         
         console.print("\n[bold cyan]Zenus OS Interactive Shell[/bold cyan]")
         console.print("Type 'exit' or 'quit' to exit")
         console.print("Special commands: status, memory, update, explain")
-        console.print("Use ↑↓ arrows for command history\n")
+        if enhanced_shell:
+            console.print("Enhanced mode: Tab completion, Ctrl+R search, multi-line (Esc+Enter)")
+        else:
+            console.print("Use ↑↓ arrows for command history")
+        console.print()
         
         while True:
             try:
-                # Use ANSI codes with readline escape sequences
-                # \001 and \002 mark non-printing characters for readline
-                prompt = "\n\001\033[1;32m\002zenus >\001\033[0m\002 "
-                user_input = input(prompt).strip()
+                # Get user input (enhanced or basic)
+                if enhanced_shell:
+                    user_input = enhanced_shell.prompt("\n[1;32mzenus >[0m ")
+                else:
+                    # Use ANSI codes with readline escape sequences
+                    # \001 and \002 mark non-printing characters for readline
+                    prompt = "\n\001\033[1;32m\002zenus >\001\033[0m\002 "
+                    user_input = input(prompt).strip()
                 
                 if not user_input:
                     continue

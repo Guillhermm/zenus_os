@@ -18,6 +18,7 @@ zenus = "zenus_cli.main:main"
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.0.0"
 pytest-cov = "^4.1.0"
+prompt-toolkit = "^3.0.52"
 
 [build-system]
 requires = ["poetry-core"]
