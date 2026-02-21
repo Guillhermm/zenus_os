@@ -398,7 +398,7 @@ class Orchestrator:
     def execute_iterative(
         self,
         user_input: str,
-        max_iterations: int = 10,
+        max_iterations: int = 12,
         dry_run: bool = False
     ) -> str:
         """
@@ -410,20 +410,17 @@ class Orchestrator:
         3. Observe results
         4. Check if goal achieved
         5. If not, re-plan with new observations
-        6. Repeat until goal achieved or max iterations
+        6. Repeat until goal achieved (automatically continues in batches of max_iterations)
         
         Args:
             user_input: Natural language command
-            max_iterations: Maximum iterations to prevent infinite loops
+            max_iterations: Batch size for iterations (default: 12)
             dry_run: If True, show plan without executing
         
         Returns:
             Human-readable result
         """
         from zenus_core.brain.goal_tracker import GoalTracker
-        
-        # Initialize goal tracker
-        goal_tracker = GoalTracker(max_iterations=max_iterations)
         
         # Accumulator for observations
         all_observations = []
@@ -434,144 +431,135 @@ class Orchestrator:
             context = self._build_context(user_input)
         
         print_goal(f"Starting iterative execution: {user_input}")
-        console.print(f"[dim]Max iterations: {max_iterations}[/dim]\n")
+        console.print(f"[dim]Batch size: {max_iterations} iterations per batch[/dim]\n")
         
         iteration = 0
         goal_achieved = False
+        batch_number = 1
         
         try:
-            while not goal_achieved and iteration < max_iterations:
-                iteration += 1
-                console.print(f"\n[bold cyan]═══ Iteration {iteration}/{max_iterations} ═══[/bold cyan]")
+            # Continue until goal is achieved (no hard limit)
+            while not goal_achieved:
+                # Initialize goal tracker for this batch
+                batch_max = iteration + max_iterations
+                goal_tracker = GoalTracker(max_iterations=batch_max)
                 
-                # Build enhanced input with context and observations
-                enhanced_input = user_input
-                if context:
-                    enhanced_input += f"\n\nContext: {context}"
-                if all_observations:
-                    obs_text = "\n".join([f"- {obs}" for obs in all_observations[-5:]])  # Last 5 observations
-                    enhanced_input += f"\n\nPrevious observations:\n{obs_text}"
+                # Run batch of iterations
+                batch_start = iteration
+                while not goal_achieved and iteration < batch_max:
+                    iteration += 1
+                    iteration_in_batch = iteration - batch_start
+                    console.print(f"\n[bold cyan]═══ Iteration {iteration} (Batch {batch_number}, {iteration_in_batch}/{max_iterations}) ═══[/bold cyan]")
                 
-                # Step 1: Translate intent with accumulated context
-                if self.progress:
-                    with self.progress.thinking("Planning next steps"):
+                    # Build enhanced input with context and observations
+                    enhanced_input = user_input
+                    if context:
+                        enhanced_input += f"\n\nContext: {context}"
+                    if all_observations:
+                        obs_text = "\n".join([f"- {obs}" for obs in all_observations[-5:]])  # Last 5 observations
+                        enhanced_input += f"\n\nPrevious observations:\n{obs_text}"
+                    
+                    # Step 1: Translate intent with accumulated context
+                    if self.progress:
+                        with self.progress.thinking("Planning next steps"):
+                            intent = self.llm.translate_intent(enhanced_input)
+                    else:
                         intent = self.llm.translate_intent(enhanced_input)
-                else:
-                    intent = self.llm.translate_intent(enhanced_input)
-                
-                # Log intent
-                self.logger.log_intent(user_input, intent)
-                
-                # Show goal for this iteration
-                console.print(f"[yellow]→ Goal:[/yellow] {intent.goal}")
-                
-                if dry_run:
-                    console.print(self._format_dry_run(intent))
-                    continue
-                
-                # Step 2: Execute plan
-                step_results = []
-                iteration_observations = []
-                
-                if self.adaptive:
-                    step_results = self.adaptive_planner.execute_with_retry(
-                        intent, max_retries=2
-                    )
-                else:
-                    step_results = execute_plan(intent, self.logger)
-                
-                # Step 3: Collect observations
-                for i, (step, result) in enumerate(zip(intent.steps, step_results), 1):
-                    print_step(i, step.tool, step.action, step.risk, result)
                     
-                    # Create observation
-                    observation = f"{step.tool}.{step.action} → {str(result)[:200]}"  # Truncate long results
-                    iteration_observations.append(observation)
-                
-                # Add to all observations
-                all_observations.extend(iteration_observations)
-                
-                # Step 4: Update memory
-                if self.use_memory:
-                    self.session_memory.add_intent(intent)
-                    for result in step_results:
-                        if "path" in str(result).lower():
-                            words = str(result).split()
-                            for word in words:
-                                if "/" in word and not word.startswith("http"):
-                                    self.world_model.update_path_frequency(word)
+                    # Log intent
+                    self.logger.log_intent(user_input, intent)
                     
-                    self.intent_history.record(user_input, intent, step_results)
-                
-                # Step 5: Check if goal achieved
-                console.print("\n")  # Blank line before reflection
-                
-                goal_status = goal_tracker.check_goal(
-                    user_goal=user_input,
-                    original_intent=intent,
-                    observations=iteration_observations,
-                    stream=True  # Enable streaming for real-time reflection
-                )
-                
-                # Display reflection
-                if goal_status.achieved:
-                    console.print(f"\n[bold green]✓ Goal Achieved![/bold green]")
-                    console.print(f"[dim]{goal_status.reasoning}[/dim]")
-                    goal_achieved = True
-                else:
-                    console.print(f"\n[yellow]⟳ Goal not yet achieved[/yellow]")
-                    console.print(f"[dim]Confidence: {goal_status.confidence:.0%}[/dim]")
-                    console.print(f"[dim]Reasoning: {goal_status.reasoning}[/dim]")
+                    # Show goal for this iteration
+                    console.print(f"[yellow]→ Goal:[/yellow] {intent.goal}")
                     
-                    if goal_status.next_steps:
-                        console.print(f"\n[cyan]Next steps suggested:[/cyan]")
-                        for step in goal_status.next_steps:
-                            console.print(f"  • {step}")
+                    if dry_run:
+                        console.print(self._format_dry_run(intent))
+                        continue
                     
-                    # Update context for next iteration
-                    context = f"Previous attempt: {intent.goal}. Observations: {', '.join(iteration_observations[-3:])}"
-            
-            # Final result
-            if goal_achieved:
-                print_success(f"Task completed in {iteration} iteration(s)")
-                
-                # Add to semantic search
-                if self.semantic_search:
-                    try:
-                        self.semantic_search.add_command(
-                            user_input=user_input,
-                            goal=intent.goal,
-                            steps=[s.model_dump() for s in intent.steps],
-                            success=True
+                    # Step 2: Execute plan
+                    step_results = []
+                    iteration_observations = []
+                    
+                    if self.adaptive:
+                        step_results = self.adaptive_planner.execute_with_retry(
+                            intent, max_retries=2
                         )
-                    except:
-                        pass
-                
-                return f"Task completed successfully in {iteration} iteration(s)"
-            else:
-                # Max iterations reached - ask for confirmation to continue
-                console.print(f"\n[yellow]⚠ Maximum iterations ({max_iterations}) reached[/yellow]")
-                console.print(f"[dim]Observations so far: {len(all_observations)} steps completed[/dim]")
-                console.print(f"[dim]Goal not yet achieved with high confidence[/dim]\n")
-                
-                # Ask user if they want to continue
-                console.print("[cyan]Would you like to continue for more iterations?[/cyan]")
-                user_choice = input("Continue? [y/N]: ").strip().lower()
-                
-                if user_choice in ['y', 'yes']:
-                    # Continue with more iterations
-                    console.print("\n[green]Continuing execution...[/green]")
-                    additional_iterations = 5  # Add 5 more iterations
-                    max_iterations += additional_iterations
-                    console.print(f"[dim]New max: {max_iterations} iterations[/dim]\n")
+                    else:
+                        step_results = execute_plan(intent, self.logger)
                     
-                    # Continue the loop (but we're outside the while, so need recursion)
-                    # Instead, let's just tell the user to re-run with higher limit
-                    console.print(f"[yellow]Please re-run with: --max-iterations {max_iterations}[/yellow]")
-                    return f"Task paused after {iteration} iterations. User can continue with higher limit."
-                else:
-                    console.print("\n[dim]Stopping execution as requested.[/dim]")
-                    return f"Task incomplete after {max_iterations} iterations (user chose to stop)"
+                    # Step 3: Collect observations
+                    for i, (step, result) in enumerate(zip(intent.steps, step_results), 1):
+                        print_step(i, step.tool, step.action, step.risk, result)
+                        
+                        # Create observation
+                        observation = f"{step.tool}.{step.action} → {str(result)[:200]}"  # Truncate long results
+                        iteration_observations.append(observation)
+                    
+                    # Add to all observations
+                    all_observations.extend(iteration_observations)
+                    
+                    # Step 4: Update memory
+                    if self.use_memory:
+                        self.session_memory.add_intent(intent)
+                        for result in step_results:
+                            if "path" in str(result).lower():
+                                words = str(result).split()
+                                for word in words:
+                                    if "/" in word and not word.startswith("http"):
+                                        self.world_model.update_path_frequency(word)
+                        
+                        self.intent_history.record(user_input, intent, step_results)
+                    
+                    # Step 5: Check if goal achieved
+                    console.print("\n")  # Blank line before reflection
+                    
+                    goal_status = goal_tracker.check_goal(
+                        user_goal=user_input,
+                        original_intent=intent,
+                        observations=iteration_observations,
+                        stream=True  # Enable streaming for real-time reflection
+                    )
+                    
+                    # Display reflection
+                    if goal_status.achieved:
+                        console.print(f"\n[bold green]✓ Goal Achieved![/bold green]")
+                        console.print(f"[dim]{goal_status.reasoning}[/dim]")
+                        goal_achieved = True
+                    else:
+                        console.print(f"\n[yellow]⟳ Goal not yet achieved[/yellow]")
+                        console.print(f"[dim]Confidence: {goal_status.confidence:.0%}[/dim]")
+                        console.print(f"[dim]Reasoning: {goal_status.reasoning}[/dim]")
+                        
+                        if goal_status.next_steps:
+                            console.print(f"\n[cyan]Next steps suggested:[/cyan]")
+                            for step in goal_status.next_steps:
+                                console.print(f"  • {step}")
+                        
+                        # Update context for next iteration
+                        context = f"Previous attempt: {intent.goal}. Observations: {', '.join(iteration_observations[-3:])}"
+            
+                # Check if batch completed without achieving goal
+                if iteration >= batch_max and not goal_achieved:
+                    batch_number += 1
+                    console.print(f"\n[yellow]⟳ Batch {batch_number - 1} complete ({max_iterations} iterations)[/yellow]")
+                    console.print(f"[dim]Goal not yet achieved. Continuing with batch {batch_number}...[/dim]\n")
+            
+            # Final result (goal achieved)
+            print_success(f"Task completed in {iteration} iteration(s) across {batch_number} batch(es)")
+            
+            # Add to semantic search
+            if self.semantic_search:
+                try:
+                    self.semantic_search.add_command(
+                        user_input=user_input,
+                        goal=intent.goal,
+                        steps=[s.model_dump() for s in intent.steps],
+                        success=True
+                    )
+                except:
+                    pass
+            
+            return f"Task completed successfully in {iteration} iteration(s)"
         
         except Exception as e:
             error_msg = f"Iterative execution error: {str(e)}"
