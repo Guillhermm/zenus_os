@@ -159,8 +159,14 @@ class ExecutionLog(Container):
         status_icon = "✓" if success else "✗"
         status_style = "green" if success else "red"
         
+        # DEBUG: Always write something to verify log is working
+        log.write(f"[yellow]DEBUG: add_execution called for: {command[:50]}[/yellow]")
+        
         # Main execution line
         log.write(f"[dim][{timestamp}][/dim] [cyan]{command}[/cyan] [{status_style}]{status_icon}[/{status_style}] [dim]{duration:.1f}s[/dim]")
+        
+        # Show result details
+        log.write(f"[dim]Result length: {len(result)} chars, Success: {success}[/dim]")
         
         # Show result summary (first few lines)
         if result:
@@ -620,44 +626,41 @@ class ZenusDashboard(App):
         success = False
         result = ""
         
-        try:
-            # Capture stdout to get actual execution output
+        def run_with_capture(cmd, is_dry, is_iter):
+            """Run orchestrator and capture stdout"""
             old_stdout = sys.stdout
-            captured_output = StringIO()
-            sys.stdout = captured_output
+            captured = StringIO()
+            sys.stdout = captured
             
             try:
-                # Execute via orchestrator (run in thread pool to avoid blocking)
-                loop = asyncio.get_event_loop()
-                
-                if iterative:
-                    summary = await loop.run_in_executor(
-                        None,  # Use default executor
-                        lambda: self.orchestrator.execute_iterative(
-                            command,
-                            max_iterations=12,
-                            dry_run=dry_run
-                        )
+                if is_iter:
+                    summary = self.orchestrator.execute_iterative(
+                        cmd,
+                        max_iterations=12,
+                        dry_run=is_dry
                     )
                 else:
-                    summary = await loop.run_in_executor(
-                        None,
-                        lambda: self.orchestrator.execute_command(
-                            command,
-                            dry_run=dry_run,
-                            force_oneshot=True
-                        )
+                    summary = self.orchestrator.execute_command(
+                        cmd,
+                        dry_run=is_dry,
+                        force_oneshot=True
                     )
+                
+                output = captured.getvalue()
+                return output if output.strip() else summary
             finally:
-                # Restore stdout
                 sys.stdout = old_stdout
-            
-            # Get captured output
-            result = captured_output.getvalue()
-            
-            # If no output was captured, use the summary
-            if not result.strip():
-                result = summary
+        
+        try:
+            # Execute in thread pool with stdout capture
+            loop = asyncio.get_event_loop()
+            result = await loop.run_in_executor(
+                None,
+                run_with_capture,
+                command,
+                dry_run,
+                iterative
+            )
             
             success = True
             self.last_result = result
@@ -685,9 +688,18 @@ class ZenusDashboard(App):
         status_bar.update_status(self.command_count, status_text)
         
         # Hide spinner and add to execution log
-        exec_log = self.query_one("#execution-log-container", ExecutionLog)
-        exec_log.hide_spinner()
-        exec_log.add_execution(command, result, duration, success)
+        try:
+            exec_log = self.query_one("#execution-log-container", ExecutionLog)
+            exec_log.hide_spinner()
+            
+            # DEBUG: Write directly to log to test
+            log_widget = exec_log.query_one("#execution-log", RichLog)
+            log_widget.write(f"[yellow]DEBUG _update_after_execution: cmd={command[:30]}, result_len={len(result)}, success={success}[/yellow]")
+            
+            exec_log.add_execution(command, result, duration, success)
+        except Exception as e:
+            # If log fails, at least update status bar with error
+            status_bar.update_status(self.command_count, f"Log Error: {e}")
         
         # Check for patterns (every 10 commands)
         if self.command_count % 10 == 0:
