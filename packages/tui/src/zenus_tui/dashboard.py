@@ -26,7 +26,6 @@ from zenus_core.cli.orchestrator import Orchestrator
 from zenus_core.memory.action_tracker import get_action_tracker
 from zenus_core.brain.pattern_detector import PatternDetector
 from zenus_core.memory.world_model import WorldModel
-from zenus_core.cli.explainability import ExplainMode
 
 
 class StatusBar(Static):
