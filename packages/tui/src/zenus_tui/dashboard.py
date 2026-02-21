@@ -3,6 +3,7 @@ Zenus OS Dashboard
 
 Main TUI application with multiple views and real-time updates.
 Fully wired to Zenus orchestrator and memory systems.
+Polished with advanced features.
 """
 
 from textual.app import App, ComposeResult
@@ -10,16 +11,19 @@ from textual.containers import Container, Vertical, Horizontal, ScrollableContai
 from textual.widgets import (
     Header, Footer, Static, Button, Input, 
     DataTable, TabbedContent, TabPane, Log,
-    Label, ProgressBar, RichLog
+    Label, ProgressBar, RichLog, LoadingIndicator
 )
 from textual.binding import Binding
 from textual.worker import Worker, WorkerState
+from textual.message import Message
 from rich.text import Text
 from rich.table import Table as RichTable
 from rich.panel import Panel
+from rich.tree import Tree
 from datetime import datetime
 import asyncio
-from typing import Optional
+from typing import Optional, List
+from collections import deque
 
 # Zenus imports
 from zenus_core.cli.orchestrator import Orchestrator
@@ -48,10 +52,20 @@ class StatusBar(Static):
         duration = datetime.now() - self.session_start
         minutes = int(duration.total_seconds() / 60)
         
-        # Build status text
+        # Build status text with emoji indicators
         status_text = Text()
         status_text.append("Status: ", style="bold")
-        status_text.append(self.last_result, style="green" if "✓" in self.last_result else "yellow")
+        
+        # Smart status styling
+        if "Executing" in self.last_result:
+            status_text.append(self.last_result, style="bold yellow")
+        elif "✓" in self.last_result or "Success" in self.last_result:
+            status_text.append(self.last_result, style="bold green")
+        elif "✗" in self.last_result or "Failed" in self.last_result:
+            status_text.append(self.last_result, style="bold red")
+        else:
+            status_text.append(self.last_result, style="cyan")
+        
         status_text.append(" | ", style="dim")
         status_text.append(f"Commands: {self.command_count}", style="cyan")
         status_text.append(" | ", style="dim")
@@ -61,22 +75,76 @@ class StatusBar(Static):
 
 
 class CommandInput(Container):
-    """Command input area with action buttons"""
+    """Command input area with action buttons and history"""
+    
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.command_history: deque = deque(maxlen=100)
+        self.history_index = -1
     
     def compose(self) -> ComposeResult:
         with Horizontal(id="command-input-container"):
-            yield Input(placeholder="Enter command...", id="command-input")
+            yield Input(placeholder="Enter command... (↑↓ for history)", id="command-input")
             yield Button("Execute", variant="primary", id="execute-btn")
             yield Button("Dry Run", variant="default", id="dry-run-btn")
             yield Button("Iterative", variant="default", id="iterative-btn")
+            yield Button("Clear Log", variant="warning", id="clear-log-btn")
+    
+    def add_to_history(self, command: str):
+        """Add command to history"""
+        if command and (not self.command_history or self.command_history[-1] != command):
+            self.command_history.append(command)
+        self.history_index = -1
+    
+    def get_previous_command(self) -> Optional[str]:
+        """Get previous command from history"""
+        if not self.command_history:
+            return None
+        
+        if self.history_index == -1:
+            self.history_index = len(self.command_history) - 1
+        elif self.history_index > 0:
+            self.history_index -= 1
+        
+        return self.command_history[self.history_index] if self.history_index >= 0 else None
+    
+    def get_next_command(self) -> Optional[str]:
+        """Get next command from history"""
+        if not self.command_history or self.history_index == -1:
+            return ""
+        
+        self.history_index += 1
+        
+        if self.history_index >= len(self.command_history):
+            self.history_index = -1
+            return ""
+        
+        return self.command_history[self.history_index]
 
 
 class ExecutionLog(Container):
-    """Live execution log viewer"""
+    """Live execution log viewer with real-time updates"""
     
     def compose(self) -> ComposeResult:
-        yield Label("Recent Executions", id="log-title")
+        with Horizontal():
+            yield Label("Recent Executions", id="log-title")
+            yield LoadingIndicator(id="execution-spinner")
         yield RichLog(id="execution-log", highlight=True, markup=True)
+    
+    def on_mount(self):
+        """Hide spinner initially"""
+        spinner = self.query_one("#execution-spinner", LoadingIndicator)
+        spinner.display = False
+    
+    def show_spinner(self):
+        """Show loading spinner"""
+        spinner = self.query_one("#execution-spinner", LoadingIndicator)
+        spinner.display = True
+    
+    def hide_spinner(self):
+        """Hide loading spinner"""
+        spinner = self.query_one("#execution-spinner", LoadingIndicator)
+        spinner.display = False
     
     def add_execution(self, command: str, result: str, duration: float, success: bool):
         """Add execution to log"""
@@ -88,10 +156,22 @@ class ExecutionLog(Container):
         
         log.write(f"[dim][{timestamp}][/dim] [cyan]{command}[/cyan] [{status_style}]{status_icon}[/{status_style}] [dim]{duration:.1f}s[/dim]")
         
-        # Show result summary (first line only)
+        # Show result summary (first few lines)
         if result:
-            first_line = result.split('\n')[0][:80]
-            log.write(f"  → {first_line}")
+            lines = result.split('\n')[:3]  # First 3 lines
+            for line in lines:
+                if line.strip():
+                    log.write(f"  [dim]→[/dim] {line[:100]}")
+    
+    def add_progress(self, message: str):
+        """Add progress message during execution"""
+        log = self.query_one("#execution-log", RichLog)
+        log.write(f"[yellow]⏳ {message}[/yellow]")
+    
+    def clear_log(self):
+        """Clear execution log"""
+        log = self.query_one("#execution-log", RichLog)
+        log.clear()
 
 
 class PatternSuggestion(Container):
@@ -119,41 +199,53 @@ class PatternSuggestion(Container):
 
 
 class HistoryView(ScrollableContainer):
-    """Command history viewer"""
+    """Command history viewer with search"""
     
     def compose(self) -> ComposeResult:
+        yield Input(placeholder="Search history...", id="history-search")
         yield DataTable(id="history-table")
     
     def on_mount(self):
         """Initialize history table"""
         table = self.query_one("#history-table", DataTable)
         table.add_columns("Time", "Command", "Status", "Duration")
+        table.cursor_type = "row"
         self.refresh_history()
     
-    def refresh_history(self):
+    def on_input_changed(self, event: Input.Changed):
+        """Filter history on search"""
+        if event.input.id == "history-search":
+            self.refresh_history(search=event.value)
+    
+    def refresh_history(self, search: str = ""):
         """Load history from action tracker"""
         table = self.query_one("#history-table", DataTable)
         table.clear()
         
         try:
             tracker = get_action_tracker()
-            transactions = tracker.get_recent_transactions(limit=50)
+            transactions = tracker.get_recent_transactions(limit=100)
             
             for txn in reversed(transactions):  # Most recent first
                 timestamp = txn.get('timestamp', 'Unknown')
-                # Parse ISO timestamp to readable format
+                
+                # Parse ISO timestamp
                 try:
                     dt = datetime.fromisoformat(timestamp)
                     time_str = dt.strftime("%m/%d %H:%M")
                 except:
                     time_str = timestamp[:16]
                 
-                # Get command from first action
+                # Get command
                 actions = txn.get('actions', [])
                 if actions:
                     command = f"{actions[0]['tool']}.{actions[0]['operation']}"
                 else:
                     command = "Unknown"
+                
+                # Filter by search
+                if search and search.lower() not in command.lower():
+                    continue
                 
                 success = txn.get('success', True)
                 status = "✓" if success else "✗"
@@ -222,25 +314,59 @@ class MemoryView(ScrollableContainer):
 
 
 class ExplainView(ScrollableContainer):
-    """Explainability dashboard"""
+    """Explainability dashboard with detailed step breakdown"""
     
     def compose(self) -> ComposeResult:
         yield RichLog(id="explain-log", highlight=True, markup=True)
     
-    def show_explanation(self, user_input: str, result: str):
-        """Display explanation for last command"""
+    def show_explanation(self, user_input: str, result: str, steps: Optional[List] = None):
+        """Display detailed explanation for last command"""
         log = self.query_one("#explain-log", RichLog)
         log.clear()
         
         log.write("[bold cyan]📊 Command Explanation[/bold cyan]\n")
         log.write(f"[yellow]Input:[/yellow] {user_input}\n")
-        log.write(f"[yellow]Result:[/yellow] {result[:200]}...\n" if len(result) > 200 else f"[yellow]Result:[/yellow] {result}\n")
         
-        log.write("\n[dim]Detailed step-by-step explanation coming soon...[/dim]")
+        # Show steps if available
+        if steps:
+            log.write("\n[bold cyan]📝 Execution Steps:[/bold cyan]\n")
+            for i, step in enumerate(steps, 1):
+                log.write(f"\n[cyan]{i}. {step.get('tool', 'Unknown')}.{step.get('action', 'Unknown')}[/cyan]")
+                if step.get('reasoning'):
+                    log.write(f"   [dim]{step['reasoning']}[/dim]")
+                if step.get('confidence'):
+                    log.write(f"   [dim]Confidence: {step['confidence']:.0%}[/dim]")
+        
+        # Show result
+        log.write(f"\n[yellow]Result:[/yellow]")
+        all_lines = result.split('\n')
+        result_lines = all_lines[:10]  # First 10 lines
+        for line in result_lines:
+            if line.strip():
+                log.write(f"  {line}")
+        
+        if len(all_lines) > 10:
+            remaining = len(all_lines) - 10
+            log.write(f"\n  [dim]... ({remaining} more lines)[/dim]")
+
+
+class RollbackPanel(Container):
+    """Rollback control panel"""
+    
+    def compose(self) -> ComposeResult:
+        with Horizontal():
+            yield Button("⎌ Rollback Last", variant="error", id="rollback-btn")
+            yield Static("", id="rollback-status")
+    
+    def show_rollback_status(self, message: str, success: bool):
+        """Show rollback result"""
+        status = self.query_one("#rollback-status", Static)
+        style = "green" if success else "red"
+        status.update(f"[{style}]{message}[/{style}]")
 
 
 class ZenusDashboard(App):
-    """Zenus OS TUI Dashboard"""
+    """Zenus OS TUI Dashboard - Polished Edition"""
     
     CSS = """
     #status-bar {
@@ -259,12 +385,16 @@ class ZenusDashboard(App):
     }
     
     #command-input {
-        width: 70%;
+        width: 50%;
     }
     
     #execution-log-container {
         height: 60%;
         border: solid $primary;
+    }
+    
+    #execution-spinner {
+        margin-left: 1;
     }
     
     #pattern-suggestion {
@@ -274,8 +404,12 @@ class ZenusDashboard(App):
         padding: 1;
     }
     
+    #history-search {
+        margin: 0 0 1 0;
+    }
+    
     #history-table {
-        height: 100%;
+        height: 1fr;
     }
     
     #memory-log {
@@ -289,15 +423,22 @@ class ZenusDashboard(App):
     Button {
         margin: 0 1;
     }
+    
+    LoadingIndicator {
+        height: 1;
+        width: auto;
+    }
     """
     
     BINDINGS = [
-        Binding("q", "quit", "Quit", show=True),
-        Binding("f1", "tab('execution')", "Execution"),
-        Binding("f2", "tab('history')", "History"),
-        Binding("f3", "tab('memory')", "Memory"),
-        Binding("f4", "tab('explain')", "Explain"),
-        Binding("f5", "refresh", "Refresh"),
+        Binding("ctrl+c", "quit", "Quit", show=True),
+        Binding("q", "quit", "Quit", show=False),
+        Binding("f1", "tab('execution')", "Execution", show=True),
+        Binding("f2", "tab('history')", "History", show=True),
+        Binding("f3", "tab('memory')", "Memory", show=True),
+        Binding("f4", "tab('explain')", "Explain", show=True),
+        Binding("f5", "refresh", "Refresh", show=True),
+        Binding("ctrl+r", "rollback", "Rollback", show=True),
     ]
     
     def __init__(self):
@@ -317,6 +458,7 @@ class ZenusDashboard(App):
         self.command_count = 0
         self.last_command = None
         self.last_result = None
+        self.last_steps = None
     
     def compose(self) -> ComposeResult:
         """Create child widgets"""
@@ -354,6 +496,10 @@ class ZenusDashboard(App):
         # Update status
         status_bar = self.query_one("#status-bar", StatusBar)
         status_bar.update_status(0, "Ready ✓")
+        
+        # Focus input
+        input_widget = self.query_one("#command-input", Input)
+        input_widget.focus()
     
     def on_button_pressed(self, event: Button.Pressed) -> None:
         """Handle button presses"""
@@ -365,11 +511,35 @@ class ZenusDashboard(App):
             self.execute_command(dry_run=True, iterative=False)
         elif button_id == "iterative-btn":
             self.execute_command(dry_run=False, iterative=True)
+        elif button_id == "clear-log-btn":
+            self.action_clear_log()
+        elif button_id == "rollback-btn":
+            self.action_rollback()
     
     def on_input_submitted(self, event: Input.Submitted) -> None:
         """Handle Enter key in input field"""
         if event.input.id == "command-input":
             self.execute_command(dry_run=False, iterative=False)
+    
+    def on_key(self, event) -> None:
+        """Handle special keys"""
+        input_widget = self.query_one("#command-input", Input)
+        command_input_container = self.query_one("#command-input-area", CommandInput)
+        
+        # Only handle arrow keys when input is focused
+        if self.focused == input_widget:
+            if event.key == "up":
+                prev_cmd = command_input_container.get_previous_command()
+                if prev_cmd:
+                    input_widget.value = prev_cmd
+                    input_widget.cursor_position = len(prev_cmd)
+                event.prevent_default()
+            elif event.key == "down":
+                next_cmd = command_input_container.get_next_command()
+                if next_cmd is not None:
+                    input_widget.value = next_cmd
+                    input_widget.cursor_position = len(next_cmd)
+                event.prevent_default()
     
     def execute_command(self, dry_run: bool = False, iterative: bool = False):
         """Execute command in background worker"""
@@ -380,12 +550,19 @@ class ZenusDashboard(App):
         if not command:
             return
         
+        # Add to history
+        command_input_container = self.query_one("#command-input-area", CommandInput)
+        command_input_container.add_to_history(command)
+        
         # Clear input
         input_widget.value = ""
         
-        # Update status
+        # Update status and show spinner
         status_bar = self.query_one("#status-bar", StatusBar)
         status_bar.update_status(last_result="Executing... ⏳")
+        
+        exec_log = self.query_one("#execution-log-container", ExecutionLog)
+        exec_log.show_spinner()
         
         # Store for explain view
         self.last_command = command
@@ -450,8 +627,9 @@ class ZenusDashboard(App):
         status_text = "Success ✓" if success else "Failed ✗"
         status_bar.update_status(self.command_count, status_text)
         
-        # Add to execution log
+        # Hide spinner and add to execution log
         exec_log = self.query_one("#execution-log-container", ExecutionLog)
+        exec_log.hide_spinner()
         exec_log.add_execution(command, result, duration, success)
         
         # Check for patterns (every 10 commands)
@@ -474,7 +652,7 @@ class ZenusDashboard(App):
         # Update explain view
         try:
             explain_view = self.query_one("#explain-view", ExplainView)
-            explain_view.show_explanation(command, result)
+            explain_view.show_explanation(command, result, self.last_steps)
         except:
             pass
     
@@ -516,6 +694,17 @@ class ZenusDashboard(App):
         elif active_tab == "memory-tab":
             memory_view = self.query_one("#memory-view", MemoryView)
             memory_view.refresh_memory()
+    
+    def action_clear_log(self) -> None:
+        """Clear execution log"""
+        exec_log = self.query_one("#execution-log-container", ExecutionLog)
+        exec_log.clear_log()
+    
+    def action_rollback(self) -> None:
+        """Rollback last command"""
+        # TODO: Implement rollback via action_tracker
+        status_bar = self.query_one("#status-bar", StatusBar)
+        status_bar.update_status(last_result="Rollback not yet implemented")
 
 
 def main():
