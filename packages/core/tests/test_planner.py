@@ -4,10 +4,10 @@ Tests for plan execution
 
 import pytest
 from unittest.mock import Mock
-from brain.llm.schemas import IntentIR, Step
-from brain.planner import execute_plan
+from zenus_core.brain.llm.schemas import IntentIR, Step
+from zenus_core.brain.planner import execute_plan
 from safety.policy import SafetyError
-from tools.file_ops import FileOps
+from zenus_core.tools.file_ops import FileOps
 
 
 class TestPlanner:

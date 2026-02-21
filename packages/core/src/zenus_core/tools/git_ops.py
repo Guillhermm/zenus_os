@@ -7,7 +7,7 @@ Advanced git operations beyond basic commands.
 import subprocess
 import os
 from typing import Optional, List
-from tools.base import Tool
+from zenus_core.tools.base import Tool
 
 
 class GitOps(Tool):

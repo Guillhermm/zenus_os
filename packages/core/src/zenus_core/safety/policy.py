@@ -4,7 +4,7 @@ Safety Policy
 Defines rules for what operations are allowed and enforces them.
 """
 
-from brain.llm.schemas import Step
+from zenus_core.brain.llm.schemas import Step
 
 
 class SafetyError(Exception):

@@ -3,7 +3,7 @@ Tests for safety policy enforcement
 """
 
 import pytest
-from brain.llm.schemas import Step
+from zenus_core.brain.llm.schemas import Step
 from safety.policy import check_step, SafetyError
 
 

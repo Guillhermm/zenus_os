@@ -25,10 +25,10 @@ from memory.session_memory import SessionMemory
 from memory.world_model import WorldModel
 from memory.intent_history import IntentHistory
 from context.context_manager import get_context_manager
-from cli.progress import ProgressIndicator
-from cli.feedback import FeedbackGenerator
-from cli.explain import ExplainMode
-from cli.formatter import (
+from zenus_core.cli.progress import ProgressIndicator
+from zenus_core.cli.feedback import FeedbackGenerator
+from zenus_core.cli.explain import ExplainMode
+from zenus_core.cli.formatter import (
     print_success, print_error, print_goal, 
     print_step, console
 )

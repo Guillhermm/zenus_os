@@ -4,7 +4,7 @@ Tests for core data schemas
 
 import pytest
 from pydantic import ValidationError
-from brain.llm.schemas import Step, IntentIR
+from zenus_core.brain.llm.schemas import Step, IntentIR
 
 
 class TestStep:

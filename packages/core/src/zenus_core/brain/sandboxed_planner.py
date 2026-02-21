@@ -5,11 +5,11 @@ Extends adaptive planner with sandbox enforcement.
 """
 
 from typing import Optional, List
-from brain.adaptive_planner import AdaptivePlanner, ExecutionResult
-from brain.llm.schemas import IntentIR, Step
-from sandbox.executor import SandboxViolation
-from sandbox.constraints import SandboxConstraints
-from tools.registry import TOOLS
+from zenus_core.brain.adaptive_planner import AdaptivePlanner, ExecutionResult
+from zenus_core.brain.llm.schemas import IntentIR, Step
+from zenus_core.sandbox.executor import SandboxViolation
+from zenus_core.sandbox.constraints import SandboxConstraints
+from zenus_core.tools.registry import TOOLS
 
 
 class SandboxedAdaptivePlanner(AdaptivePlanner):

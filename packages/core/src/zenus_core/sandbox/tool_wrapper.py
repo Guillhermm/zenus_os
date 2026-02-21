@@ -5,9 +5,9 @@ Wraps tool execution with sandbox enforcement.
 """
 
 from typing import Any, Dict
-from sandbox.executor import SandboxedExecutor, SandboxViolation, SandboxConfig
-from tools.base import Tool
-from brain.llm.schemas import Step
+from zenus_core.sandbox.executor import SandboxedExecutor, SandboxViolation, SandboxConfig
+from zenus_core.tools.base import Tool
+from zenus_core.brain.llm.schemas import Step
 
 
 class SandboxedTool:

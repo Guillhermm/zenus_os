@@ -1,4 +1,5 @@
-from zenusd.main import main
+from zenus_cli.zenusd.main import main
 
 
-main()
+if __name__ == "__main__":
+    main()

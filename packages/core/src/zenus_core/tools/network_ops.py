@@ -7,7 +7,7 @@ Network utilities: curl, wget, ping, ssh, etc.
 import subprocess
 import os
 from typing import Optional, Dict
-from tools.base import Tool
+from zenus_core.tools.base import Tool
 
 
 class NetworkOps(Tool):

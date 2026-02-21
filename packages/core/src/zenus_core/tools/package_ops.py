@@ -8,7 +8,7 @@ Supports apt, dnf, pacman, and snap.
 import subprocess
 import os
 from typing import List, Optional
-from tools.base import Tool
+from zenus_core.tools.base import Tool
 
 
 class PackageOps(Tool):

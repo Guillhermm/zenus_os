@@ -5,7 +5,7 @@ Validates task complexity detection and iterative need classification
 """
 
 import pytest
-from brain.task_analyzer import TaskAnalyzer, TaskComplexity
+from zenus_core.brain.task_analyzer import TaskAnalyzer, TaskComplexity
 
 
 def test_task_analyzer_initialization():

@@ -6,8 +6,8 @@ Uses LLM to reflect on execution results and decide if task is complete.
 """
 
 from typing import List, Dict, Any
-from brain.llm.factory import get_llm
-from brain.llm.schemas import IntentIR
+from zenus_core.brain.llm.factory import get_llm
+from zenus_core.brain.llm.schemas import IntentIR
 
 
 class GoalStatus:

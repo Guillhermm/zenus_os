@@ -12,7 +12,7 @@ Requirements:
 import os
 import subprocess
 from typing import Optional, Dict, Any, List
-from tools.base import Tool
+from zenus_core.tools.base import Tool
 
 
 class BrowserOps(Tool):

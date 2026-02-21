@@ -13,7 +13,7 @@ Recommended models:
 import json
 import requests
 from typing import Optional
-from brain.llm.schemas import IntentIR
+from zenus_core.brain.llm.schemas import IntentIR
 
 
 class OllamaLLM:

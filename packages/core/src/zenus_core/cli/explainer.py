@@ -10,7 +10,7 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 from rich.tree import Tree
-from brain.llm.schemas import IntentIR, Step
+from zenus_core.brain.llm.schemas import IntentIR, Step
 
 
 console = Console()

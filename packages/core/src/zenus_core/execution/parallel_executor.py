@@ -12,10 +12,10 @@ Responsibilities:
 
 import concurrent.futures
 from typing import List, Dict, Any, Optional, Callable
-from brain.llm.schemas import IntentIR, Step
-from brain.dependency_analyzer import DependencyAnalyzer
-from audit.logger import get_logger
-from cli.formatter import console
+from zenus_core.brain.llm.schemas import IntentIR, Step
+from zenus_core.brain.dependency_analyzer import DependencyAnalyzer
+from zenus_core.audit.logger import get_logger
+from zenus_core.cli.formatter import console
 import time
 from dataclasses import dataclass
 

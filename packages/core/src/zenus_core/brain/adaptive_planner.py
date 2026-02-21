@@ -6,10 +6,10 @@ Key difference from basic planner: can observe failures and replan.
 """
 
 from typing import Optional, Callable
-from brain.llm.schemas import IntentIR, Step
-from brain.llm.factory import get_llm
-from tools.registry import TOOLS
-from safety.policy import check_step, SafetyError
+from zenus_core.brain.llm.schemas import IntentIR, Step
+from zenus_core.brain.llm.factory import get_llm
+from zenus_core.tools.registry import TOOLS
+from zenus_core.safety.policy import check_step, SafetyError
 
 
 class ExecutionResult:

@@ -5,8 +5,8 @@ Analyzes failure patterns and suggests corrections.
 """
 
 from typing import Optional, Dict, List, Tuple
-from memory.failure_logger import get_failure_logger, Failure
-from brain.llm.schemas import IntentIR
+from zenus_core.memory.failure_logger import get_failure_logger, Failure
+from zenus_core.brain.llm.schemas import IntentIR
 import re
 
 

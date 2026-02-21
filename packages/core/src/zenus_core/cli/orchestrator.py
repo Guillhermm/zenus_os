@@ -9,26 +9,26 @@ High-level orchestration of:
 """
 
 from typing import Optional
-from brain.llm.factory import get_llm
-from brain.planner import execute_plan
-from brain.adaptive_planner import AdaptivePlanner
-from brain.sandboxed_planner import SandboxedAdaptivePlanner
-from brain.task_analyzer import TaskAnalyzer
-from brain.failure_analyzer import FailureAnalyzer
-from brain.dependency_analyzer import DependencyAnalyzer
-from brain.suggestion_engine import get_suggestion_engine
-from brain.llm.schemas import IntentIR
-from memory.action_tracker import get_action_tracker
-from execution.parallel_executor import get_parallel_executor
-from audit.logger import get_logger
-from memory.session_memory import SessionMemory
-from memory.world_model import WorldModel
-from memory.intent_history import IntentHistory
-from context.context_manager import get_context_manager
-from cli.progress import ProgressIndicator
-from cli.feedback import FeedbackGenerator
-from cli.explain import ExplainMode
-from cli.formatter import (
+from zenus_core.brain.llm.factory import get_llm
+from zenus_core.brain.planner import execute_plan
+from zenus_core.brain.adaptive_planner import AdaptivePlanner
+from zenus_core.brain.sandboxed_planner import SandboxedAdaptivePlanner
+from zenus_core.brain.task_analyzer import TaskAnalyzer
+from zenus_core.brain.failure_analyzer import FailureAnalyzer
+from zenus_core.brain.dependency_analyzer import DependencyAnalyzer
+from zenus_core.brain.suggestion_engine import get_suggestion_engine
+from zenus_core.brain.llm.schemas import IntentIR
+from zenus_core.memory.action_tracker import get_action_tracker
+from zenus_core.execution.parallel_executor import get_parallel_executor
+from zenus_core.audit.logger import get_logger
+from zenus_core.memory.session_memory import SessionMemory
+from zenus_core.memory.world_model import WorldModel
+from zenus_core.memory.intent_history import IntentHistory
+from zenus_core.context.context_manager import get_context_manager
+from zenus_core.cli.progress import ProgressIndicator
+from zenus_core.cli.feedback import FeedbackGenerator
+from zenus_core.cli.explain import ExplainMode
+from zenus_core.cli.formatter import (
     print_success, print_error, print_goal, 
     print_step, console
 )

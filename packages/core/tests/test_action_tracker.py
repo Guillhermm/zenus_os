@@ -6,7 +6,7 @@ import pytest
 import tempfile
 import os
 from pathlib import Path
-from memory.action_tracker import ActionTracker, Action
+from zenus_core.memory.action_tracker import ActionTracker, Action
 
 
 @pytest.fixture

@@ -11,9 +11,9 @@ Responsibilities:
 """
 
 from typing import List, Dict, Optional
-from brain.llm.schemas import IntentIR, Step
-from memory.failure_logger import get_failure_logger
-from memory.intent_history import IntentHistory
+from zenus_core.brain.llm.schemas import IntentIR, Step
+from zenus_core.memory.failure_logger import get_failure_logger
+from zenus_core.memory.intent_history import IntentHistory
 from dataclasses import dataclass
 
 

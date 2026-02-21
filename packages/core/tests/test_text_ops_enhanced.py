@@ -7,7 +7,7 @@ Test real-world scenarios users report as difficult.
 import pytest
 import os
 import tempfile
-from tools.text_ops import TextOps
+from zenus_core.tools.text_ops import TextOps
 
 
 @pytest.fixture

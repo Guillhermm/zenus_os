@@ -6,12 +6,12 @@ Routes commands through: CLI to Intent to Plan to Execute
 """
 
 import sys
-from cli.router import CommandRouter
-from cli.orchestrator import Orchestrator, OrchestratorError
-from cli.rollback import get_rollback_engine, RollbackError
-from memory.action_tracker import get_action_tracker
-from memory.failure_logger import get_failure_logger
-from cli.formatter import console
+from zenus_cli.cli.router import CommandRouter
+from zenus_core.cli.orchestrator import Orchestrator, OrchestratorError
+from zenus_core.cli.rollback import get_rollback_engine, RollbackError
+from zenus_core.memory.action_tracker import get_action_tracker
+from zenus_core.memory.failure_logger import get_failure_logger
+from zenus_core.cli.formatter import console
 
 
 def main():

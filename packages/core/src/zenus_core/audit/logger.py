@@ -9,7 +9,7 @@ import os
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
-from brain.llm.schemas import IntentIR
+from zenus_core.brain.llm.schemas import IntentIR
 
 
 class AuditLogger:

@@ -1,7 +1,7 @@
 from dotenv import load_dotenv # type: ignore
 import json
 import os
-from brain.llm.schemas import IntentIR
+from zenus_core.brain.llm.schemas import IntentIR
 
 
 load_dotenv()

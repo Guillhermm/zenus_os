@@ -7,7 +7,7 @@ Provides process management capabilities.
 import os
 import signal
 import psutil
-from tools.base import Tool
+from zenus_core.tools.base import Tool
 
 
 class ProcessOps(Tool):

@@ -5,7 +5,7 @@ Generates natural language summaries of execution results.
 """
 
 from typing import List
-from brain.llm.schemas import IntentIR
+from zenus_core.brain.llm.schemas import IntentIR
 
 
 class FeedbackGenerator:

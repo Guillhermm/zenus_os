@@ -6,7 +6,7 @@ Manage system services using systemctl.
 
 import subprocess
 from typing import Optional
-from tools.base import Tool
+from zenus_core.tools.base import Tool
 
 
 class ServiceOps(Tool):

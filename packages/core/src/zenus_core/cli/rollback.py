@@ -11,8 +11,8 @@ Capabilities:
 """
 
 from typing import List, Optional, Dict, Tuple
-from memory.action_tracker import get_action_tracker, Action
-from cli.formatter import console, print_error, print_success
+from zenus_core.memory.action_tracker import get_action_tracker, Action
+from zenus_core.cli.formatter import console, print_error, print_success
 import os
 import shutil
 import subprocess

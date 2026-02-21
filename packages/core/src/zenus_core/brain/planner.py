@@ -6,9 +6,9 @@ Does NOT handle display or confirmation, that is the orchestrator's job.
 """
 
 from typing import Optional
-from tools.registry import TOOLS
-from safety.policy import check_step, SafetyError
-from brain.llm.schemas import IntentIR
+from zenus_core.tools.registry import TOOLS
+from zenus_core.safety.policy import check_step, SafetyError
+from zenus_core.brain.llm.schemas import IntentIR
 
 
 def execute_plan(intent: IntentIR, logger=None) -> None:

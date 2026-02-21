@@ -7,7 +7,7 @@ Provides system information and monitoring capabilities.
 import os
 import shutil
 import psutil
-from tools.base import Tool
+from zenus_core.tools.base import Tool
 
 
 class SystemOps(Tool):

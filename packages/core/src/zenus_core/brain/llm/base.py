@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import List, Optional, Iterator
-from brain.llm.schemas import IntentIR
+from zenus_core.brain.llm.schemas import IntentIR
 
 
 class LLM(ABC):

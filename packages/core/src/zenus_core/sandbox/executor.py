@@ -10,7 +10,7 @@ import time
 import signal
 from typing import Callable, Any, Optional
 from contextlib import contextmanager
-from sandbox.constraints import SandboxConstraints, get_safe_defaults
+from zenus_core.sandbox.constraints import SandboxConstraints, get_safe_defaults
 
 
 class SandboxViolation(Exception):

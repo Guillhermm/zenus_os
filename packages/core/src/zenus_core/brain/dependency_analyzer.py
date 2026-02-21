@@ -11,7 +11,7 @@ Responsibilities:
 """
 
 from typing import List, Set, Dict, Tuple
-from brain.llm.schemas import IntentIR, Step
+from zenus_core.brain.llm.schemas import IntentIR, Step
 from dataclasses import dataclass
 
 
