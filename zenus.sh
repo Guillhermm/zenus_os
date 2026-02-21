@@ -1,11 +1,7 @@
 #!/bin/bash
-
-# Zenus OS launcher script
+# Zenus OS launcher script for monorepo
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-cd "$SCRIPT_DIR"
 
-# Activate venv
-source .venv/bin/activate
-
-# Run Zenus
-python src/main.py "$@"
+# Run zenus via Poetry in the CLI package
+cd "$SCRIPT_DIR/packages/cli"
+poetry run zenus "$@"

@@ -130,7 +130,7 @@ class SuggestionEngine:
             return None
         
         # Check if steps could run in parallel
-        from brain.dependency_analyzer import DependencyAnalyzer
+        from zenus_core.brain.dependency_analyzer import DependencyAnalyzer
         analyzer = DependencyAnalyzer()
         
         if analyzer.is_parallelizable(intent):
@@ -209,7 +209,7 @@ class SuggestionEngine:
     ) -> Optional[Suggestion]:
         """Warn about operations that have failed before"""
         
-        from brain.failure_analyzer import FailureAnalyzer
+        from zenus_core.brain.failure_analyzer import FailureAnalyzer
         analyzer = FailureAnalyzer()
         
         analysis = analyzer.analyze_before_execution(user_input, intent)

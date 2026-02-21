@@ -96,7 +96,7 @@ class Orchestrator:
         # Semantic search for command history (lazy import)
         self.semantic_search = None
         try:
-            from memory.semantic_search import SemanticSearch
+            from zenus_core.memory.semantic_search import SemanticSearch
             self.semantic_search = SemanticSearch()
         except ImportError as e:
             # sentence-transformers not installed, semantic search disabled
@@ -420,7 +420,7 @@ class Orchestrator:
         Returns:
             Human-readable result
         """
-        from brain.goal_tracker import GoalTracker
+        from zenus_core.brain.goal_tracker import GoalTracker
         
         # Initialize goal tracker
         goal_tracker = GoalTracker(max_iterations=max_iterations)
