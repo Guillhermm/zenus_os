@@ -122,68 +122,69 @@ class CommandInput(Container):
         return self.command_history[self.history_index]
 
 
-class ExecutionLog(Container):
+class ExecutionLog(ScrollableContainer):
     """Live execution log viewer with real-time updates"""
     
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.log_text = "✓ Execution log ready. Enter a command below to get started.\n\n"
+    
     def compose(self) -> ComposeResult:
-        yield Label("📋 Recent Executions", id="log-title")
-        yield LoadingIndicator(id="execution-spinner")
-        yield Log(id="execution-log", auto_scroll=True)
+        yield Static(self.log_text, id="execution-log")
     
     def on_mount(self):
-        """Hide spinner initially"""
-        spinner = self.query_one("#execution-spinner", LoadingIndicator)
-        spinner.display = False
-        
-        # Add welcome message
-        log = self.query_one("#execution-log", Log)
-        log.write_line("✓ Execution log ready. Enter a command below to get started.")
+        """Update display on mount"""
+        self.update_log()
+    
+    def update_log(self):
+        """Update the Static widget with current log text"""
+        log_widget = self.query_one("#execution-log", Static)
+        log_widget.update(self.log_text)
     
     def show_spinner(self):
-        """Show loading spinner"""
-        spinner = self.query_one("#execution-spinner", LoadingIndicator)
-        spinner.display = True
+        """Show loading spinner (no-op for now)"""
+        pass
     
     def hide_spinner(self):
-        """Hide loading spinner"""
-        spinner = self.query_one("#execution-spinner", LoadingIndicator)
-        spinner.display = False
+        """Hide loading spinner (no-op for now)"""
+        pass
     
     def add_execution(self, command: str, result: str, duration: float, success: bool):
         """Add execution to log"""
-        log = self.query_one("#execution-log", Log)
-        
         timestamp = datetime.now().strftime("%H:%M:%S")
         status_icon = "✓" if success else "✗"
         
-        # Main execution line (simplified for Log widget)
-        log.write_line(f"[{timestamp}] {command} {status_icon} {duration:.1f}s")
+        # Add to log text
+        self.log_text += f"[{timestamp}] {command} {status_icon} {duration:.1f}s\n"
         
         # Show result summary (first few lines)
         if result:
             lines = result.split('\n')[:5]  # First 5 lines
             for line in lines:
                 if line.strip():
-                    log.write_line(f"  → {line[:100]}")
+                    self.log_text += f"  → {line[:100]}\n"
         else:
             # No result - show indicator
             if success:
-                log.write_line(f"  → (completed successfully, no output)")
+                self.log_text += "  → (completed successfully, no output)\n"
             else:
-                log.write_line(f"  → (failed, no error message)")
+                self.log_text += "  → (failed, no error message)\n"
         
         # Add blank line for readability
-        log.write_line("")
+        self.log_text += "\n"
+        
+        # Update display
+        self.update_log()
     
     def add_progress(self, message: str):
         """Add progress message during execution"""
-        log = self.query_one("#execution-log", Log)
-        log.write_line(f"⏳ {message}")
+        self.log_text += f"⏳ {message}\n"
+        self.update_log()
     
     def clear_log(self):
         """Clear execution log"""
-        log = self.query_one("#execution-log", RichLog)
-        log.clear()
+        self.log_text = "✓ Log cleared.\n\n"
+        self.update_log()
 
 
 class PatternSuggestion(Container):
@@ -419,23 +420,12 @@ class ZenusDashboard(App):
     #execution-log-container {
         height: 60%;
         border: solid $primary;
-    }
-    
-    #log-title {
-        dock: top;
-        height: 1;
-        padding: 0 1;
-        background: $panel;
-    }
-    
-    #execution-spinner {
-        dock: top;
-        height: 1;
+        padding: 1;
     }
     
     #execution-log {
-        height: 100%;
-        background: $surface;
+        width: 100%;
+        height: auto;
     }
     
     #pattern-suggestion {
@@ -689,9 +679,8 @@ class ZenusDashboard(App):
             exec_log = self.query_one("#execution-log-container", ExecutionLog)
             exec_log.hide_spinner()
             
-            # DEBUG: Write directly to log to test
-            log_widget = exec_log.query_one("#execution-log", Log)
-            log_widget.write_line(f"DEBUG: cmd={command[:30]}, result_len={len(result)}, success={success}")
+            # DEBUG: Add directly to log text
+            exec_log.log_text += f"DEBUG: cmd={command[:30]}, result_len={len(result)}, success={success}\n"
             
             exec_log.add_execution(command, result, duration, success)
         except Exception as e:
