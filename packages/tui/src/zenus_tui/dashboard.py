@@ -126,11 +126,9 @@ class ExecutionLog(Container):
     """Live execution log viewer with real-time updates"""
     
     def compose(self) -> ComposeResult:
-        with Vertical():
-            with Horizontal():
-                yield Label("Recent Executions", id="log-title")
-                yield LoadingIndicator(id="execution-spinner")
-            yield RichLog(id="execution-log", highlight=True, markup=True)
+        yield Label("📋 Recent Executions", id="log-title")
+        yield LoadingIndicator(id="execution-spinner")
+        yield Log(id="execution-log", auto_scroll=True)
     
     def on_mount(self):
         """Hide spinner initially"""
@@ -138,8 +136,8 @@ class ExecutionLog(Container):
         spinner.display = False
         
         # Add welcome message
-        log = self.query_one("#execution-log", RichLog)
-        log.write("[dim]Execution log ready. Enter a command below to get started.[/dim]")
+        log = self.query_one("#execution-log", Log)
+        log.write_line("✓ Execution log ready. Enter a command below to get started.")
     
     def show_spinner(self):
         """Show loading spinner"""
@@ -153,41 +151,34 @@ class ExecutionLog(Container):
     
     def add_execution(self, command: str, result: str, duration: float, success: bool):
         """Add execution to log"""
-        log = self.query_one("#execution-log", RichLog)
+        log = self.query_one("#execution-log", Log)
         
         timestamp = datetime.now().strftime("%H:%M:%S")
         status_icon = "✓" if success else "✗"
-        status_style = "green" if success else "red"
         
-        # DEBUG: Always write something to verify log is working
-        log.write(f"[yellow]DEBUG: add_execution called for: {command[:50]}[/yellow]")
-        
-        # Main execution line
-        log.write(f"[dim][{timestamp}][/dim] [cyan]{command}[/cyan] [{status_style}]{status_icon}[/{status_style}] [dim]{duration:.1f}s[/dim]")
-        
-        # Show result details
-        log.write(f"[dim]Result length: {len(result)} chars, Success: {success}[/dim]")
+        # Main execution line (simplified for Log widget)
+        log.write_line(f"[{timestamp}] {command} {status_icon} {duration:.1f}s")
         
         # Show result summary (first few lines)
         if result:
             lines = result.split('\n')[:5]  # First 5 lines
             for line in lines:
                 if line.strip():
-                    log.write(f"  [dim]→[/dim] {line[:120]}")
+                    log.write_line(f"  → {line[:100]}")
         else:
             # No result - show indicator
             if success:
-                log.write(f"  [dim]→ (completed successfully, no output)[/dim]")
+                log.write_line(f"  → (completed successfully, no output)")
             else:
-                log.write(f"  [red]→ (failed, no error message)[/red]")
+                log.write_line(f"  → (failed, no error message)")
         
         # Add blank line for readability
-        log.write("")
+        log.write_line("")
     
     def add_progress(self, message: str):
         """Add progress message during execution"""
-        log = self.query_one("#execution-log", RichLog)
-        log.write(f"[yellow]⏳ {message}[/yellow]")
+        log = self.query_one("#execution-log", Log)
+        log.write_line(f"⏳ {message}")
     
     def clear_log(self):
         """Clear execution log"""
@@ -428,17 +419,23 @@ class ZenusDashboard(App):
     #execution-log-container {
         height: 60%;
         border: solid $primary;
-        padding: 1;
     }
     
-    #execution-log {
-        height: 1fr;
-        min-height: 10;
-        background: $surface;
+    #log-title {
+        dock: top;
+        height: 1;
+        padding: 0 1;
+        background: $panel;
     }
     
     #execution-spinner {
-        margin-left: 1;
+        dock: top;
+        height: 1;
+    }
+    
+    #execution-log {
+        height: 100%;
+        background: $surface;
     }
     
     #pattern-suggestion {
@@ -693,8 +690,8 @@ class ZenusDashboard(App):
             exec_log.hide_spinner()
             
             # DEBUG: Write directly to log to test
-            log_widget = exec_log.query_one("#execution-log", RichLog)
-            log_widget.write(f"[yellow]DEBUG _update_after_execution: cmd={command[:30]}, result_len={len(result)}, success={success}[/yellow]")
+            log_widget = exec_log.query_one("#execution-log", Log)
+            log_widget.write_line(f"DEBUG: cmd={command[:30]}, result_len={len(result)}, success={success}")
             
             exec_log.add_execution(command, result, duration, success)
         except Exception as e:
