@@ -64,7 +64,7 @@ def test_analyze_feasibility_with_non_rollbackable(tracker, rollback_engine):
 
 def test_describe_rollback_delete(rollback_engine, tracker):
     """Test rollback description for delete strategy"""
-    from memory.action_tracker import Action
+    from zenus_core.memory.action_tracker import Action
     
     action = Action(
         id=1,
@@ -86,7 +86,7 @@ def test_describe_rollback_delete(rollback_engine, tracker):
 
 def test_describe_rollback_move_back(rollback_engine, tracker):
     """Test rollback description for move_back strategy"""
-    from memory.action_tracker import Action
+    from zenus_core.memory.action_tracker import Action
     
     action = Action(
         id=1,

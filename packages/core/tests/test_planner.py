@@ -34,7 +34,7 @@ class TestPlanner:
         mock_tool.scan = Mock(return_value=["file1.txt", "file2.txt"])
         
         # Replace in registry
-        from tools import registry
+        from zenus_core.tools import registry
         registry.TOOLS["FileOps"] = mock_tool
         
         step = Step(tool="FileOps", action="scan", args={"path": "/tmp"}, risk=0)
@@ -67,7 +67,7 @@ class TestPlanner:
                 calls.append(("touch", kwargs))
                 return "Touched"
         
-        from tools import registry
+        from zenus_core.tools import registry
         registry.TOOLS["FileOps"] = MockTool()
         
         steps = [
@@ -97,7 +97,7 @@ class TestPlanner:
     
     def test_raises_on_missing_tool(self):
         """Should raise ValueError if tool not found"""
-        from tools import registry
+        from zenus_core.tools import registry
         # Remove FileOps
         del registry.TOOLS["FileOps"]
         
@@ -113,7 +113,7 @@ class TestPlanner:
             def scan(self):
                 return "result"
         
-        from tools import registry
+        from zenus_core.tools import registry
         registry.TOOLS["FileOps"] = MockTool()
         
         step = Step(tool="FileOps", action="nonexistent", args={}, risk=0)
@@ -128,7 +128,7 @@ class TestPlanner:
         mock_tool.scan = Mock(return_value="result")
         mock_logger = Mock()
         
-        from tools import registry
+        from zenus_core.tools import registry
         registry.TOOLS["FileOps"] = mock_tool
         
         step = Step(tool="FileOps", action="scan", args={}, risk=0)
