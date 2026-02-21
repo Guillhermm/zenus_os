@@ -1,0 +1,24 @@
+[tool.poetry]
+name = "zenus-cli"
+version = "0.3.0"
+description = "Zenus OS - Command Line Interface"
+authors = ["Zenus Team"]
+readme = "README.md"
+license = "MIT"
+packages = [{include = "zenus_cli", from = "src"}]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+zenus-core = {path = "../core", develop = true}
+rich = "^13.7.0"
+
+[tool.poetry.scripts]
+zenus = "zenus_cli.main:main"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.0.0"
+pytest-cov = "^4.1.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

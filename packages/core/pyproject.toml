@@ -1,0 +1,30 @@
+[tool.poetry]
+name = "zenus-core"
+version = "0.3.0"
+description = "Zenus OS Core - Intent Execution Engine"
+authors = ["Zenus Team"]
+readme = "README.md"
+license = "MIT"
+packages = [{include = "zenus_core", from = "src"}]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+pydantic = "^2.0.0"
+python-dotenv = "^1.0.0"
+requests = "^2.31.0"
+openai = "^1.0.0"
+rich = "^13.7.0"
+playwright = {version = "^1.40.0", optional = true}
+
+[tool.poetry.extras]
+browser = ["playwright"]
+all = ["playwright"]
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.0.0"
+pytest-cov = "^4.1.0"
+pytest-asyncio = "^0.23.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

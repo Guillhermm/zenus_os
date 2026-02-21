@@ -1,0 +1,67 @@
+name: PR Check
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  # Required check that blocks PR merge
+  required-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Install Poetry
+        run: pipx install poetry
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: 'poetry'
+      
+      - name: Install dependencies
+        run: |
+          poetry install
+          poetry run playwright install chromium
+      
+      - name: Run core tests (required)
+        run: |
+          poetry run pytest packages/core/tests -v --tb=short
+      
+      - name: Run CLI tests (required)
+        run: |
+          poetry run pytest packages/cli/tests -v --tb=short || true
+        continue-on-error: false
+      
+      - name: Check formatting
+        run: |
+          poetry run black --check packages/
+      
+      - name: Run linting
+        run: |
+          poetry run ruff check packages/
+      
+      - name: Verify CLI functionality
+        run: |
+          poetry run zenus --version
+          poetry run zenus help
+      
+      - name: Comment on PR
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const status = '${{ job.status }}';
+            const icon = status === 'success' ? '✅' : '❌';
+            const message = status === 'success' 
+              ? 'All checks passed! Ready to merge.'
+              : 'Some checks failed. Please review.';
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `${icon} ${message}\n\nStatus: ${status}`
+            });

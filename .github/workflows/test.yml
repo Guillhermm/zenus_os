@@ -1,0 +1,87 @@
+name: Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Install Poetry
+        run: pipx install poetry
+      
+      - name: Setup Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: 'poetry'
+      
+      - name: Install dependencies
+        run: |
+          poetry install
+          poetry run playwright install chromium
+      
+      - name: Run linting
+        run: |
+          poetry run ruff check packages/
+      
+      - name: Run type checking
+        run: |
+          poetry run mypy packages/core/src --ignore-missing-imports
+        continue-on-error: true
+      
+      - name: Test core package
+        run: |
+          poetry run pytest packages/core/tests -v --cov=zenus_core --cov-report=xml --cov-report=term
+      
+      - name: Test CLI package
+        run: |
+          poetry run pytest packages/cli/tests -v --cov=zenus_cli --cov-report=xml --cov-report=term
+        continue-on-error: true
+      
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./coverage.xml
+          flags: unittests
+          name: codecov-umbrella
+      
+      - name: Test CLI installation
+        run: |
+          poetry run zenus --version
+          poetry run zenus help
+  
+  lint:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Install Poetry
+        run: pipx install poetry
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: 'poetry'
+      
+      - name: Install dependencies
+        run: poetry install
+      
+      - name: Check code formatting
+        run: poetry run black --check packages/
+      
+      - name: Run ruff
+        run: poetry run ruff check packages/

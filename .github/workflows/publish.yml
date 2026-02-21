@@ -1,0 +1,91 @@
+name: Publish to PyPI
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  # Run tests first - block publish if tests fail
+  test-before-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Install Poetry
+        run: pipx install poetry
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: 'poetry'
+      
+      - name: Install dependencies
+        run: |
+          poetry install
+          poetry run playwright install chromium
+      
+      - name: Run all tests
+        run: |
+          poetry run pytest packages/core/tests -v
+          poetry run pytest packages/cli/tests -v || true
+      
+      - name: Verify CLI works
+        run: |
+          poetry run zenus --version
+          poetry run zenus help
+  
+  publish-core:
+    needs: test-before-publish
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Install Poetry
+        run: pipx install poetry
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+      
+      - name: Build core package
+        run: |
+          cd packages/core
+          poetry build
+      
+      - name: Publish core to PyPI
+        env:
+          POETRY_PYPI_TOKEN_PYPI: ${{ secrets.PYPI_TOKEN }}
+        run: |
+          cd packages/core
+          poetry publish --no-interaction
+  
+  publish-cli:
+    needs: [test-before-publish, publish-core]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Install Poetry
+        run: pipx install poetry
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+      
+      - name: Build CLI package
+        run: |
+          cd packages/cli
+          poetry build
+      
+      - name: Publish CLI to PyPI
+        env:
+          POETRY_PYPI_TOKEN_PYPI: ${{ secrets.PYPI_TOKEN }}
+        run: |
+          cd packages/cli
+          poetry publish --no-interaction

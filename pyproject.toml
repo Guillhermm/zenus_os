@@ -1,0 +1,31 @@
+# Zenus OS - Monorepo Root Configuration
+# Poetry workspace for managing multiple packages
+
+[tool.poetry]
+name = "zenus"
+version = "0.3.0"
+description = "Zenus OS - AI-Mediated Operating System Layer"
+authors = ["Zenus Team"]
+readme = "README.md"
+license = "MIT"
+
+# This is a workspace root - actual packages are in packages/
+packages = []
+
+[tool.poetry.dependencies]
+python = "^3.10"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.0.0"
+pytest-cov = "^4.1.0"
+pytest-asyncio = "^0.23.0"
+black = "^24.0.0"
+ruff = "^0.1.0"
+mypy = "^1.8.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+# Poetry workspace configuration
+# Packages are automatically discovered in packages/
