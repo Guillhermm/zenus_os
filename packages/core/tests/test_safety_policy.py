@@ -4,7 +4,7 @@ Tests for safety policy enforcement
 
 import pytest
 from zenus_core.brain.llm.schemas import Step
-from safety.policy import check_step, SafetyError
+from zenus_core.safety.policy import check_step, SafetyError
 
 
 class TestSafetyPolicy:

@@ -6,7 +6,7 @@ import pytest
 from unittest.mock import Mock
 from zenus_core.brain.llm.schemas import IntentIR, Step
 from zenus_core.brain.planner import execute_plan
-from safety.policy import SafetyError
+from zenus_core.safety.policy import SafetyError
 from zenus_core.tools.file_ops import FileOps
 
 
@@ -15,7 +15,7 @@ class TestPlanner:
     
     def setup_method(self):
         """Reset tool registry before each test"""
-        from tools import registry
+        from zenus_core.tools import registry
         # Store original and reset
         self.original_tools = registry.TOOLS.copy()
         registry.TOOLS.clear()
@@ -23,7 +23,7 @@ class TestPlanner:
     
     def teardown_method(self):
         """Restore tool registry after each test"""
-        from tools import registry
+        from zenus_core.tools import registry
         registry.TOOLS.clear()
         registry.TOOLS.update(self.original_tools)
     
