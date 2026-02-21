@@ -374,7 +374,6 @@ class Orchestrator:
             
             # Show recovery plan if available
             if failure_analysis["similar_failures"]:
-                from cli.formatter import console
                 most_recent = failure_analysis["similar_failures"][0]
                 recovery_plan = self.failure_analyzer.generate_recovery_plan(most_recent)
                 if recovery_plan:
