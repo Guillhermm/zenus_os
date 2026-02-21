@@ -314,13 +314,29 @@ class MemoryView(ScrollableContainer):
             
             try:
                 world_model = WorldModel()
-                facts = world_model.get_recent_facts(limit=10)
                 
-                if facts:
-                    for fact in facts:
-                        log.write(f"• {fact['category']}: {fact['key']} = {fact['value']}")
-                else:
-                    log.write("[dim]No facts recorded yet[/dim]")
+                # Show frequent paths
+                paths = world_model.get_frequent_paths(limit=5)
+                if paths:
+                    log.write("\n[yellow]Frequent Paths:[/yellow]")
+                    for path in paths:
+                        log.write(f"  • {path}")
+                
+                # Show patterns
+                patterns = world_model.get_patterns()
+                if patterns:
+                    log.write("\n[yellow]Learned Patterns:[/yellow]")
+                    for pattern in patterns[:5]:  # Top 5
+                        log.write(f"  • {pattern.get('description', 'Unknown')}")
+                
+                # Show summary
+                summary = world_model.get_summary()
+                if summary and not paths and not patterns:
+                    log.write(f"\n{summary}")
+                
+                if not paths and not patterns and not summary:
+                    log.write("[dim]No world model data yet[/dim]")
+                    
             except Exception as e:
                 log.write(f"[dim]World model unavailable: {e}[/dim]")
                 
@@ -597,32 +613,51 @@ class ZenusDashboard(App):
     
     async def _execute_async(self, command: str, dry_run: bool, iterative: bool):
         """Execute command asynchronously"""
+        import sys
+        from io import StringIO
+        
         start_time = datetime.now()
         success = False
         result = ""
         
         try:
-            # Execute via orchestrator (run in thread pool to avoid blocking)
-            loop = asyncio.get_event_loop()
+            # Capture stdout to get actual execution output
+            old_stdout = sys.stdout
+            captured_output = StringIO()
+            sys.stdout = captured_output
             
-            if iterative:
-                result = await loop.run_in_executor(
-                    None,  # Use default executor
-                    lambda: self.orchestrator.execute_iterative(
-                        command,
-                        max_iterations=12,
-                        dry_run=dry_run
+            try:
+                # Execute via orchestrator (run in thread pool to avoid blocking)
+                loop = asyncio.get_event_loop()
+                
+                if iterative:
+                    summary = await loop.run_in_executor(
+                        None,  # Use default executor
+                        lambda: self.orchestrator.execute_iterative(
+                            command,
+                            max_iterations=12,
+                            dry_run=dry_run
+                        )
                     )
-                )
-            else:
-                result = await loop.run_in_executor(
-                    None,
-                    lambda: self.orchestrator.execute_command(
-                        command,
-                        dry_run=dry_run,
-                        force_oneshot=True
+                else:
+                    summary = await loop.run_in_executor(
+                        None,
+                        lambda: self.orchestrator.execute_command(
+                            command,
+                            dry_run=dry_run,
+                            force_oneshot=True
+                        )
                     )
-                )
+            finally:
+                # Restore stdout
+                sys.stdout = old_stdout
+            
+            # Get captured output
+            result = captured_output.getvalue()
+            
+            # If no output was captured, use the summary
+            if not result.strip():
+                result = summary
             
             success = True
             self.last_result = result
