@@ -149,14 +149,16 @@ def check_and_suggest_patterns(orchestrator):
     (e.g., every 10 commands)
     """
     from zenus_core.brain.pattern_detector import get_pattern_detector
+    from zenus_core.brain.pattern_memory import get_pattern_memory
     from zenus_core.memory.intent_history import IntentHistory
     from rich.console import Console
     from rich.panel import Panel
     
     console = Console()
     
-    # Get pattern detector
+    # Get pattern detector and memory
     detector = get_pattern_detector()
+    memory = get_pattern_memory()
     
     # Get execution history
     history = IntentHistory()
@@ -175,13 +177,22 @@ def check_and_suggest_patterns(orchestrator):
         patterns = detector.detect_patterns(history_records, lookback_days=30)
         
         # Filter to high-confidence patterns we haven't suggested yet
-        high_confidence = [p for p in patterns if p.confidence >= 0.8]
+        high_confidence = []
+        for p in patterns:
+            if p.confidence >= 0.8:
+                # Create unique key for this pattern
+                pattern_key = f"{p.pattern_type}:{p.description[:50]}"
+                if not memory.has_suggested(pattern_key):
+                    high_confidence.append((p, pattern_key))
         
         if not high_confidence:
             return
         
         # Show first pattern suggestion
-        pattern = high_confidence[0]
+        pattern, pattern_key = high_confidence[0]
+        
+        # Mark as suggested (so we don't repeat)
+        memory.mark_suggested(pattern_key)
         
         if pattern.pattern_type == 'recurring' and pattern.suggested_cron:
             console.print()
@@ -208,7 +219,7 @@ def check_and_suggest_patterns(orchestrator):
             elif choice == 's':
                 # Show all patterns
                 console.print("\n[cyan]Detected Patterns:[/cyan]\n")
-                for i, p in enumerate(high_confidence[:5], 1):
+                for i, (p, _) in enumerate(high_confidence[:5], 1):
                     console.print(f"{i}. {p.description}")
                     console.print(f"   [dim]Confidence: {p.confidence:.0%}, Occurrences: {p.occurrences}[/dim]")
                     if p.suggested_cron:
