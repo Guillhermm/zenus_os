@@ -154,15 +154,84 @@ esac
 
 echo ""
 echo "════════════════════════════════════"
+echo "  Installing Poetry..."
+echo "════════════════════════════════════"
+echo ""
+
+# Check if poetry is installed
+if ! command -v poetry &> /dev/null; then
+    echo "Poetry not found. Installing..."
+    curl -sSL https://install.python-poetry.org | python3 -
+    
+    # Add poetry to PATH for this session
+    export PATH="$HOME/.local/bin:$PATH"
+    
+    echo "✓ Poetry installed"
+else
+    echo "✓ Poetry already installed: $(poetry --version)"
+fi
+
+# Install project dependencies with poetry
+echo ""
+echo "Installing project dependencies..."
+cd "$(dirname "$0")"
+poetry install --no-interaction
+
+echo ""
+echo "════════════════════════════════════"
+echo "  Setting up shell aliases..."
+echo "════════════════════════════════════"
+echo ""
+
+# Get absolute path to project
+PROJECT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+# Define the aliases
+ZENUS_ALIAS="alias zenus='$PROJECT_DIR/zenus.sh'"
+ZENUS_TUI_ALIAS="alias zenus-tui='$PROJECT_DIR/zenus-tui.sh'"
+
+# Check if aliases already exist in bashrc
+if grep -q "alias zenus=" ~/.bashrc 2>/dev/null; then
+    echo "⚠️  Zenus aliases already exist in ~/.bashrc"
+    echo "   Updating to standardized format..."
+    
+    # Remove old aliases (zenus_os, zenus, zenus-tui)
+    sed -i '/alias zenus_os=/d' ~/.bashrc
+    sed -i '/alias zenus=/d' ~/.bashrc
+    sed -i '/alias zenus-tui=/d' ~/.bashrc
+    
+    # Add new standardized aliases
+    echo "" >> ~/.bashrc
+    echo "# Zenus OS aliases" >> ~/.bashrc
+    echo "$ZENUS_ALIAS" >> ~/.bashrc
+    echo "$ZENUS_TUI_ALIAS" >> ~/.bashrc
+    
+    echo "✓ Aliases updated"
+else
+    # Add aliases for the first time
+    echo "" >> ~/.bashrc
+    echo "# Zenus OS aliases" >> ~/.bashrc
+    echo "$ZENUS_ALIAS" >> ~/.bashrc
+    echo "$ZENUS_TUI_ALIAS" >> ~/.bashrc
+    
+    echo "✓ Aliases added to ~/.bashrc"
+fi
+
+echo ""
+echo "════════════════════════════════════"
 echo "  Installation Complete!"
 echo "════════════════════════════════════"
 echo ""
-echo "Run Zenus OS:"
-echo "  ./zenus.sh               # Start interactive shell"
-echo "  ./zenus.sh help          # Show help"
-echo "  ./zenus.sh \"<command>\"   # Direct execution"
-echo ""
-echo "Or add to PATH:"
-echo "  echo 'alias zenus_os=\"$(pwd)/zenus.sh\"' >> ~/.bashrc"
+echo "To use the new aliases, run:"
 echo "  source ~/.bashrc"
+echo ""
+echo "Then you can use:"
+echo "  zenus                    # Start interactive shell"
+echo "  zenus help               # Show help"
+echo "  zenus \"<command>\"        # Direct execution"
+echo "  zenus-tui                # Launch TUI interface"
+echo ""
+echo "Or run directly:"
+echo "  $PROJECT_DIR/zenus.sh"
+echo "  $PROJECT_DIR/zenus-tui.sh"
 echo ""
