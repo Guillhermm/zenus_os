@@ -1,23 +1,33 @@
-# Installation Script Fixes - 2026-02-22
+# Installation Script Fixes - 2026-02-22 (REVISED)
 
 ## Issues Found
 
 When attempting to run Zenus OS on another PC, three critical issues were identified:
 
-### 1. Poetry Missing from Dependencies
-**Problem**: Poetry was installed manually on the development machine but wasn't listed in `pyproject.toml` dependencies.
+### 1. Poetry Incorrectly Added as Dependency
+**Problem**: Initially tried to add `poetry = "^1.8.0"` to root `pyproject.toml` dependencies, which is circular and breaks the installation.
 
-**Fix**: Added `poetry = "^1.8.0"` to `[tool.poetry.dependencies]` section.
+**Root Cause**: Zenus OS is a **monorepo** with separate packages:
+- `packages/core` - Core library
+- `packages/cli` - CLI interface (depends on core)
+- `packages/tui` - TUI interface (depends on core)
 
-### 2. Install Script Not Setting Up Aliases
-**Problem**: The install script only suggested adding aliases manually but didn't automate the process.
+**Fix**: 
+- Removed poetry from root dependencies (it's a tool, not a dependency)
+- Updated install script to install each package independently
+- Each package has its own `pyproject.toml` and is installed via Poetry
+
+### 2. Install Script Not Properly Installing Packages
+**Problem**: The install script only installed pip dependencies, not the Poetry packages themselves.
 
 **Fix**: Updated `install.sh` to:
 - Check if Poetry is installed, install if missing
-- Run `poetry install` to install all project dependencies
-- Automatically add aliases to `~/.bashrc`
-- Update existing aliases if they're already present
-- Remove old inconsistent aliases
+- Install each package in order:
+  1. `cd packages/core && poetry install` (core first)
+  2. `cd packages/cli && poetry install` (CLI depends on core)
+  3. `cd packages/tui && poetry install` (TUI depends on core)
+- Skip LLM configuration if `.env` already exists
+- Automatically add/update shell aliases
 
 ### 3. Inconsistent Alias Naming
 **Problem**: Three aliases with mixed naming conventions:
@@ -29,49 +39,107 @@ When attempting to run Zenus OS on another PC, three critical issues were identi
 - `zenus` - Main CLI interface
 - `zenus-tui` - TUI interface
 
-## Files Modified
+## Monorepo Structure
 
-### 1. `pyproject.toml`
-```toml
-[tool.poetry.dependencies]
-python = "^3.10"
-poetry = "^1.8.0"  # ← ADDED
+```
+zenus_os/
+├── pyproject.toml           # Root config (no code, just dev tools)
+├── poetry.lock              # Root lockfile
+├── zenus.sh                 # CLI launcher
+├── zenus-tui.sh             # TUI launcher
+└── packages/
+    ├── core/
+    │   ├── pyproject.toml   # Core package config
+    │   ├── poetry.lock
+    │   └── src/zenus_core/
+    ├── cli/
+    │   ├── pyproject.toml   # CLI package config
+    │   ├── poetry.lock
+    │   └── src/zenus_cli/
+    └── tui/
+        ├── pyproject.toml   # TUI package config
+        ├── poetry.lock
+        └── src/zenus_tui/
 ```
 
-### 2. `install.sh`
-Added automatic Poetry installation and alias setup:
-- Installs Poetry if not present
-- Runs `poetry install` for project dependencies
-- Removes old aliases (zenus_os, inconsistent entries)
-- Adds standardized aliases with absolute paths
-- Provides clear post-install instructions
+## How It Works Now
 
-### 3. `zenus-tui.sh`
-Fixed hardcoded path to use dynamic script directory:
+1. **Install Poetry** (if not present)
+2. **Install Core Package** (`packages/core`)
+   - Contains `zenus_core` module
+   - All other packages depend on this
+3. **Install CLI Package** (`packages/cli`)
+   - Contains `zenus_cli` module
+   - Depends on `zenus-core`
+   - Defines `zenus` command entry point
+4. **Install TUI Package** (`packages/tui`)
+   - Contains `zenus_tui` module
+   - Depends on `zenus-core`
+   - Defines `zenus-tui` command entry point
+5. **Configure LLM** (if `.env` doesn't exist)
+6. **Set up shell aliases**
+
+## Launcher Scripts
+
+Both launcher scripts use their respective package's Poetry environment:
+
+**zenus.sh**:
 ```bash
-# Before:
-cd ~/projects/zenus_os/packages/tui
+cd packages/cli
+poetry run zenus "$@"
+```
 
-# After:
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-cd "$SCRIPT_DIR/packages/tui"
+**zenus-tui.sh**:
+```bash
+cd packages/tui
+poetry run zenus-tui "$@"
 ```
 
 ## Testing the Fixes
 
-To verify the fixes work on a fresh machine:
+On a fresh machine:
 
-1. Clone the repository
-2. Run `./install.sh`
-3. Source the bashrc: `source ~/.bashrc`
-4. Test the commands:
-   - `zenus help`
-   - `zenus "list files"`
-   - `zenus-tui`
+```bash
+git clone <repo>
+cd zenus_os
+./install.sh
+source ~/.bashrc
+zenus help        # Works!
+zenus-tui         # Works!
+```
+
+## Why This Approach?
+
+✅ **Proper separation** - Each package is independently installable  
+✅ **Clear dependencies** - CLI and TUI both depend on core  
+✅ **No circular deps** - Poetry is a tool, not a package dependency  
+✅ **Portable** - Works on any fresh Linux machine  
+✅ **Maintainable** - Each package can be versioned independently
+
+## Common Errors and Solutions
+
+### Error: `poetry.lock is out of sync with pyproject.toml`
+**Solution**: Run `poetry lock` in the affected package directory
+
+### Error: `Module zenus_cli not found`
+**Solution**: 
+```bash
+cd packages/cli
+poetry install
+```
+
+### Error: `Module zenus_core not found`
+**Solution**: Core must be installed first:
+```bash
+cd packages/core
+poetry install
+cd ../cli
+poetry install
+```
 
 ## Migration for Existing Users
 
-If you already have Zenus OS installed with old aliases:
+If you already have Zenus OS installed:
 
 ```bash
 cd ~/projects/zenus_os
@@ -80,12 +148,7 @@ git pull
 source ~/.bashrc
 ```
 
-The install script will automatically update your aliases to the new standard.
-
-## Benefits
-
-✅ **Portable**: Works on any fresh Linux machine  
-✅ **Consistent**: Standardized naming across all entry points  
-✅ **Automated**: No manual alias editing required  
-✅ **Self-contained**: All dependencies properly declared  
-✅ **Idempotent**: Safe to run multiple times
+The install script will:
+- Reinstall all packages properly
+- Update your shell aliases
+- Skip LLM reconfiguration (keeps existing `.env`)
