@@ -219,7 +219,7 @@ Git repository operations
 
 **Examples:**
 ```
-zenus "clone https://github.com/user/repo"
+zenus "clone https://github.com/Guillhermm/repo"
 zenus "check git status"
 zenus "commit all changes with message 'Fix bug'"
 zenus "push to origin main"

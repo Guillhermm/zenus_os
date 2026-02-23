@@ -127,7 +127,7 @@ ENVIRONMENT:
 LOGS:
     Audit logs: ~/.zenus/logs/
 
-For more information, visit: https://github.com/your-repo/zenus_os
+For more information, visit: https://github.com/Guillhermm/zenus_os
         """.strip()
         print(help_text)
 
