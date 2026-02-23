@@ -96,21 +96,37 @@ class AnthropicLLM:
         
         Args:
             user_input: Natural language command
-            stream: Not used for Anthropic (no structured streaming yet)
+            stream: Enable streaming (avoids timeouts on long responses)
         
         Returns:
             IntentIR object
         """
-        response = self.client.messages.create(
-            model=self.model,
-            max_tokens=self.max_tokens,
-            system=SYSTEM_PROMPT,
-            messages=[
-                {"role": "user", "content": user_input}
-            ]
-        )
-        
-        content = response.content[0].text
+        if stream:
+            # Use streaming to avoid timeouts on long responses
+            full_text = ""
+            with self.client.messages.stream(
+                model=self.model,
+                max_tokens=self.max_tokens,
+                system=SYSTEM_PROMPT,
+                messages=[
+                    {"role": "user", "content": user_input}
+                ]
+            ) as stream:
+                for text in stream.text_stream:
+                    full_text += text
+            
+            content = full_text
+        else:
+            # Non-streaming mode
+            response = self.client.messages.create(
+                model=self.model,
+                max_tokens=self.max_tokens,
+                system=SYSTEM_PROMPT,
+                messages=[
+                    {"role": "user", "content": user_input}
+                ]
+            )
+            content = response.content[0].text
         
         try:
             data = extract_json(content)

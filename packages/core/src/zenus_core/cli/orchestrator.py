@@ -472,11 +472,12 @@ class Orchestrator:
                         enhanced_input += f"\n\nPrevious observations:\n{obs_text}"
                     
                     # Step 1: Translate intent with accumulated context
+                    # Use streaming to avoid timeouts on complex planning
                     if self.progress:
                         with self.progress.thinking("Planning next steps"):
-                            intent = self.llm.translate_intent(enhanced_input)
+                            intent = self.llm.translate_intent(enhanced_input, stream=True)
                     else:
-                        intent = self.llm.translate_intent(enhanced_input)
+                        intent = self.llm.translate_intent(enhanced_input, stream=True)
                     
                     # Log intent
                     self.logger.log_intent(user_input, intent)
