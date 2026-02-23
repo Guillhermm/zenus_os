@@ -1,0 +1,209 @@
+from dotenv import load_dotenv # type: ignore
+import json
+import os
+from zenus_core.brain.llm.schemas import IntentIR
+
+
+load_dotenv()
+
+
+SYSTEM_PROMPT = """
+You are an operating system intent compiler.
+
+You MUST output a JSON object that EXACTLY matches this schema:
+
+{
+  "goal": string,
+  "requires_confirmation": true | false,
+  "steps": [
+    {
+      "tool": string,
+      "action": string,
+      "args": object,
+      "risk": 0 | 1 | 2 | 3
+    }
+  ]
+}
+
+Rules:
+- Convert user intent into structured OS actions
+- NEVER invent tools
+- NEVER include destructive actions unless explicitly requested
+- Assume Linux filesystem
+- Prefer safe, minimal steps
+
+Allowed tools:
+- FileOps: scan, mkdir, move, write_file, touch
+- TextOps: read, write, append, search, count_lines, head, tail
+- SystemOps: disk_usage, memory_info, cpu_info, list_processes, uptime
+- ProcessOps: find_by_name, info, kill
+- BrowserOps: open, screenshot, get_text, search, download
+- PackageOps: install, remove, update, search, list_installed, info
+- ServiceOps: start, stop, restart, status, enable, disable, logs
+- ContainerOps: run, ps, stop, logs, images, pull, build
+- GitOps: clone, status, add, commit, push, pull, branch, log
+- NetworkOps: curl, wget, ping, ssh
+
+Risk levels:
+0 = read-only (info gathering)
+1 = create/move (safe modifications)
+2 = overwrite (data changes)
+3 = delete/kill (destructive, requires explicit confirmation)
+
+PERFORMANCE (CRITICAL):
+- Use wildcards and batch operations instead of individual files
+- Example: move("*.pdf", "PDFs/") NOT individual file moves
+- Minimize tool calls by grouping operations
+- Use patterns: *.pdf, *.jpg, *.txt
+
+Return ONLY valid JSON matching the schema.
+"""
+
+
+def extract_json(text: str) -> dict:
+    """Extract JSON from text that might have markdown or extra content"""
+    # Try to find JSON object in the text
+    start = text.find("{")
+    end = text.rfind("}")
+    
+    if start == -1 or end == -1:
+        raise RuntimeError("No JSON object found in model output")
+    
+    snippet = text[start:end + 1]
+    return json.loads(snippet)
+
+
+class AnthropicLLM:
+    def __init__(self):
+        """Initialize Anthropic client lazily - only when this backend is selected"""
+        from anthropic import Anthropic
+        
+        api_key = os.getenv("ANTHROPIC_API_KEY")
+        
+        if not api_key:
+            raise ValueError(
+                "ANTHROPIC_API_KEY not set. "
+                "Add it to .env or run: ./install.sh"
+            )
+        
+        self.client = Anthropic(api_key=api_key)
+        self.model = os.getenv("ANTHROPIC_MODEL", "claude-3-5-sonnet-20241022")
+        self.max_tokens = int(os.getenv("ANTHROPIC_MAX_TOKENS", "4096"))
+    
+    def translate_intent(self, user_input: str, stream: bool = False) -> IntentIR:
+        """
+        Translate user intent to IntentIR using Claude
+        
+        Args:
+            user_input: Natural language command
+            stream: Not used for Anthropic (no structured streaming yet)
+        
+        Returns:
+            IntentIR object
+        """
+        response = self.client.messages.create(
+            model=self.model,
+            max_tokens=self.max_tokens,
+            system=SYSTEM_PROMPT,
+            messages=[
+                {"role": "user", "content": user_input}
+            ]
+        )
+        
+        content = response.content[0].text
+        
+        try:
+            data = extract_json(content)
+        except json.JSONDecodeError as e:
+            raise RuntimeError(
+                f"Claude returned invalid JSON:\n{content}"
+            ) from e
+        
+        return IntentIR.model_validate(data)
+    
+    def reflect_on_goal(
+        self,
+        reflection_prompt: str,
+        user_goal: str,
+        observations: list,
+        stream: bool = False
+    ) -> str:
+        """
+        Reflect on whether a goal has been achieved
+        
+        Returns structured text with ACHIEVED, CONFIDENCE, REASONING, NEXT_STEPS
+        """
+        if stream:
+            # Streaming mode
+            from zenus_core.cli.streaming import get_stream_handler
+            handler = get_stream_handler()
+            
+            full_text = ""
+            with self.client.messages.stream(
+                model=self.model,
+                max_tokens=1024,
+                system="You are a goal achievement evaluator. Analyze observations and determine if a user's goal has been achieved.",
+                messages=[
+                    {"role": "user", "content": reflection_prompt}
+                ]
+            ) as stream:
+                handler.start_section("Reflecting: ")
+                for text in stream.text_stream:
+                    handler.handle_token(text)
+                    full_text += text
+                handler.end_section()
+            
+            return full_text
+        else:
+            # Non-streaming mode
+            response = self.client.messages.create(
+                model=self.model,
+                max_tokens=1024,
+                system="You are a goal achievement evaluator. Analyze observations and determine if a user's goal has been achieved.",
+                messages=[
+                    {"role": "user", "content": reflection_prompt}
+                ]
+            )
+            
+            return response.content[0].text
+    
+    def analyze_image(self, image_base64: str, prompt: str) -> str:
+        """
+        Analyze image using Claude Vision
+        
+        Args:
+            image_base64: Base64 encoded image
+            prompt: Analysis prompt
+        
+        Returns:
+            Analysis result
+        """
+        try:
+            response = self.client.messages.create(
+                model=self.model,
+                max_tokens=1024,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "image",
+                                "source": {
+                                    "type": "base64",
+                                    "media_type": "image/png",
+                                    "data": image_base64
+                                }
+                            },
+                            {
+                                "type": "text",
+                                "text": prompt
+                            }
+                        ]
+                    }
+                ]
+            )
+            
+            return response.content[0].text
+        
+        except Exception as e:
+            return f"Vision analysis failed: {str(e)}"

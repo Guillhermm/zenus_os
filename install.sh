@@ -82,16 +82,21 @@ else
     echo "   - No API key needed"
     echo "   - Requires 4-16GB RAM"
     echo ""
-    echo "2) OpenAI (Cloud, requires API key)"
+    echo "2) Anthropic Claude (Cloud, requires API key)"
+    echo "   - Excellent reasoning and code"
+    echo "   - claude-3-5-sonnet recommended"
+    echo "   - Costs ~\$0.003 per command"
+    echo ""
+    echo "3) OpenAI (Cloud, requires API key)"
     echo "   - Fast and reliable"
     echo "   - Costs ~\$0.001 per command"
     echo ""
-    echo "3) DeepSeek (Cloud, requires API key)"
+    echo "4) DeepSeek (Cloud, requires API key)"
     echo "   - Good performance"
     echo "   - Lower cost than OpenAI"
     echo ""
 
-    read -p "Enter choice [1-3]: " llm_choice
+    read -p "Enter choice [1-4]: " llm_choice
 
     cp .env.example .env
 
@@ -159,13 +164,38 @@ else
             
         2)
             echo ""
+            read -p "Enter your Anthropic API key: " api_key
+            sed -i "s/^ZENUS_LLM=.*/ZENUS_LLM=anthropic/" .env
+            sed -i "s/^# ANTHROPIC_API_KEY=.*/ANTHROPIC_API_KEY=$api_key/" .env
+            
+            echo ""
+            echo "Choose Claude model:"
+            echo "1) claude-3-5-sonnet-20241022 (recommended)"
+            echo "2) claude-3-5-haiku-20241022 (faster, cheaper)"
+            echo "3) claude-3-opus-20240229 (most capable)"
+            
+            read -p "Enter choice [1-3]: " model_choice
+            
+            case $model_choice in
+                1) CLAUDE_MODEL="claude-3-5-sonnet-20241022" ;;
+                2) CLAUDE_MODEL="claude-3-5-haiku-20241022" ;;
+                3) CLAUDE_MODEL="claude-3-opus-20240229" ;;
+                *) CLAUDE_MODEL="claude-3-5-sonnet-20241022" ;;
+            esac
+            
+            sed -i "s/^# ANTHROPIC_MODEL=.*/ANTHROPIC_MODEL=$CLAUDE_MODEL/" .env
+            echo "✓ Anthropic configured with $CLAUDE_MODEL"
+            ;;
+            
+        3)
+            echo ""
             read -p "Enter your OpenAI API key: " api_key
             sed -i "s/^ZENUS_LLM=.*/ZENUS_LLM=openai/" .env
             sed -i "s/^# OPENAI_API_KEY=.*/OPENAI_API_KEY=$api_key/" .env
             echo "✓ OpenAI configured"
             ;;
             
-        3)
+        4)
             echo ""
             read -p "Enter your DeepSeek API key: " api_key
             sed -i "s/^ZENUS_LLM=.*/ZENUS_LLM=deepseek/" .env
