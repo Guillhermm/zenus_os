@@ -150,24 +150,34 @@ class AnthropicLLM:
         Returns structured text with ACHIEVED, CONFIDENCE, REASONING, NEXT_STEPS
         """
         if stream:
-            # Streaming mode
-            from zenus_core.cli.streaming import get_stream_handler
-            handler = get_stream_handler()
+            # Streaming mode - manually handle tokens (Anthropic format differs from OpenAI)
+            from rich.console import Console
+            import sys
+            
+            console = Console()
+            console.print("[cyan]Reflecting: [/cyan]", end="")
+            sys.stdout.flush()
             
             full_text = ""
-            with self.client.messages.stream(
-                model=self.model,
-                max_tokens=1024,
-                system="You are a goal achievement evaluator. Analyze observations and determine if a user's goal has been achieved.",
-                messages=[
-                    {"role": "user", "content": reflection_prompt}
-                ]
-            ) as stream:
-                handler.start_section("Reflecting: ")
-                for text in stream.text_stream:
-                    handler.handle_token(text)
-                    full_text += text
-                handler.end_section()
+            try:
+                with self.client.messages.stream(
+                    model=self.model,
+                    max_tokens=1024,
+                    system="You are a goal achievement evaluator. Analyze observations and determine if a user's goal has been achieved.",
+                    messages=[
+                        {"role": "user", "content": reflection_prompt}
+                    ]
+                ) as stream:
+                    for text in stream.text_stream:
+                        console.print(text, end="")
+                        sys.stdout.flush()
+                        full_text += text
+                
+                console.print()  # New line after streaming
+            except Exception as e:
+                console.print(f"\n[yellow]Reflection streaming error: {str(e)}[/yellow]")
+                # Fall back to non-streaming on error
+                return self.reflect_on_goal(reflection_prompt, user_goal, observations, stream=False)
             
             return full_text
         else:
