@@ -310,3 +310,21 @@ cat .env | grep ZENUS_LLM
 ```
 
 This will show if Poetry, Python, dependencies, and config are correct.
+
+
+Error in Zenus:
+
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+  File "/home/gzeni/projects/private/zenus_os/packages/cli/src/zenus_cli/zenusd/main.py", line 21, in main
+    orchestrator = Orchestrator()
+                   ^^^^^^^^^^^^^^
+  File "/home/gzeni/projects/private/zenus_os/packages/core/src/zenus_core/cli/orchestrator.py", line 67, in __init__
+    self.llm = get_llm()
+               ^^^^^^^^^
+  File "/home/gzeni/projects/private/zenus_os/packages/core/src/zenus_core/brain/llm/factory.py", line 17, in get_llm
+    return AnthropicLLM()
+           ^^^^^^^^^^^^^^
+  File "/home/gzeni/projects/private/zenus_os/packages/core/src/zenus_core/brain/llm/anthropic_llm.py", line 79, in __init__
+    from anthropic import Anthropic
+ModuleNotFoundError: No module named 'anthropic'
