@@ -11,6 +11,9 @@ packages = [{include = "zenus_cli", from = "src"}]
 python = "^3.10"
 zenus-core = {path = "../core", develop = true}
 rich = "^13.7.0"
+# LLM provider dependencies (needed for runtime)
+openai = "^1.0.0"
+anthropic = "^0.47.0"
 
 [tool.poetry.scripts]
 zenus = "zenus_cli.main:main"

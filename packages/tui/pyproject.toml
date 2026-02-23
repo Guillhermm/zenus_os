@@ -12,6 +12,9 @@ python = "^3.10"
 zenus-core = {path = "../core", develop = true}
 textual = "^0.47.0"
 rich = "^13.7.0"
+# LLM provider dependencies (needed for runtime)
+openai = "^1.0.0"
+anthropic = "^0.47.0"
 
 [tool.poetry.scripts]
 zenus-tui = "zenus_tui.main:main"

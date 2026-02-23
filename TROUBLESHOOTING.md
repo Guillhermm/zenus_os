@@ -15,21 +15,27 @@ ModuleNotFoundError: No module named 'anthropic'
 
 Even though `anthropic` is in `poetry.lock`.
 
-**Cause**: The lock file was updated but the packages weren't reinstalled.
+**Cause**: The CLI/TUI packages use their own virtual environments. Even though they depend on core, Poetry doesn't automatically install core's dependencies into CLI/TUI environments.
 
-**Solution**: Run the update script:
+**Solution**: 
+
+This issue was fixed in commit `[upcoming]`. After pulling the latest updates, run:
 
 ```bash
-cd ~/projects/zenus_os  # or wherever you cloned it
+cd ~/projects/zenus_os
+git pull
 ./update.sh
 ```
 
-Or manually update each package:
+The CLI and TUI packages now explicitly include LLM provider dependencies (anthropic, openai) so they're always available at runtime.
+
+**Manual fix** (if you're on an older version):
 
 ```bash
-cd packages/core && poetry install
-cd ../cli && poetry install
-cd ../tui && poetry install
+cd packages/cli
+poetry add anthropic@^0.47.0 openai@^1.0.0
+cd ../tui
+poetry add anthropic@^0.47.0 openai@^1.0.0
 ```
 
 ### Error: `ModuleNotFoundError: No module named 'zenus_cli'`
