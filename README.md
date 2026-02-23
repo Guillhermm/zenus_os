@@ -60,66 +60,62 @@ $ zenus rollback  # Made a mistake? Undo it!
 git clone https://github.com/Guillhermm/zenus_os.git
 cd zenus_os
 
-# 2. Create virtual environment
-python3 -m venv .venv
-source .venv/bin/activate
+# 2. Run installer (handles Poetry, packages, LLM setup, and aliases)
+./install.sh
 
-# 3. Install dependencies
-pip install -r requirements.txt
+# 3. Reload shell to use aliases
+source ~/.bashrc
 
-# 4. Configure LLM backend
-cp .env.example .env
-# Edit .env to choose your LLM (see LLM Setup below)
-
-# 5. Test installation
-python src/zenusd/main.py version
+# 4. Test it!
+zenus help
+zenus "list files"
 ```
 
-### LLM Setup
+The installer will:
+- ✓ Check/install Python 3.10+
+- ✓ Check/install Poetry
+- ✓ Install all Zenus packages (core, CLI, TUI)
+- ✓ Guide you through LLM backend setup
+- ✓ Configure shell aliases automatically
 
-**Option 1: Ollama (Local, FREE - Recommended)**
+### LLM Options
+
+During installation, you'll choose one:
+
+**1. Ollama** (Local, FREE - Recommended)
+- Runs on your hardware, no API key needed
+- Requires 4-16GB RAM depending on model
+- Models: phi3:mini (recommended), llama3.2:3b, qwen2.5:3b
+
+**2. Anthropic Claude** (Cloud)
+- Excellent reasoning and code generation
+- Get API key: https://console.anthropic.com/account/keys
+- Models: claude-3-5-sonnet (recommended), claude-3-5-haiku, claude-3-opus
+- Cost: ~$0.003 per command
+
+**3. OpenAI** (Cloud)
+- Fast and reliable GPT-4o-mini
+- Get API key: https://platform.openai.com/api-keys
+- Cost: ~$0.001 per command
+
+**4. DeepSeek** (Cloud, Cost-Effective)
+- Good performance at lower cost
+- Get API key: https://platform.deepseek.com
+- Cost: ~$0.0001-0.0003 per command
+
+### Updating
+
+After pulling updates from git:
 
 ```bash
-# Install Ollama
-curl -fsSL https://ollama.com/install.sh | sh
-
-# Pull a model
-ollama pull phi3:mini        # 3.8GB - Fast, efficient (recommended)
-# OR
-ollama pull llama3.2:3b      # 2GB - Lightweight
-# OR
-ollama pull qwen2.5:3b       # 2.3GB - Good reasoning
-
-# Configure .env
-echo "ZENUS_LLM=ollama" >> .env
-echo "OLLAMA_MODEL=phi3:mini" >> .env
+cd zenus_os
+git pull
+./update.sh
 ```
 
-**Option 2: OpenAI (Cloud)**
+This reinstalls all packages with updated dependencies.
 
-```bash
-# Get API key from https://platform.openai.com/api-keys
-echo "ZENUS_LLM=openai" >> .env
-echo "OPENAI_API_KEY=sk-your-key-here" >> .env
-```
-
-**Option 3: DeepSeek (Cloud, Cost-Effective)**
-
-```bash
-# Get API key from https://platform.deepseek.com
-echo "ZENUS_LLM=deepseek" >> .env
-echo "DEEPSEEK_API_KEY=sk-your-key-here" >> .env
-```
-
-### System-Wide Alias (Optional)
-
-```bash
-# Add to ~/.bashrc or ~/.zshrc
-alias zenus='cd ~/projects/zenus_os && source .venv/bin/activate && python src/zenusd/main.py'
-
-# Reload shell
-source ~/.bashrc  # or ~/.zshrc
-```
+**Troubleshooting?** See [TROUBLESHOOTING.md](TROUBLESHOOTING.md)
 
 ---
 
