@@ -23,11 +23,45 @@ class FileOps(Tool):
         return f"Moved files matching {source} -> {destination}"
     
     def write_file(self, path: str, content: str):
+        """
+        Write content to file with support for large files
+        
+        Args:
+            path: File path
+            content: Content to write (supports large strings)
+        
+        Returns:
+            Success message with file size
+        """
         full = os.path.expanduser(path)
         os.makedirs(os.path.dirname(full), exist_ok=True)
-        with open(full, "w") as f:
-            f.write(content)
-        return f"File written: {path}"
+        
+        # Write in chunks for large content (>10MB)
+        chunk_size = 10 * 1024 * 1024  # 10MB chunks
+        
+        try:
+            with open(full, "w", encoding='utf-8') as f:
+                if len(content) > chunk_size:
+                    # Write in chunks for large files
+                    for i in range(0, len(content), chunk_size):
+                        f.write(content[i:i + chunk_size])
+                else:
+                    # Write all at once for small files
+                    f.write(content)
+            
+            # Calculate file size
+            size_bytes = len(content.encode('utf-8'))
+            if size_bytes < 1024:
+                size_str = f"{size_bytes}B"
+            elif size_bytes < 1024 * 1024:
+                size_str = f"{size_bytes / 1024:.1f}KB"
+            else:
+                size_str = f"{size_bytes / (1024 * 1024):.1f}MB"
+            
+            return f"File written: {path} ({size_str})"
+        
+        except Exception as e:
+            return f"Failed to write {path}: {str(e)}"
 
 
     def touch(self, path: str):

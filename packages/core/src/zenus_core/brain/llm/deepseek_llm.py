@@ -67,6 +67,8 @@ SystemOps:
 - cpu_info(): show CPU usage
 - list_processes(limit: int = 10): list top processes
 - uptime(): show system uptime
+- find_large_files(path: string = "~", min_size_mb: int = 100, limit: int = 20): find large files
+- check_resource_usage(): comprehensive CPU, memory, and disk status
 
 ProcessOps:
 - find_by_name(name: string): find processes by name

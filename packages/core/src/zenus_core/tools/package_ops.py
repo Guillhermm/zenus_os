@@ -5,10 +5,10 @@ Manage system packages across different package managers.
 Supports apt, dnf, pacman, and snap.
 """
 
-import subprocess
 import os
 from typing import List, Optional
 from zenus_core.tools.base import Tool
+from zenus_core.tools.shell_executor import execute_shell_command
 
 
 class PackageOps(Tool):
@@ -43,28 +43,28 @@ class PackageOps(Tool):
         
         return "unknown"
     
-    def _run_command(self, cmd: List[str], sudo: bool = False) -> str:
-        """Run package manager command"""
-        if sudo and os.geteuid() != 0:
-            cmd = ["sudo"] + cmd
+    def _run_command(self, cmd: List[str], sudo: bool = False, timeout: Optional[int] = None) -> str:
+        """
+        Run package manager command with streaming output
         
+        Args:
+            cmd: Command to run
+            sudo: Use sudo
+            timeout: Optional timeout (None = no timeout, recommended for long operations)
+        
+        Returns:
+            Command output
+        """
         try:
-            result = subprocess.run(
+            return execute_shell_command(
                 cmd,
-                capture_output=True,
-                text=True,
-                timeout=300  # 5 min timeout
+                sudo=sudo,
+                stream=True,
+                timeout=timeout
             )
-            
-            if result.returncode != 0:
-                return f"Error: {result.stderr}"
-            
-            return result.stdout
-        
-        except subprocess.TimeoutExpired:
-            return "Error: Command timed out"
-        except Exception as e:
-            return f"Error: {str(e)}"
+        except RuntimeError as e:
+            # Convert RuntimeError to string for tool compatibility
+            return str(e)
     
     def install(self, package: str, confirm: bool = False) -> str:
         """
@@ -95,7 +95,8 @@ class PackageOps(Tool):
         else:
             return f"Package manager '{self.package_manager}' not supported"
         
-        return self._run_command(cmd, sudo=True)
+        # No timeout for install operations (can take a long time)
+        return self._run_command(cmd, sudo=True, timeout=None)
     
     def remove(self, package: str, confirm: bool = False) -> str:
         """
@@ -126,7 +127,8 @@ class PackageOps(Tool):
         else:
             return f"Package manager '{self.package_manager}' not supported"
         
-        return self._run_command(cmd, sudo=True)
+        # No timeout for remove operations
+        return self._run_command(cmd, sudo=True, timeout=None)
     
     def update(self, upgrade: bool = False) -> str:
         """
@@ -141,9 +143,9 @@ class PackageOps(Tool):
         if self.package_manager == "apt":
             cmd = ["apt", "update"]
             if upgrade:
-                result = self._run_command(cmd, sudo=True)
+                result = self._run_command(cmd, sudo=True, timeout=None)
                 cmd = ["apt", "upgrade", "-y"]
-                result += "\n" + self._run_command(cmd, sudo=True)
+                result += "\n" + self._run_command(cmd, sudo=True, timeout=None)
                 return result
         
         elif self.package_manager == "dnf":
@@ -155,7 +157,8 @@ class PackageOps(Tool):
         else:
             return f"Package manager '{self.package_manager}' not supported"
         
-        return self._run_command(cmd, sudo=True)
+        # No timeout for update/upgrade operations
+        return self._run_command(cmd, sudo=True, timeout=None)
     
     def search(self, query: str) -> str:
         """

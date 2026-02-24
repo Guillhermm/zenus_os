@@ -69,8 +69,9 @@ class GoalTracker:
         # Increment iteration counter
         self.current_iteration += 1
         
-        # Store observations
-        self.observation_history.extend(observations)
+        # Store observations (filter out empty ones)
+        valid_observations = [obs for obs in observations if obs and obs.strip()]
+        self.observation_history.extend(valid_observations)
         
         # Safety: prevent infinite loops
         if self.current_iteration >= self.max_iterations:
@@ -79,6 +80,15 @@ class GoalTracker:
                 confidence=0.0,
                 reasoning=f"Maximum iterations ({self.max_iterations}) reached. Task may be too complex or ill-defined.",
                 next_steps=["Break down task into smaller steps", "Clarify requirements"]
+            )
+        
+        # Handle case where all observations are empty
+        if not valid_observations:
+            return GoalStatus(
+                achieved=False,
+                confidence=0.3,
+                reasoning="No meaningful observations from execution. Commands may have executed but produced no output.",
+                next_steps=["Try different approach", "Check if operation requires different permissions or tools"]
             )
         
         # Build reflection prompt

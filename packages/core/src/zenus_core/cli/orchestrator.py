@@ -504,8 +504,20 @@ class Orchestrator:
                     for i, (step, result) in enumerate(zip(intent.steps, step_results), 1):
                         print_step(i, step.tool, step.action, step.risk, result)
                         
-                        # Create observation
-                        observation = f"{step.tool}.{step.action} → {str(result)[:200]}"  # Truncate long results
+                        # Create observation with better formatting
+                        # Handle empty/None results gracefully
+                        result_str = str(result).strip() if result else "(no output)"
+                        
+                        # If result is very short or generic, add context
+                        if not result_str or result_str in ["None", "(no output)", ""]:
+                            result_str = f"(command executed, no visible output)"
+                        elif len(result_str) < 10:
+                            result_str = f"(output: {result_str})"
+                        else:
+                            # Truncate long results but keep meaningful info
+                            result_str = result_str[:300] + "..." if len(result_str) > 300 else result_str
+                        
+                        observation = f"{step.tool}.{step.action}({', '.join(f'{k}={v}' for k, v in step.args.items())}) → {result_str}"
                         iteration_observations.append(observation)
                     
                     # Add to all observations
