@@ -17,6 +17,7 @@ from zenus_core.brain.task_analyzer import TaskAnalyzer
 from zenus_core.brain.failure_analyzer import FailureAnalyzer
 from zenus_core.brain.dependency_analyzer import DependencyAnalyzer
 from zenus_core.brain.suggestion_engine import get_suggestion_engine
+from zenus_core.brain.model_router import get_router
 from zenus_core.brain.llm.schemas import IntentIR
 from zenus_core.memory.action_tracker import get_action_tracker
 from zenus_core.execution.parallel_executor import get_parallel_executor
@@ -93,6 +94,9 @@ class Orchestrator:
         self.parallel_executor = get_parallel_executor() if enable_parallel else None
         self.suggestion_engine = get_suggestion_engine()
         
+        # Model router for intelligent LLM selection
+        self.router = get_router()
+        
         # Semantic search for command history (lazy import)
         self.semantic_search = None
         try:
@@ -151,9 +155,24 @@ class Orchestrator:
             if self.use_memory:
                 context = self._build_context(user_input)
             
-            # Step 2: Translate intent with context
+            # Step 1.5: Route to appropriate model based on complexity
+            selected_model, complexity = self.router.route(user_input, iterative=False)
+            
+            # Show routing decision (if not simple)
+            if complexity.score > 0.5 and self.show_progress:
+                console.print(f"[dim]Task complexity: {complexity.score:.2f} → Using {selected_model}[/dim]")
+            
+            # Step 2: Translate intent with context using selected model
             # IMPORTANT: Always use streaming to avoid Anthropic timeouts
             try:
+                # Temporarily set model for this request
+                import os
+                original_model = os.environ.get('ZENUS_LLM')
+                os.environ['ZENUS_LLM'] = selected_model
+                
+                # Refresh LLM instance with new model
+                self.llm = get_llm()
+                
                 # Show thinking indicator
                 if self.progress:
                     with self.progress.thinking("Understanding your request"):
@@ -168,6 +187,12 @@ class Orchestrator:
                         intent = self.llm.translate_intent(enhanced_input, stream=True)
                     else:
                         intent = self.llm.translate_intent(user_input, stream=True)
+                
+                # Restore original model
+                if original_model:
+                    os.environ['ZENUS_LLM'] = original_model
+                else:
+                    os.environ.pop('ZENUS_LLM', None)
             except Exception as e:
                 error_msg = f"Failed to understand command: {str(e)}"
                 self.logger.log_error(error_msg, {"user_input": user_input})
@@ -443,8 +468,18 @@ class Orchestrator:
         if self.use_memory:
             context = self._build_context(user_input)
         
+        # Route to appropriate model (iterative = likely complex)
+        selected_model, complexity = self.router.route(user_input, iterative=True)
+        
+        # Set model for iterative execution
+        import os
+        original_model = os.environ.get('ZENUS_LLM')
+        os.environ['ZENUS_LLM'] = selected_model
+        self.llm = get_llm()  # Refresh with new model
+        
         print_goal(f"Starting iterative execution: {user_input}")
-        console.print(f"[dim]Batch size: {max_iterations} iterations per batch[/dim]\n")
+        console.print(f"[dim]Batch size: {max_iterations} iterations per batch[/dim]")
+        console.print(f"[dim]Using model: {selected_model} (complexity: {complexity.score:.2f})[/dim]\n")
         
         iteration = 0
         goal_achieved = False
@@ -637,6 +672,13 @@ class Orchestrator:
             self.logger.log_error(error_msg, {"user_input": user_input})
             print_error(error_msg)
             return error_msg
+        
+        finally:
+            # Restore original model
+            if original_model:
+                os.environ['ZENUS_LLM'] = original_model
+            else:
+                os.environ.pop('ZENUS_LLM', None)
     
     def _build_context(self, user_input: str) -> str:
         """Build context string from memory and environment"""
