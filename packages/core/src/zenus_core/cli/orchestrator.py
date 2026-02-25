@@ -152,21 +152,22 @@ class Orchestrator:
                 context = self._build_context(user_input)
             
             # Step 2: Translate intent with context
+            # IMPORTANT: Always use streaming to avoid Anthropic timeouts
             try:
                 # Show thinking indicator
                 if self.progress:
                     with self.progress.thinking("Understanding your request"):
                         if context:
                             enhanced_input = f"{user_input}\n{context}"
-                            intent = self.llm.translate_intent(enhanced_input)
+                            intent = self.llm.translate_intent(enhanced_input, stream=True)
                         else:
-                            intent = self.llm.translate_intent(user_input)
+                            intent = self.llm.translate_intent(user_input, stream=True)
                 else:
                     if context:
                         enhanced_input = f"{user_input}\n{context}"
-                        intent = self.llm.translate_intent(enhanced_input)
+                        intent = self.llm.translate_intent(enhanced_input, stream=True)
                     else:
-                        intent = self.llm.translate_intent(user_input)
+                        intent = self.llm.translate_intent(user_input, stream=True)
             except Exception as e:
                 error_msg = f"Failed to understand command: {str(e)}"
                 self.logger.log_error(error_msg, {"user_input": user_input})
@@ -448,10 +449,13 @@ class Orchestrator:
         iteration = 0
         goal_achieved = False
         batch_number = 1
+        max_total_iterations = 50  # Absolute safety limit
+        stuck_count = 0  # Track repeated failures
+        last_goal = None  # Track if we're repeating the same goal
         
         try:
-            # Continue until goal is achieved (no hard limit)
-            while not goal_achieved:
+            # Continue until goal is achieved (with safety limit)
+            while not goal_achieved and iteration < max_total_iterations:
                 # Initialize goal tracker for this batch
                 batch_max = iteration + max_iterations
                 goal_tracker = GoalTracker(max_iterations=batch_max)
@@ -555,6 +559,30 @@ class Orchestrator:
                         console.print(f"[dim]Confidence: {goal_status.confidence:.0%}[/dim]")
                         console.print(f"[dim]Reasoning: {goal_status.reasoning}[/dim]")
                         
+                        # Detect stuck state (repeating same goal with low confidence)
+                        if intent.goal == last_goal and goal_status.confidence < 0.4:
+                            stuck_count += 1
+                        else:
+                            stuck_count = 0
+                        
+                        last_goal = intent.goal
+                        
+                        # If stuck for 3+ iterations, warn user
+                        if stuck_count >= 3:
+                            console.print(f"\n[red]⚠️  Appears to be stuck (same goal repeated {stuck_count} times with low progress)[/red]")
+                            console.print(f"[yellow]Consider:[/yellow]")
+                            console.print(f"  • Breaking down the task into smaller steps")
+                            console.print(f"  • Trying a different approach")
+                            console.print(f"  • Checking if manual intervention is needed")
+                            
+                            response = console.input("\n[bold]Continue trying? (y/n):[/bold] ")
+                            if response.lower() not in ('y', 'yes'):
+                                console.print("[yellow]Stopping iterations by user request[/yellow]")
+                                return f"Task stopped after {iteration} iteration(s) - appears stuck"
+                            
+                            # Reset stuck count after user confirms
+                            stuck_count = 0
+                        
                         if goal_status.next_steps:
                             console.print(f"\n[cyan]Next steps suggested:[/cyan]")
                             for step in goal_status.next_steps:
@@ -567,7 +595,25 @@ class Orchestrator:
                 if iteration >= batch_max and not goal_achieved:
                     batch_number += 1
                     console.print(f"\n[yellow]⟳ Batch {batch_number - 1} complete ({max_iterations} iterations)[/yellow]")
-                    console.print(f"[dim]Goal not yet achieved. Continuing with batch {batch_number}...[/dim]\n")
+                    console.print(f"[dim]Goal not yet achieved. {iteration}/{max_total_iterations} total iterations used.[/dim]")
+                    
+                    # Ask user to continue after each batch (safety check)
+                    if batch_number > 1:  # After first batch
+                        response = console.input(f"\n[bold]Continue with batch {batch_number}? (y/n):[/bold] ")
+                        if response.lower() not in ('y', 'yes'):
+                            console.print("[yellow]Stopping iterations by user request[/yellow]")
+                            return f"Task stopped after {iteration} iteration(s) - goal not achieved"
+                    
+                    console.print(f"[dim]Continuing with batch {batch_number}...[/dim]\n")
+            
+            # Check if we hit the absolute limit
+            if iteration >= max_total_iterations and not goal_achieved:
+                console.print(f"\n[red]⚠️  Maximum iterations reached ({max_total_iterations})[/red]")
+                console.print(f"[yellow]Goal was not achieved. Task may be:[/yellow]")
+                console.print(f"  • Too complex for iterative approach")
+                console.print(f"  • Requires manual intervention")
+                console.print(f"  • Blocked by permissions or system constraints")
+                return f"Task stopped after {iteration} iteration(s) - maximum iterations reached"
             
             # Final result (goal achieved)
             print_success(f"Task completed in {iteration} iteration(s) across {batch_number} batch(es)")
