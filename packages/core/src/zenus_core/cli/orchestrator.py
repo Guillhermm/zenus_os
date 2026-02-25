@@ -220,10 +220,11 @@ class Orchestrator:
                         os.environ['ZENUS_LLM'] = original_model
                     else:
                         os.environ.pop('ZENUS_LLM', None)
-            except Exception as e:
-                error_msg = f"Failed to understand command: {str(e)}"
-                self.logger.log_error(error_msg, {"user_input": user_input})
-                raise IntentTranslationError(error_msg) from e
+                
+                except Exception as e:
+                    error_msg = f"Failed to understand command: {str(e)}"
+                    self.logger.log_error(error_msg, {"user_input": user_input})
+                    raise IntentTranslationError(error_msg) from e
             
             # Step 2.5: Analyze for potential failures (learning from past mistakes)
             pre_analysis = self.failure_analyzer.analyze_before_execution(user_input, intent)
