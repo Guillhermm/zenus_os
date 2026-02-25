@@ -9,6 +9,7 @@ from typing import Optional, List
 from zenus_core.tools.registry import TOOLS
 from zenus_core.safety.policy import check_step, SafetyError
 from zenus_core.brain.llm.schemas import IntentIR
+from zenus_core.execution.error_handler import get_error_handler
 
 
 def execute_plan(intent: IntentIR, logger=None, parallel: bool = True) -> List[str]:
@@ -124,10 +125,21 @@ def execute_plan(intent: IntentIR, logger=None, parallel: bool = True) -> List[s
                 if logger:
                     logger.log_step_result(step.tool, step.action, result_msg, True)
             else:
-                # Recovery failed
-                error_msg = f"Step failed: {recovery_result.message}"
+                # Recovery failed - provide enhanced error message
+                error_handler = get_error_handler()
+                enhanced_error = error_handler.handle(
+                    e, step.tool, step.action, step.args, context
+                )
+                
+                # Log with enhanced message
                 if logger:
-                    logger.log_step_result(step.tool, step.action, error_msg, False)
-                raise RuntimeError(error_msg) from e
+                    logger.log_step_result(step.tool, step.action, enhanced_error.user_friendly, False)
+                
+                # Print enhanced error (user-friendly)
+                from rich.console import Console
+                console = Console()
+                console.print(enhanced_error.format())
+                
+                raise RuntimeError(enhanced_error.user_friendly) from e
     
     return results
