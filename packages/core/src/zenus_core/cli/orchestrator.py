@@ -23,6 +23,7 @@ from zenus_core.memory.action_tracker import get_action_tracker
 from zenus_core.execution.parallel_executor import get_parallel_executor
 from zenus_core.execution.intent_cache import get_intent_cache
 from zenus_core.feedback import get_feedback_collector
+from zenus_core.observability import get_metrics_collector
 from zenus_core.audit.logger import get_logger
 from zenus_core.memory.session_memory import SessionMemory
 from zenus_core.memory.world_model import WorldModel
@@ -104,6 +105,9 @@ class Orchestrator:
         
         # Feedback collector for learning
         self.feedback_collector = get_feedback_collector()
+        
+        # Metrics collector for observability
+        self.metrics = get_metrics_collector()
         
         # Semantic search for command history (lazy import)
         self.semantic_search = None
@@ -385,8 +389,33 @@ class Orchestrator:
             
             print_success("Plan executed successfully")
             
-            # Collect feedback (non-blocking)
+            # Record metrics
             execution_time_ms = (time.time() - start_time) * 1000
+            try:
+                # Get primary tool
+                tool = intent.steps[0].tool if intent.steps else "unknown"
+                
+                # Get cache info
+                cache_hit = (intent == self.intent_cache.get(user_input, context))
+                
+                # Get token/cost info from router
+                router_stats = self.router.get_stats()
+                tokens = router_stats['session']['tokens_used']
+                cost = router_stats['session']['estimated_cost']
+                
+                self.metrics.record_command(
+                    latency_ms=execution_time_ms,
+                    model=selected_model,
+                    tool=tool,
+                    tokens=tokens,
+                    cost=cost,
+                    cache_hit=cache_hit,
+                    success=True
+                )
+            except:
+                pass  # Non-critical
+            
+            # Collect feedback (non-blocking)
             try:
                 self.feedback_collector.collect(
                     user_input, intent, execution_time_ms, success=True
