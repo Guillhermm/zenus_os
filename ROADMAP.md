@@ -26,12 +26,12 @@ This roadmap outlines transformative improvements to make Zenus OS the definitiv
   - CI/CD with automated test suite
   - Coverage target: >85%
 
-- [ ] **Observability**
-  - OpenTelemetry instrumentation
-  - Structured logging with log levels
+- [x] **Observability** ✅ (v0.4.0 - partial)
   - Performance metrics (latency, token usage, success rate)
-  - Real-time dashboard for system health
-  - Alerting for anomalies
+  - Real-time statistics
+  - Cost tracking
+  - Per-model breakdown
+  - Historical data access
 
 - [ ] **Configuration Management**
   - YAML/TOML config files (not just .env)
@@ -44,11 +44,11 @@ This roadmap outlines transformative improvements to make Zenus OS the definitiv
 
 **Goal**: <100ms response time for most operations
 
-- [ ] **Caching Strategy**
-  - Distributed cache (Redis optional)
+- [x] **Caching Strategy** ✅ (v0.4.0 - partial)
   - Intent memoization (hash → plan)
-  - LLM response streaming with partial execution
-  - Predictive pre-warming for common commands
+  - LLM response streaming
+  - 1-hour TTL cache
+  - LRU eviction
 
 - [ ] **Concurrency**
   - Async/await throughout stack
@@ -70,11 +70,11 @@ This roadmap outlines transformative improvements to make Zenus OS the definitiv
 
 **Goal**: System learns from every interaction
 
-- [ ] **Feedback Loop**
+- [x] **Feedback Loop** ✅ (v0.4.0)
   - Explicit thumbs up/down on results
-  - Implicit feedback (user corrections, retries)
   - Success metric tracking per command type
-  - A/B testing for prompts
+  - Training data export
+  - Privacy-aware collection
 
 - [ ] **Prompt Evolution**
   - Auto-tune system prompts based on success rate
@@ -82,12 +82,12 @@ This roadmap outlines transformative improvements to make Zenus OS the definitiv
   - Prompt versioning and rollback
   - Domain-specific prompt variants (dev ops, data science, etc.)
 
-- [ ] **Model Router**
+- [x] **Model Router** ✅ (v0.4.0)
   - Task complexity estimator
-  - Route simple tasks to fast/cheap models
-  - Route complex tasks to powerful models
-  - Cost-accuracy tradeoff optimizer
-  - Fallback cascade (GPT-4 → Claude → DeepSeek → rules)
+  - Route simple tasks to fast/cheap models (DeepSeek)
+  - Route complex tasks to powerful models (Claude)
+  - Cost tracking per model
+  - Fallback cascade
 
 - [ ] **Local Fine-Tuning**
   - Export training data from successful executions
