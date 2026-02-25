@@ -1,95 +1,144 @@
-# Zenus OS Changelog
+# Changelog
 
-## [Unreleased] - 2026-02-10
+All notable changes to Zenus OS will be documented in this file.
 
-### Added - Semantic Memory & Explain Mode
-- **Semantic Search**: sentence-transformers integration for finding similar past commands
-  - Embeddings cached in `~/.zenus/semantic_cache/`
-  - Cosine similarity search with configurable threshold
-  - Success rate tracking per command type
-- **Explain Mode**: `--explain` flag shows reasoning before execution
-  - Display similar past commands
-  - Show success probability
-  - Require confirmation before proceeding
-  - Detailed step-by-step breakdown
-- **Visual Improvements**: Rich library for beautiful CLI output
-  - Color-coded output: green (success), red (error), yellow (warning), cyan (info)
-  - Risk levels with emoji: 🟢 (read), 🔵 (create), 🟡 (modify), 🔴 (delete)
-  - Formatted tables and panels
-  - Syntax highlighting for code/JSON
-  - Bold/italic/underline support
-- **Readline Support**: Arrow keys for command history
-  - History saved to `~/.zenus/history.txt`
-  - 1000 commands stored
-  - Persists across sessions
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+## [0.3.0] - 2026-02-24
 
 ### Fixed
-- **Ollama Timeout**: Increased from 30s to 300s (5 minutes)
-- **Token Limits**: Increased from 512 to 2048 tokens for longer responses
-- **Context Window**: Added 8192 token context window
-- **Lazy Loading**: Fixed API key errors when using Ollama
-- **Text Operations**: Fixed write() detection for new vs existing files
-- **.env Parsing**: Fixed corruption issues in installer
-- **Module Imports**: Moved OpenAI imports inside __init__ to prevent eager loading
+- **Result Caching Bug**: Fixed adaptive planner not clearing execution_history between commands, causing observations to show cached results from previous commands in the session
+- **Anthropic Streaming**: Enabled streaming in regular execution mode (was only enabled in iterative mode), fixing timeout errors with Claude models on normal commands
+- **Infinite Loops**: Added max 50 iteration limit, stuck detection (repeating same goal 3+ times), and user confirmation between batches to prevent runaway iterative tasks
+- **Empty Observations**: Enhanced observation formatting to handle None/empty results gracefully, providing context even when commands produce minimal output
+- **Large File Writes**: Added chunked writing (10MB chunks) for large files, enabling LaTeX documents and other big file operations
+- **Package Operation Timeouts**: Removed fixed 300s timeout, using streaming executor with no timeout for install/remove/update operations
+- **Shell Output Streaming**: Created StreamingExecutor for real-time line-by-line output with subprocess.Popen instead of subprocess.run
+
+### Added
+- **Real-Time Command Output**: All shell commands now stream output in real-time with dimmed formatting
+- **System Resource Commands**: Added SystemOps.check_resource_usage() and SystemOps.find_large_files() for comprehensive system diagnostics
+- **Loop Prevention**: Stuck detection warns users and offers to abort when tasks repeat without progress
+- **Better Error Context**: Enhanced error messages throughout execution chain with stdout/stderr labels
+
+## [0.2.0] - 2026-02-23
+
+### Added
+- **Anthropic Claude Support**: Full integration with Claude models (Sonnet, Opus, Haiku) via Anthropic API
+- **Streaming for Claude**: Implemented streaming in translate_intent() and reflect_on_goal() to avoid timeout errors on long operations
+- **Update Script**: Added update.sh for easy dependency reinstallation after git pull
+
+### Fixed
+- **Dependency Installation**: Fixed module not found errors by adding LLM provider dependencies directly to CLI and TUI packages
+- **Streaming Reflection**: Fixed reflect_on_goal() to use Anthropic's streaming format (.text_stream) instead of OpenAI's format
+
+## [0.2.0-beta] - 2026-02-22
+
+### Added
+- **Installation Automation**: install.sh now automatically installs Poetry, runs dependency installation, and configures bash aliases
+- **Monorepo Support**: Proper Poetry workspace structure with three packages (core, cli, tui)
+
+### Fixed
+- **Monorepo Installation**: Fixed dependency resolution for path dependencies in Poetry workspace
+- **Alias Consistency**: Standardized all aliases to use hyphens (zenus, zenus-tui) instead of mixed underscore/hyphen
+
+## [0.2.0-alpha] - 2026-02-21
+
+### Added
+- **TUI (Terminal UI)**: Full-featured dashboard with Live Status, Execution Log, Memory Browser, and Statistics panels
+- **Vision Capabilities**: VisionOps tool using Playwright for UI automation via screenshot analysis
+- **Workflow Recorder**: Record command sequences and replay them with workflow system
+- **Parallel Execution**: Dependency analysis and parallel execution for independent steps (2-3x faster)
+- **Error Recovery**: Automatic retry with exponential backoff for transient failures
+- **Smart Caching**: LLM response caching (1hr TTL) and filesystem caching (5min TTL)
+- **Enhanced Shell**: Tab completion, Ctrl+R search, multi-line input, syntax highlighting
+- **Progress Indicators**: Spinners for LLM calls, progress bars for multi-step execution
+- **Pattern Detection**: Learns usage patterns and suggests automation after 10 similar commands
+- **Explainability**: `explain` command shows decision-making process for last command
 
 ### Changed
-- All execution steps now print with formatted output
-- Success/failure automatically tracked in semantic index
-- Orchestrator integrated with new formatter and explain mode
+- **Iterative Execution**: Now auto-continues in batches of 12 iterations, stopping early when goal achieved
+- **Project Structure**: Refactored to Poetry workspace monorepo (core, cli, tui packages)
 
-## [0.1.0-alpha] - 2026-02-09
+## [0.1.0] - 2026-02-20
 
-### Added - Foundation
+### Added
+- **Massive Tool Expansion**: 10 tools total (was 4)
+  - BrowserOps: open, screenshot, get_text, search, download
+  - PackageOps: install, remove, update, search, list_installed, info, clean
+  - ServiceOps: start, stop, restart, status, enable, disable, logs
+  - ContainerOps: run, ps, stop, logs, images, pull, build
+  - GitOps: clone, status, add, commit, push, pull, branch, log, diff
+  - NetworkOps: curl, wget, ping, ssh, traceroute, dns_lookup, netstat
+- **Context Awareness**: Tracks current directory, git state, time, recent files, running processes
+- **Learning from Failures**: FailureAnalyzer provides suggestions based on past errors
+- **Undo/Rollback**: Transaction-based action tracking for reversible operations
+- **Proactive Suggestions**: SuggestionEngine analyzes context and provides helpful tips
+- **Auto-Detection**: TaskAnalyzer detects when tasks need iterative execution vs one-shot
+- **Batch Operations**: Wildcard and pattern support for efficient file operations
+
+### Changed
+- **Iterative Mode**: Added --iterative flag and ReAct loop for complex tasks
+- **Goal Tracking**: LLM-based reflection to determine when iterative goals are achieved
+
+### Performance
+- Batch file operations 2-3x faster with parallel execution
+- Zero crashes on common errors with recovery system
+
+## [0.1.0-alpha] - 2026-02-10
+
+### Added
+- **Semantic Memory**: sentence-transformers integration for similar command search
+- **Explain Mode**: --explain flag shows reasoning, similar commands, and success probability before execution
+- **Visual Output**: Rich library for color-coded, formatted CLI output with emoji risk levels
+- **Readline Support**: Arrow keys for command history, saved to ~/.zenus/history.txt
+
+### Fixed
+- **Ollama Timeout**: Increased from 30s to 300s for longer operations
+- **Token Limits**: Increased from 512 to 2048 tokens
+- **Lazy Loading**: Fixed API key errors when using Ollama
+
+## [0.0.1] - 2026-02-09
+
+### Added - Initial Release
 - **CLI Routing**: help, version, shell, direct command modes
 - **Intent IR Schema**: Formal contract between LLM and execution
 - **LLM Backends**: OpenAI, DeepSeek, Ollama (local) support
-- **Audit Logging**: JSONL logs to `~/.zenus/logs/`
-- **Dry-run Mode**: `--dry-run` flag for safe preview
+- **Audit Logging**: JSONL logs to ~/.zenus/logs/
+- **Dry-run Mode**: --dry-run flag for safe preview
 - **Adaptive Planner**: Retry with observation on failure
 - **Three-layer Memory**: Session (RAM), World (persistent), History (audit)
 - **Sandboxing**: Path validation and resource limits
 - **Tools**: FileOps, TextOps, SystemOps, ProcessOps
 - **Progress Indicators**: Spinner with elapsed time
 - **Built-in Commands**: status, memory, update
-
-### Documentation
-- README.md - Installation and usage
-- CONFIGURATION.md - LLM backend setup
-- TROUBLESHOOTING.md - Common issues
-- OLLAMA_TUNING.md - Model optimization
-- STATUS.md - Project status and roadmap
-
-### Tests
-- 57 test cases covering all core modules
-- 100% passing test suite
-
-## Roadmap
-
-### Next (Phase 2: Reliability)
-- [ ] Execution traces with detailed error messages
-- [ ] Better Ollama prompt engineering
-- [ ] Fallback strategies for failed commands
-- [ ] Success metrics dashboard
-
-### Future (Phase 3: Enhancement)
-- [ ] Voice interface (Whisper STT + Piper TTS)
-- [ ] Code editing tools
-- [ ] Git operations
-- [ ] Project scaffolding
-- [ ] Task decomposition for complex workflows
+- **Test Suite**: 57 test cases, 100% passing
 
 ---
 
-**Installation:**
+## Installation
+
 ```bash
-git clone <repo>
+git clone https://github.com/Guillhermm/zenus_os.git
 cd zenus_os
 ./install.sh
 ```
 
-**Usage:**
+## Usage
+
 ```bash
-./zenus.sh                    # Interactive mode
-./zenus.sh "list files"       # Direct command
-./zenus.sh --explain "task"   # Show explanation first
+zenus                         # Interactive mode
+zenus "list files"            # Direct command
+zenus "task" --explain        # Show explanation first
+zenus "complex task" --iterative  # Use ReAct loop
+zenus-tui                     # Launch TUI dashboard
 ```
+
+## Links
+
+- **Repository**: https://github.com/Guillhermm/zenus_os
+- **Issues**: https://github.com/Guillhermm/zenus_os/issues
+- **Discussions**: https://github.com/Guillhermm/zenus_os/discussions
