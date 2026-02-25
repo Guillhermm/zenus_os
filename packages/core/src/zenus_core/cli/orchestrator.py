@@ -21,6 +21,7 @@ from zenus_core.brain.model_router import get_router
 from zenus_core.brain.llm.schemas import IntentIR
 from zenus_core.memory.action_tracker import get_action_tracker
 from zenus_core.execution.parallel_executor import get_parallel_executor
+from zenus_core.execution.intent_cache import get_intent_cache
 from zenus_core.audit.logger import get_logger
 from zenus_core.memory.session_memory import SessionMemory
 from zenus_core.memory.world_model import WorldModel
@@ -97,6 +98,9 @@ class Orchestrator:
         # Model router for intelligent LLM selection
         self.router = get_router()
         
+        # Intent cache for memoization (2-3x speedup)
+        self.intent_cache = get_intent_cache()
+        
         # Semantic search for command history (lazy import)
         self.semantic_search = None
         try:
@@ -163,36 +167,48 @@ class Orchestrator:
                 console.print(f"[dim]Task complexity: {complexity.score:.2f} → Using {selected_model}[/dim]")
             
             # Step 2: Translate intent with context using selected model
-            # IMPORTANT: Always use streaming to avoid Anthropic timeouts
-            try:
-                # Temporarily set model for this request
-                import os
-                original_model = os.environ.get('ZENUS_LLM')
-                os.environ['ZENUS_LLM'] = selected_model
+            # Check cache first for instant response
+            if context:
+                enhanced_input = f"{user_input}\n{context}"
+            else:
+                enhanced_input = user_input
+            
+            intent = self.intent_cache.get(user_input, context)
+            
+            if intent:
+                # Cache hit! Instant response, zero tokens
+                if self.show_progress:
+                    console.print(f"[dim green]✓ Cache hit (instant, $0.00)[/dim green]")
                 
-                # Refresh LLM instance with new model
-                self.llm = get_llm()
-                
-                # Show thinking indicator
-                if self.progress:
-                    with self.progress.thinking("Understanding your request"):
-                        if context:
-                            enhanced_input = f"{user_input}\n{context}"
+                # Update router stats (cache hit counts as using selected model but zero tokens)
+                self.router.track_tokens(selected_model, 0)
+            else:
+                # Cache miss, call LLM
+                # IMPORTANT: Always use streaming to avoid Anthropic timeouts
+                try:
+                    # Temporarily set model for this request
+                    import os
+                    original_model = os.environ.get('ZENUS_LLM')
+                    os.environ['ZENUS_LLM'] = selected_model
+                    
+                    # Refresh LLM instance with new model
+                    self.llm = get_llm()
+                    
+                    # Show thinking indicator
+                    if self.progress:
+                        with self.progress.thinking("Understanding your request"):
                             intent = self.llm.translate_intent(enhanced_input, stream=True)
-                        else:
-                            intent = self.llm.translate_intent(user_input, stream=True)
-                else:
-                    if context:
-                        enhanced_input = f"{user_input}\n{context}"
-                        intent = self.llm.translate_intent(enhanced_input, stream=True)
                     else:
-                        intent = self.llm.translate_intent(user_input, stream=True)
-                
-                # Restore original model
-                if original_model:
-                    os.environ['ZENUS_LLM'] = original_model
-                else:
-                    os.environ.pop('ZENUS_LLM', None)
+                        intent = self.llm.translate_intent(enhanced_input, stream=True)
+                    
+                    # Cache the result
+                    self.intent_cache.set(user_input, context, intent)
+                    
+                    # Restore original model
+                    if original_model:
+                        os.environ['ZENUS_LLM'] = original_model
+                    else:
+                        os.environ.pop('ZENUS_LLM', None)
             except Exception as e:
                 error_msg = f"Failed to understand command: {str(e)}"
                 self.logger.log_error(error_msg, {"user_input": user_input})
