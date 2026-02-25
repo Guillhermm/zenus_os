@@ -48,7 +48,7 @@ class FeedbackCollector:
     def __init__(
         self,
         feedback_path: Optional[str] = None,
-        prompt_frequency: float = 1.0,  # 1.0 = always, 0.5 = 50% of time
+        prompt_frequency: float = 0.1,  # 10% of commands (less annoying)
         enable_prompts: bool = True
     ):
         if feedback_path is None:
@@ -58,7 +58,17 @@ class FeedbackCollector:
         self.feedback_path.parent.mkdir(parents=True, exist_ok=True)
         
         self.prompt_frequency = prompt_frequency
-        self.enable_prompts = enable_prompts
+        
+        # Check environment variable for override
+        import os
+        env_enable = os.environ.get('ZENUS_FEEDBACK_PROMPTS', '').lower()
+        if env_enable in ('false', '0', 'no', 'off'):
+            self.enable_prompts = False
+        else:
+            self.enable_prompts = enable_prompts
+        
+        # Track what we've already asked about (session-level, normalized)
+        self._asked_this_session: set = set()
         
         # Stats cache
         self._stats_cache: Optional[Dict] = None
@@ -87,10 +97,24 @@ class FeedbackCollector:
         if not self.enable_prompts:
             return None
         
-        # Random sampling based on frequency
+        # Normalize command for deduplication
+        normalized = user_input.lower().strip()
+        
+        # Don't ask if we already asked this session
+        if normalized in self._asked_this_session:
+            return None
+        
+        # Don't ask if we already have feedback for this command (from any session)
+        if self._already_has_feedback(normalized):
+            return None
+        
+        # Random sampling based on frequency (less annoying)
         import random
         if random.random() > self.prompt_frequency:
             return None
+        
+        # Mark as asked this session
+        self._asked_this_session.add(normalized)
         
         # Prompt user
         from rich.console import Console
@@ -296,6 +320,32 @@ class FeedbackCollector:
         
         except Exception as e:
             return f"Export failed: {str(e)}"
+    
+    def _already_has_feedback(self, normalized_input: str) -> bool:
+        """Check if we already have feedback for this command"""
+        if not self.feedback_path.exists():
+            return False
+        
+        try:
+            with open(self.feedback_path, 'r') as f:
+                for line in f:
+                    entry = json.loads(line)
+                    stored_input = entry.get('user_input', '').lower().strip()
+                    
+                    # Check if it's the same command (or very similar)
+                    if stored_input == normalized_input:
+                        # We have feedback for this already
+                        return True
+                    
+                    # Also check if it's a substring match (very similar)
+                    if len(normalized_input) > 20:  # Only for longer commands
+                        if normalized_input in stored_input or stored_input in normalized_input:
+                            return True
+            
+            return False
+        
+        except:
+            return False
     
     def _sanitize_text(self, text: str) -> str:
         """Remove sensitive information from text"""
