@@ -37,7 +37,7 @@ def print_info(message: str):
 
 
 def print_step(step_num: int, tool: str, action: str, risk: int, result: str = None):
-    """Print execution step with color coding"""
+    """Print execution step with color coding and rich formatting"""
     
     # Risk color coding
     risk_colors = {
@@ -64,7 +64,29 @@ def print_step(step_num: int, tool: str, action: str, risk: int, result: str = N
     )
     
     if result:
-        console.print(f"  → {result}", style="dim")
+        # Try to format result if it's structured data
+        result_str = str(result)
+        
+        # Check if result looks like it should be formatted nicely
+        should_format = (
+            result_str.count('\n') > 3 or  # Multi-line
+            '{' in result_str or  # JSON-like
+            '|' in result_str or  # Table-like
+            '\t' in result_str     # Tab-separated
+        )
+        
+        if should_format and len(result_str) > 50:
+            # Use rich formatter for complex output
+            try:
+                from zenus_core.output import format_output
+                console.print(f"  → Result:")
+                format_output(result_str, title=None)
+            except:
+                # Fallback to simple display
+                console.print(f"  → {result}", style="dim")
+        else:
+            # Simple one-liner
+            console.print(f"  → {result}", style="dim")
 
 
 def print_goal(goal: str):

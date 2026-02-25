@@ -24,6 +24,7 @@ from zenus_core.execution.parallel_executor import get_parallel_executor
 from zenus_core.execution.intent_cache import get_intent_cache
 from zenus_core.feedback import get_feedback_collector
 from zenus_core.observability import get_metrics_collector
+from zenus_core.output import get_formatter
 from zenus_core.audit.logger import get_logger
 from zenus_core.memory.session_memory import SessionMemory
 from zenus_core.memory.world_model import WorldModel
@@ -108,6 +109,9 @@ class Orchestrator:
         
         # Metrics collector for observability
         self.metrics = get_metrics_collector()
+        
+        # Output formatter for rich display
+        self.formatter = get_formatter()
         
         # Semantic search for command history (lazy import)
         self.semantic_search = None
