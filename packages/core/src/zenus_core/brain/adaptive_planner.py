@@ -54,6 +54,10 @@ class AdaptivePlanner:
             True if all steps succeeded, False otherwise
         """
         
+        # CRITICAL: Clear execution history at the start of each execution
+        # to prevent caching results from previous commands
+        self.execution_history = []
+        
         if self.logger:
             self.logger.log_execution_start(intent)
         

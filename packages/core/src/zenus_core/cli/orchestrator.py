@@ -305,7 +305,7 @@ class Orchestrator:
                 self.action_tracker.end_transaction(transaction_id, "failed")
                 raise
             
-            # Print steps with formatting
+            # Print steps with formatting  
             for i, (step, result) in enumerate(zip(intent.steps, step_results), 1):
                 print_step(i, step.tool, step.action, step.risk, result)
             
