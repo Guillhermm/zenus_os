@@ -22,6 +22,7 @@ from zenus_core.brain.llm.schemas import IntentIR
 from zenus_core.memory.action_tracker import get_action_tracker
 from zenus_core.execution.parallel_executor import get_parallel_executor
 from zenus_core.execution.intent_cache import get_intent_cache
+from zenus_core.feedback import get_feedback_collector
 from zenus_core.audit.logger import get_logger
 from zenus_core.memory.session_memory import SessionMemory
 from zenus_core.memory.world_model import WorldModel
@@ -101,6 +102,9 @@ class Orchestrator:
         # Intent cache for memoization (2-3x speedup)
         self.intent_cache = get_intent_cache()
         
+        # Feedback collector for learning
+        self.feedback_collector = get_feedback_collector()
+        
         # Semantic search for command history (lazy import)
         self.semantic_search = None
         try:
@@ -139,6 +143,9 @@ class Orchestrator:
         Returns:
             Human-readable result
         """
+        import time
+        start_time = time.time()
+        
         try:
             # Step 0: Analyze task complexity (auto-detect iterative need)
             if not force_oneshot:
@@ -377,6 +384,16 @@ class Orchestrator:
                     self.logger.log_error(f"Failed to add to semantic search: {e}")
             
             print_success("Plan executed successfully")
+            
+            # Collect feedback (non-blocking)
+            execution_time_ms = (time.time() - start_time) * 1000
+            try:
+                self.feedback_collector.collect(
+                    user_input, intent, execution_time_ms, success=True
+                )
+            except:
+                pass  # Non-critical
+            
             return "Plan executed successfully"
         
         except IntentTranslationError as e:
