@@ -115,11 +115,13 @@ This roadmap outlines transformative improvements to make Zenus OS the definitiv
   - Shows all alternatives with pros/cons
   - Confidence-based decision making
 
-- [ ] **Self-Reflection**
+- [x] **Self-Reflection** ✅ (v0.5.0 - NEW!)
   - Critique own plans before execution
   - Validate assumptions with queries
   - Estimate confidence per step
   - Know when to ask for human input
+  - Critical issue detection
+  - Intelligent help requests
 
 - [ ] **Knowledge Graph**
   - Build ontology of system state
@@ -180,11 +182,13 @@ This roadmap outlines transformative improvements to make Zenus OS the definitiv
 
 **Goal**: Information presented optimally
 
-- [ ] **Data Visualization**
-  - Auto-generate charts (matplotlib, plotly)
-  - Tables with sorting/filtering
+- [x] **Data Visualization** ✅ (v0.5.0 - NEW!)
+  - Auto-generate charts (matplotlib)
+  - Tables with sorting/filtering (Rich)
   - Diff views (before/after)
-  - Timeline views for events
+  - Auto-detects best visualization
+  - Multiple chart types (line, bar, pie, histogram, heatmap)
+  - Beautiful table formatting
 
 - [ ] **Web Dashboard**
   - Browser-based UI (FastAPI + React)

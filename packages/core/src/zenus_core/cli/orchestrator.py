@@ -23,7 +23,9 @@ from zenus_core.brain.tree_of_thoughts import get_tree_of_thoughts
 from zenus_core.brain.prompt_evolution import get_prompt_evolution
 from zenus_core.brain.goal_inference import get_goal_inference
 from zenus_core.brain.multi_agent import get_multi_agent_system
+from zenus_core.brain.self_reflection import get_self_reflection
 from zenus_core.monitoring import get_proactive_monitor
+from zenus_core.visualization import get_visualizer
 from zenus_core.memory.action_tracker import get_action_tracker
 from zenus_core.execution.parallel_executor import get_parallel_executor
 from zenus_core.execution.intent_cache import get_intent_cache
@@ -77,7 +79,9 @@ class Orchestrator:
         enable_prompt_evolution: bool = True,
         enable_goal_inference: bool = True,
         enable_multi_agent: bool = False,  # Experimental feature
-        enable_proactive_monitoring: bool = False  # Experimental feature
+        enable_proactive_monitoring: bool = False,  # Experimental feature
+        enable_self_reflection: bool = True,  # NEW!
+        enable_visualization: bool = True  # NEW!
     ):
         self.llm = get_llm()
         self.logger = get_logger()
@@ -146,6 +150,8 @@ class Orchestrator:
         self.enable_goal_inference = enable_goal_inference
         self.enable_multi_agent = enable_multi_agent
         self.enable_proactive_monitoring = enable_proactive_monitoring
+        self.enable_self_reflection = enable_self_reflection
+        self.enable_visualization = enable_visualization
         
         # 🌳 Tree of Thoughts - Explore multiple solution paths
         self.tree_of_thoughts = get_tree_of_thoughts(self.llm, self.logger) if enable_tree_of_thoughts else None
@@ -164,6 +170,12 @@ class Orchestrator:
         if self.proactive_monitor and enable_proactive_monitoring:
             # Start monitoring session
             self.proactive_monitor.start_monitoring()
+        
+        # 🤔 Self-Reflection - Critique plans before execution
+        self.self_reflection = get_self_reflection(self.llm, self.logger) if enable_self_reflection else None
+        
+        # 📊 Visualizer - Auto-generate charts and tables
+        self.visualizer = get_visualizer() if enable_visualization else None
     
     def execute_command(
         self, 
@@ -361,6 +373,33 @@ class Orchestrator:
                         response = console.input("\n[bold]Proceed anyway?[/bold] (y/n): ")
                         if response.lower() not in ('y', 'yes'):
                             return "Execution cancelled due to high failure risk"
+            
+            # Step 2.6: Self-Reflection - Critique plan before execution
+            if self.enable_self_reflection and self.self_reflection and not dry_run:
+                reflection = self.self_reflection.reflect_on_plan(user_input, intent, {"context": context})
+                
+                # Check if reflection found critical issues
+                should_proceed, reason = self.self_reflection.should_proceed(reflection)
+                
+                # Show reflection to user if confidence is low or has critical issues
+                if not should_proceed or reflection.overall_confidence_score < 0.7:
+                    reflection_output = self.self_reflection.format_reflection_for_user(reflection)
+                    console.print(reflection_output)
+                    
+                    # If critical issues, don't proceed
+                    if not should_proceed:
+                        console.print(f"\n[red bold]⚠️  {reason}[/red bold]")
+                        
+                        # Ask user if they want to proceed anyway
+                        if reflection.should_ask_user and reflection.questions_for_user:
+                            console.print("\n[cyan bold]❓ Please answer these questions:[/cyan bold]")
+                            for q in reflection.questions_for_user:
+                                answer = console.input(f"  {q}: ")
+                                console.print(f"    → {answer}")
+                        
+                        response = console.input("\n[bold]Proceed anyway?[/bold] (y/n): ")
+                        if response.lower() not in ('y', 'yes'):
+                            return "Execution cancelled after self-reflection"
             
             # Step 2.7: Show proactive suggestions
             ctx_mgr = get_context_manager()
@@ -1004,6 +1043,26 @@ class Orchestrator:
             error_msg = f"Health check failed: {e}"
             self.logger.log_error(error_msg)
             return {"status": "error", "message": error_msg}
+    
+    def visualize_result(self, data: any, title: Optional[str] = None) -> str:
+        """
+        Visualize result data (auto-generates charts/tables)
+        
+        Args:
+            data: Data to visualize
+            title: Optional title
+        
+        Returns:
+            Formatted visualization
+        """
+        if not self.enable_visualization or not self.visualizer:
+            return str(data)
+        
+        try:
+            return self.visualizer.visualize(data, title=title)
+        except Exception as e:
+            self.logger.log_error(f"Visualization failed: {e}")
+            return str(data)
     
     def _format_dry_run(self, intent: IntentIR) -> str:
         """Format dry-run output"""
