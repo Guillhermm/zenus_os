@@ -14,7 +14,7 @@ This is true proactive AI - preventing problems, not just reacting!
 import json
 import time
 import subprocess
-from typing import List, Dict, Optional, Callable
+from typing import List, Dict, Optional, Callable, Tuple
 from dataclasses import dataclass, asdict
 from enum import Enum
 from datetime import datetime, timedelta
