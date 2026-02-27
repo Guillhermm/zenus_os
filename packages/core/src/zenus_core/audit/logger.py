@@ -87,6 +87,16 @@ class AuditLogger:
             "context": context or {}
         }
         self._write(entry)
+    
+    def log_info(self, event_type: str, data: Optional[dict] = None):
+        """Log informational event"""
+        entry = {
+            "timestamp": datetime.now().isoformat(),
+            "type": "info",
+            "event": event_type,
+            "data": data or {}
+        }
+        self._write(entry)
 
     def _write(self, entry: dict):
         """Write entry to log file"""
