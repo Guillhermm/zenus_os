@@ -1,0 +1,110 @@
+# Zenus OS Configuration
+# Copy to ~/.zenus/config.yaml or ./zenus.yaml
+
+version: "0.5.1"
+profile: dev  # dev, staging, or production
+
+# LLM Configuration
+llm:
+  provider: anthropic  # anthropic, openai, deepseek, ollama
+  model: claude-3-5-sonnet-20241022
+  max_tokens: 4096
+  temperature: 0.7
+  timeout_seconds: 30
+
+# Fallback Chain (when primary LLM fails)
+fallback:
+  enabled: true
+  providers:
+    - anthropic
+    - deepseek
+    - rule_based
+
+# Circuit Breaker (prevent cascade failures)
+circuit_breaker:
+  enabled: true
+  failure_threshold: 5          # Open after 5 failures
+  timeout_seconds: 60.0         # Try reset after 60s
+  success_threshold: 2          # Close after 2 successes
+
+# Retry Logic (prevent infinite retries)
+retry:
+  enabled: true
+  max_attempts: 3
+  initial_delay_seconds: 1.0
+  max_delay_seconds: 30.0
+  exponential_base: 2.0
+  jitter: true
+
+# Cache Configuration
+cache:
+  enabled: true
+  ttl_seconds: 3600             # 1 hour
+  max_size_mb: 100
+
+# Safety & Sandbox
+safety:
+  sandbox_enabled: true
+  max_file_size_mb: 100
+  allowed_paths:
+    - "."
+  blocked_commands:
+    - "rm -rf /"
+    - "dd if="
+    - ":(){ :|:& };:"
+
+# Proactive Monitoring
+monitoring:
+  enabled: true
+  check_interval_seconds: 300   # 5 minutes
+  disk_warning_threshold: 0.8   # Warn at 80%
+  disk_critical_threshold: 0.9  # Critical at 90%
+  cpu_warning_threshold: 0.8
+  memory_warning_threshold: 0.85
+
+# Feature Flags
+features:
+  voice_interface: false        # Experimental
+  multi_agent: false            # Experimental
+  proactive_monitoring: true
+  tree_of_thoughts: true
+  prompt_evolution: true
+  goal_inference: true
+  self_reflection: true
+  data_visualization: true
+
+# Profile-Specific Overrides
+profiles:
+  dev:
+    llm:
+      temperature: 0.9          # More creative in dev
+    cache:
+      ttl_seconds: 300          # Shorter cache in dev
+    safety:
+      sandbox_enabled: false    # Disabled in dev for convenience
+  
+  staging:
+    llm:
+      temperature: 0.7
+    cache:
+      ttl_seconds: 1800         # 30 minutes
+    safety:
+      sandbox_enabled: true
+  
+  production:
+    llm:
+      temperature: 0.5          # More conservative
+    cache:
+      ttl_seconds: 3600         # 1 hour
+    safety:
+      sandbox_enabled: true
+    features:
+      voice_interface: false
+      multi_agent: true         # Stable features only
+
+# Custom Settings (optional)
+custom:
+  # Add your own settings here
+  # Example:
+  # workspace_path: /path/to/workspace
+  # notification_email: user@example.com
