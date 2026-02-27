@@ -25,7 +25,14 @@ from zenus_core.brain.goal_inference import get_goal_inference
 from zenus_core.brain.multi_agent import get_multi_agent_system
 from zenus_core.brain.self_reflection import get_self_reflection
 from zenus_core.monitoring import get_proactive_monitor
-from zenus_core.visualization import get_visualizer
+
+# Optional visualization (requires matplotlib)
+try:
+    from zenus_core.visualization import get_visualizer
+    VISUALIZATION_AVAILABLE = True
+except ImportError:
+    get_visualizer = None
+    VISUALIZATION_AVAILABLE = False
 from zenus_core.memory.action_tracker import get_action_tracker
 from zenus_core.execution.parallel_executor import get_parallel_executor
 from zenus_core.execution.intent_cache import get_intent_cache
@@ -175,7 +182,12 @@ class Orchestrator:
         self.self_reflection = get_self_reflection(self.llm, self.logger) if enable_self_reflection else None
         
         # 📊 Visualizer - Auto-generate charts and tables
-        self.visualizer = get_visualizer() if enable_visualization else None
+        if enable_visualization and VISUALIZATION_AVAILABLE:
+            self.visualizer = get_visualizer()
+        else:
+            self.visualizer = None
+            if enable_visualization and not VISUALIZATION_AVAILABLE:
+                self.logger.log_error("Visualization requested but matplotlib not installed. Install with: poetry add matplotlib numpy")
     
     def execute_command(
         self, 
