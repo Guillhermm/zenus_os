@@ -8,7 +8,7 @@ High-level orchestration of:
 - Audit logging
 """
 
-from typing import Optional
+from typing import Optional, Dict
 from zenus_core.brain.llm.factory import get_llm
 from zenus_core.brain.planner import execute_plan
 from zenus_core.brain.adaptive_planner import AdaptivePlanner
