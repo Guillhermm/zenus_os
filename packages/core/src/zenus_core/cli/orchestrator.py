@@ -19,6 +19,9 @@ from zenus_core.brain.dependency_analyzer import DependencyAnalyzer
 from zenus_core.brain.suggestion_engine import get_suggestion_engine
 from zenus_core.brain.model_router import get_router
 from zenus_core.brain.llm.schemas import IntentIR
+from zenus_core.brain.tree_of_thoughts import get_tree_of_thoughts
+from zenus_core.brain.prompt_evolution import get_prompt_evolution
+from zenus_core.brain.goal_inference import get_goal_inference
 from zenus_core.memory.action_tracker import get_action_tracker
 from zenus_core.execution.parallel_executor import get_parallel_executor
 from zenus_core.execution.intent_cache import get_intent_cache
@@ -67,7 +70,10 @@ class Orchestrator:
         use_memory: bool = True,
         use_sandbox: bool = True,
         show_progress: bool = True,
-        enable_parallel: bool = True
+        enable_parallel: bool = True,
+        enable_tree_of_thoughts: bool = True,
+        enable_prompt_evolution: bool = True,
+        enable_goal_inference: bool = True
     ):
         self.llm = get_llm()
         self.logger = get_logger()
@@ -129,6 +135,20 @@ class Orchestrator:
         
         # Task analyzer for auto-detecting iterative vs one-shot
         self.task_analyzer = TaskAnalyzer(self.llm)
+        
+        # Revolutionary features (can be toggled)
+        self.enable_tree_of_thoughts = enable_tree_of_thoughts
+        self.enable_prompt_evolution = enable_prompt_evolution
+        self.enable_goal_inference = enable_goal_inference
+        
+        # 🌳 Tree of Thoughts - Explore multiple solution paths
+        self.tree_of_thoughts = get_tree_of_thoughts(self.llm, self.logger) if enable_tree_of_thoughts else None
+        
+        # 📈 Prompt Evolution - Self-improving prompts
+        self.prompt_evolution = get_prompt_evolution() if enable_prompt_evolution else None
+        
+        # 🔮 Goal Inference - Understand high-level intent
+        self.goal_inference = get_goal_inference(self.llm, self.logger) if enable_goal_inference else None
     
     def execute_command(
         self, 
@@ -174,61 +194,132 @@ class Orchestrator:
             if self.use_memory:
                 context = self._build_context(user_input)
             
-            # Step 1.5: Route to appropriate model based on complexity
+            # Step 1.5: Goal Inference - Understand high-level intent
+            if self.enable_goal_inference:
+                goal_suggestion = self.goal_inference.infer_goal(user_input, context)
+                
+                # Show goal inference result
+                if goal_suggestion.implicit_steps and not dry_run:
+                    console.print(f"\n[cyan bold]🔮 Goal Inference:[/cyan bold] Detected {goal_suggestion.goal_type.value} workflow")
+                    console.print(f"[dim]{goal_suggestion.reasoning}[/dim]\n")
+                    
+                    # Show complete workflow suggestion
+                    if len(goal_suggestion.implicit_steps) > 0:
+                        console.print("[yellow]💡 Suggested workflow includes:[/yellow]")
+                        for step in goal_suggestion.complete_workflow[:5]:  # Show first 5
+                            console.print(f"  • {step}")
+                        if len(goal_suggestion.complete_workflow) > 5:
+                            console.print(f"  ... and {len(goal_suggestion.complete_workflow) - 5} more steps")
+                        console.print()
+                        
+                        # Ask if user wants to use suggested workflow
+                        import os
+                        if not os.environ.get('ZENUS_AUTO_ACCEPT_SUGGESTIONS'):
+                            console.print("[cyan]Use suggested workflow? (y/n, default=y):[/cyan] ", end="")
+                            try:
+                                response = input().strip().lower()
+                                if response and response != 'y' and response != 'yes':
+                                    console.print("[dim]Using original command only[/dim]\n")
+                                else:
+                                    # Enhance user input with suggested steps
+                                    user_input = f"{user_input} [SUGGESTED WORKFLOW: {', '.join(goal_suggestion.complete_workflow)}]"
+                                    console.print("[green]✓[/green] Using enhanced workflow\n")
+                            except:
+                                console.print("[dim]Auto-accepting suggested workflow[/dim]\n")
+            
+            # Step 1.6: Route to appropriate model based on complexity
             selected_model, complexity = self.router.route(user_input, iterative=False)
             
             # Show routing decision (if not simple)
             if complexity.score > 0.5 and self.show_progress:
                 console.print(f"[dim]Task complexity: {complexity.score:.2f} → Using {selected_model}[/dim]")
             
-            # Step 2: Translate intent with context using selected model
-            # Check cache first for instant response
-            if context:
-                enhanced_input = f"{user_input}\n{context}"
-            else:
-                enhanced_input = user_input
+            # Step 1.7: Tree of Thoughts - Explore multiple solution paths
+            use_tree_of_thoughts = self.enable_tree_of_thoughts and complexity.score > 0.6
             
-            intent = self.intent_cache.get(user_input, context)
-            
-            if intent:
-                # Cache hit! Instant response, zero tokens
-                if self.show_progress:
-                    console.print(f"[dim green]✓ Cache hit (instant, $0.00)[/dim green]")
+            if use_tree_of_thoughts:
+                console.print("[cyan]🌳 Tree of Thoughts:[/cyan] Exploring multiple solution paths...\n")
                 
-                # Update router stats (cache hit counts as using selected model but zero tokens)
-                self.router.track_tokens(selected_model, 0)
+                tree = self.tree_of_thoughts.explore(user_input, context, num_paths=3)
+                
+                # Show explored paths
+                console.print(f"[bold]Explored {len(tree.paths)} alternative approaches:[/bold]\n")
+                for path in tree.paths:
+                    quality_color = {
+                        "excellent": "green",
+                        "good": "cyan",
+                        "acceptable": "yellow",
+                        "risky": "red"
+                    }.get(path.quality.value, "white")
+                    
+                    console.print(f"[{quality_color}]Path {path.path_id}:[/{quality_color}] {path.description}")
+                    console.print(f"  Confidence: {path.confidence:.0%} | Risk: {path.risk_level} | Time: {path.estimated_time}")
+                    console.print(f"  ✓ Pros: {', '.join(path.pros[:2])}")
+                    if path.cons:
+                        console.print(f"  ✗ Cons: {', '.join(path.cons[:2])}")
+                    console.print()
+                
+                # Show selected path
+                best_path = tree.get_best_path()
+                console.print(f"[green bold]✓ Selected Path {best_path.path_id}:[/green bold] {best_path.description}")
+                console.print(f"[dim]{tree.selection_reasoning}[/dim]\n")
+                
+                # Use selected path's intent
+                intent = best_path.intent
+                
+                # Skip normal intent translation since we have it from tree
+                # Cache the result
+                self.intent_cache.set(user_input, context, intent)
             else:
-                # Cache miss, call LLM
-                # IMPORTANT: Always use streaming to avoid Anthropic timeouts
-                try:
-                    # Temporarily set model for this request
-                    import os
-                    original_model = os.environ.get('ZENUS_LLM')
-                    os.environ['ZENUS_LLM'] = selected_model
+                # Normal execution path
+                # Step 2: Translate intent with context using selected model
+                # Check cache first for instant response
+                if context:
+                    enhanced_input = f"{user_input}\n{context}"
+                else:
+                    enhanced_input = user_input
+                
+                intent = self.intent_cache.get(user_input, context)
+                
+                if intent:
+                    # Cache hit! Instant response, zero tokens
+                    if self.show_progress:
+                        console.print(f"[dim green]✓ Cache hit (instant, $0.00)[/dim green]")
                     
-                    # Refresh LLM instance with new model
-                    self.llm = get_llm()
-                    
-                    # Show thinking indicator
-                    if self.progress:
-                        with self.progress.thinking("Understanding your request"):
+                    # Update router stats (cache hit counts as using selected model but zero tokens)
+                    self.router.track_tokens(selected_model, 0)
+                else:
+                    # Cache miss, call LLM
+                    # IMPORTANT: Always use streaming to avoid Anthropic timeouts
+                    try:
+                        # Temporarily set model for this request
+                        import os
+                        original_model = os.environ.get('ZENUS_LLM')
+                        os.environ['ZENUS_LLM'] = selected_model
+                        
+                        # Refresh LLM instance with new model
+                        self.llm = get_llm()
+                        
+                        # Show thinking indicator
+                        if self.progress:
+                            with self.progress.thinking("Understanding your request"):
+                                intent = self.llm.translate_intent(enhanced_input, stream=True)
+                        else:
                             intent = self.llm.translate_intent(enhanced_input, stream=True)
-                    else:
-                        intent = self.llm.translate_intent(enhanced_input, stream=True)
+                        
+                        # Cache the result
+                        self.intent_cache.set(user_input, context, intent)
+                        
+                        # Restore original model
+                        if original_model:
+                            os.environ['ZENUS_LLM'] = original_model
+                        else:
+                            os.environ.pop('ZENUS_LLM', None)
                     
-                    # Cache the result
-                    self.intent_cache.set(user_input, context, intent)
-                    
-                    # Restore original model
-                    if original_model:
-                        os.environ['ZENUS_LLM'] = original_model
-                    else:
-                        os.environ.pop('ZENUS_LLM', None)
-                
-                except Exception as e:
-                    error_msg = f"Failed to understand command: {str(e)}"
-                    self.logger.log_error(error_msg, {"user_input": user_input})
-                    raise IntentTranslationError(error_msg) from e
+                    except Exception as e:
+                        error_msg = f"Failed to understand command: {str(e)}"
+                        self.logger.log_error(error_msg, {"user_input": user_input})
+                        raise IntentTranslationError(error_msg) from e
             
             # Step 2.5: Analyze for potential failures (learning from past mistakes)
             pre_analysis = self.failure_analyzer.analyze_before_execution(user_input, intent)
@@ -428,6 +519,19 @@ class Orchestrator:
             except:
                 pass  # Non-critical
             
+            # Record prompt evolution result (for self-improvement)
+            if self.enable_prompt_evolution and hasattr(self, '_prompt_version_used'):
+                try:
+                    self.prompt_evolution.record_result(
+                        version_id=self._prompt_version_used,
+                        user_input=user_input,
+                        intent_ir=intent.to_dict(),
+                        success=True,
+                        result="Executed successfully"
+                    )
+                except:
+                    pass  # Non-critical
+            
             return "Plan executed successfully"
         
         except IntentTranslationError as e:
@@ -452,6 +556,19 @@ class Orchestrator:
         except Exception as e:
             error_msg = f"Unexpected error: {str(e)}"
             self.logger.log_error(error_msg, {"user_input": user_input})
+            
+            # Record prompt evolution failure
+            if self.enable_prompt_evolution and hasattr(self, '_prompt_version_used') and 'intent' in locals():
+                try:
+                    self.prompt_evolution.record_result(
+                        version_id=self._prompt_version_used,
+                        user_input=user_input,
+                        intent_ir=intent.to_dict(),
+                        success=False,
+                        result=None
+                    )
+                except:
+                    pass  # Non-critical
             
             # Analyze failure and provide intelligent suggestions
             ctx_mgr = get_context_manager()
