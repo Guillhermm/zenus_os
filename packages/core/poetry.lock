@@ -2092,6 +2092,23 @@ files = [
     {file = "wcwidth-0.6.0.tar.gz", hash = "sha256:cdc4e4262d6ef9a1a57e018384cbeb1208d8abbc64176027e2c2455c81313159"},
 ]
 
+[[package]]
+name = "zenus-visualization"
+version = "0.1.0"
+description = "Data visualization system for Zenus OS"
+optional = false
+python-versions = "^3.10"
+groups = ["main"]
+files = []
+develop = true
+
+[package.dependencies]
+rich = "^13.7.0"
+
+[package.source]
+type = "directory"
+url = "../visualization"
+
 [extras]
 all = ["playwright"]
 browser = ["playwright"]
@@ -2099,4 +2116,4 @@ browser = ["playwright"]
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.10"
-content-hash = "df60ee4989a9c47d4eb1dc211b254786820d2cf26324e20b7f42fbd6fa82456f"
+content-hash = "7d3c63c62fbb7cb82cbe9bf31939c917bd52dee039a23cb188b7eade4cb51365"
