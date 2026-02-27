@@ -571,7 +571,7 @@ We welcome contributions! Areas for improvement:
 
 ## 📜 License
 
-MIT License - See [LICENSE](LICENSE) file for details.
+GNU General Public License (GPLv3) - See [LICENSE](LICENSE) file for details.
 
 ---
 
@@ -580,7 +580,6 @@ MIT License - See [LICENSE](LICENSE) file for details.
 Built with:
 - **LLM Providers**: OpenAI, DeepSeek, Ollama
 - **Libraries**: Pydantic, Rich, SQLite, Playwright, pytest
-- **Inspiration**: OpenClaw, modern AI assistants, Unix philosophy
 
 ---
 
