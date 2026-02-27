@@ -42,6 +42,15 @@ Understands your high-level goal and proposes COMPLETE workflows including safet
 
 ## 🚀 Advanced Features (Experimental)
 
+### 🎤 **Voice Interface** (NEW!)
+Hands-free control using speech! Talk to Zenus naturally - no typing required. Features local Whisper STT, Piper TTS, conversational flow, and optional wake word detection ("Hey Zenus").
+
+**Zero cloud**: Everything runs locally, completely private
+
+**Use for**: Accessibility, hands-free coding, demos, convenience
+
+**[Read voice documentation →](packages/voice/README.md)**
+
 ### 🤖 **Multi-Agent Collaboration**
 Deploy specialized AI agents (Researcher, Planner, Executor, Validator) that work together to solve complex tasks. Like having a team of experts collaborating on your behalf!
 
