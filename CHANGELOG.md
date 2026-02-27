@@ -7,6 +7,82 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-02-27
+
+### Added - Revolutionary Features
+
+- **Tree of Thoughts**: Explores 3-5 alternative solutions in parallel before execution
+  - Evaluates multiple approaches simultaneously
+  - Confidence scoring for each alternative
+  - Risk assessment and pros/cons analysis
+  - Selects best approach based on context
+  - Example: "deploy app" explores Docker Compose, Kubernetes, systemd
+
+- **Prompt Evolution**: Self-improving prompts based on command success/failure
+  - Tracks success rates per command type
+  - Auto-tunes prompts based on failures
+  - Automatic A/B testing
+  - No manual prompt engineering needed
+  - Learns from YOUR workflows
+
+- **Goal Inference**: High-level goal understanding with complete workflow suggestions
+  - Understands user intent beyond literal commands
+  - Proposes complete workflows with safety steps
+  - Suggests backup, testing, verification steps
+  - Example: "deploy app" suggests backup → test → deploy → verify → monitor
+
+- **Multi-Agent Collaboration**: Multiple specialized AI agents work together on complex tasks
+  - Code review (one writes, another reviews)
+  - Research + implementation workflows
+  - Testing + debugging collaboration
+  - Design + code separation
+  - Spawns specialized agents as needed
+
+- **Proactive Monitoring**: System health monitoring with alerts before problems occur
+  - Disk space warnings (80% warning, 90% critical)
+  - High CPU usage alerts (80% threshold)
+  - High memory usage alerts (85% threshold)
+  - Failed services detection
+  - Security updates notifications
+  - Prevents problems before they happen
+
+- **Voice Interface**: Full hands-free voice control (100% local, no cloud)
+  - Local Whisper STT (speech-to-text)
+  - Piper TTS (text-to-speech)
+  - Conversational flow
+  - Optional wake word ("Hey Zenus")
+  - Complete privacy - zero external dependencies
+
+- **Data Visualization**: Automatic data formatting and visualization
+  - Auto-detects data types (processes, disk usage, stats, etc.)
+  - Rich tables with borders, colors, and alignment
+  - Progress bars for resource usage
+  - Color coding (green/yellow/red for status)
+  - File trees with icons
+  - Syntax highlighting for JSON/code
+  - Graceful fallback to plain text
+
+- **Self-Reflection**: Pre-execution plan critique and validation
+  - Analyzes plans before execution
+  - Confidence scoring per step (0-100%)
+  - Issue detection (ambiguity, missing info, risks, invalid assumptions)
+  - Smart question generation
+  - Risk assessment and safeguard suggestions
+  - Alternative approach proposals
+  - Asks user when needed, proceeds automatically when safe
+
+### Changed
+- Enhanced system output with beautiful formatted visualizations
+- Improved safety with pre-execution validation
+- Better decision-making with multi-path exploration
+- Increased accessibility with voice interface
+
+### Impact
+- 8 revolutionary features not available in competitors (Cursor, OpenClaw)
+- True innovation beyond incremental improvements
+- Local-first architecture (privacy + control)
+- Self-improving system that gets smarter over time
+
 ## [0.4.0] - 2026-02-24
 
 ### Added - Cost Optimization & Production Readiness
