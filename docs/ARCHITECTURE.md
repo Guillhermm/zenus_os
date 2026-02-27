@@ -14,69 +14,41 @@ User Input → Translation → Validation → Analysis → Execution → Memory
 
 ### High-Level Data Flow
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                        User Input                            │
-│              (Natural Language / Commands)                   │
-└────────────────────────┬────────────────────────────────────┘
-                         │
-                         ▼
-┌─────────────────────────────────────────────────────────────┐
-│                   Intent Translation (LLM)                   │
-│            Understanding + Context + History                 │
-└────────────────────────┬────────────────────────────────────┘
-                         │
-                         ▼
-┌─────────────────────────────────────────────────────────────┐
-│                      Intent IR                               │
-│         (Validated Intermediate Representation)              │
-└────────────────────────┬────────────────────────────────────┘
-                         │
-        ┌────────────────┼────────────────┐
-        │                │                │
-        ▼                ▼                ▼
-  ┌──────────┐    ┌──────────┐    ┌──────────┐
-  │ Failure  │    │Dependency│    │Suggestion│
-  │ Analysis │    │ Analysis │    │  Engine  │
-  └────┬─────┘    └────┬─────┘    └────┬─────┘
-       │               │               │
-       └───────────────┼───────────────┘
-                       │
-                       ▼
-          ┌────────────────────────┐
-          │   Action Tracker       │
-          │   (Transaction Start)  │
-          └────────┬───────────────┘
-                   │
-                   ▼
-┌─────────────────────────────────────────────────────────────┐
-│                 Parallel Executor                            │
-│         (ThreadPoolExecutor + Dependency Graph)              │
-└────────────────────────┬────────────────────────────────────┘
-                         │
-        ┌────────────────┼────────────────┐
-        │                │                │
-        ▼                ▼                ▼
-  ┌──────────┐    ┌──────────┐    ┌──────────┐
-  │ FileOps  │    │SystemOps │    │ GitOps   │
-  └──────────┘    └──────────┘    └──────────┘
-  ┌──────────┐    ┌──────────┐    ┌──────────┐
-  │BrowserOps│    │PackageOps│    │NetworkOps│
-  └──────────┘    └──────────┘    └──────────┘
-        │                │                │
-        └────────────────┼────────────────┘
-                         │
-                         ▼
-          ┌────────────────────────┐
-          │   Action Tracker       │
-          │   (Transaction End)    │
-          └────────┬───────────────┘
-                   │
-                   ▼
-┌─────────────────────────────────────────────────────────────┐
-│                    Memory Layer                              │
-│   Session • World Model • Intent History • Failures          │
-└─────────────────────────────────────────────────────────────┘
+```mermaid
+graph TD
+    A[User Input<br/>Natural Language / Commands] --> B[Intent Translation LLM<br/>Understanding + Context + History]
+    B --> C[Intent IR<br/>Validated Intermediate Representation]
+    
+    C --> D[Failure Analysis]
+    C --> E[Dependency Analysis]
+    C --> F[Suggestion Engine]
+    
+    D --> G[Action Tracker<br/>Transaction Start]
+    E --> G
+    F --> G
+    
+    G --> H[Parallel Executor<br/>ThreadPoolExecutor + Dependency Graph]
+    
+    H --> I[FileOps]
+    H --> J[SystemOps]
+    H --> K[GitOps]
+    H --> L[BrowserOps]
+    H --> M[PackageOps]
+    H --> N[NetworkOps]
+    
+    I --> O[Action Tracker<br/>Transaction End]
+    J --> O
+    K --> O
+    L --> O
+    M --> O
+    N --> O
+    
+    O --> P[Memory Layer<br/>Session • World Model • Intent History • Failures]
+    
+    style A fill:#e1f5ff
+    style B fill:#fff4e6
+    style C fill:#f3e5f5
+    style P fill:#e8f5e9
 ```
 
 ---

@@ -588,41 +588,20 @@ User → Python AI Layer → Custom OS Kernel (Rust/C++) → Hardware
 
 **Three-Layer System**:
 
-```
-┌────────────────────────────────────────────────────┐
-│         AI/ML Intelligence Layer (Python)          │
-│  • LLM integration (Claude, DeepSeek, etc.)       │
-│  • Intent translation & understanding              │
-│  • Context management & memory                     │
-│  • Machine learning models                         │
-│  • High-level orchestration                        │
-│  • All current Zenus features                      │
-└────────────────┬───────────────────────────────────┘
-                 │ High-level API (syscall-like)
-┌────────────────▼───────────────────────────────────┐
-│      Orchestration/Services Layer (Rust/C++)      │
-│  • Process management & scheduling                 │
-│  • Resource allocation & limits                    │
-│  • Security policy enforcement                     │
-│  • IPC (Inter-Process Communication)              │
-│  • Service management                              │
-│  • Network stack                                   │
-└────────────────┬───────────────────────────────────┘
-                 │ System calls
-┌────────────────▼───────────────────────────────────┐
-│           Kernel Layer (Rust/C++/Zig)             │
-│  • Hardware abstraction (HAL)                      │
-│  • Memory management (paging, allocation)          │
-│  • Device drivers (disk, network, GPU)            │
-│  • File system implementation                      │
-│  • Interrupt handling                              │
-│  • Boot loader                                     │
-└────────────────┬───────────────────────────────────┘
-                 │
-┌────────────────▼───────────────────────────────────┐
-│                    Hardware                        │
-│  • CPU, RAM, Disk, Network, GPU, etc.             │
-└────────────────────────────────────────────────────┘
+```mermaid
+graph TD
+    A[AI/ML Intelligence Layer Python<br/>• LLM integration Claude, DeepSeek<br/>• Intent translation & understanding<br/>• Context management & memory<br/>• Machine learning models<br/>• High-level orchestration<br/>• All current Zenus features]
+    
+    A -->|High-level API syscall-like| B[Orchestration/Services Layer Rust/C++<br/>• Process management & scheduling<br/>• Resource allocation & limits<br/>• Security policy enforcement<br/>• IPC Inter-Process Communication<br/>• Service management<br/>• Network stack]
+    
+    B -->|System calls| C[Kernel Layer Rust/C++/Zig<br/>• Hardware abstraction HAL<br/>• Memory management paging, allocation<br/>• Device drivers disk, network, GPU<br/>• File system implementation<br/>• Interrupt handling<br/>• Boot loader]
+    
+    C --> D[Hardware<br/>CPU, RAM, Disk, Network, GPU, etc.]
+    
+    style A fill:#fff4e6
+    style B fill:#e8f5e9
+    style C fill:#f3e5f5
+    style D fill:#fce4ec
 ```
 
 **Why This Design**:

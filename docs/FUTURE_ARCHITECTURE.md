@@ -62,28 +62,16 @@
 
 ### Current Architecture (v1.x)
 
-```
-┌──────────────────────────────────────────────┐
-│            User Interfaces                   │
-│      CLI, TUI, Voice (Python)                │
-└─────────────────┬────────────────────────────┘
-                  │
-┌─────────────────▼────────────────────────────┐
-│         Zenus Core (Python)                  │
-│  • Intent Translation (LLM)                  │
-│  • Context Management                        │
-│  • Tool Orchestration                        │
-│  • Memory & Learning                         │
-└─────────────────┬────────────────────────────┘
-                  │ Python API calls
-┌─────────────────▼────────────────────────────┐
-│        Host Operating System                 │
-│     Linux / macOS / Windows                  │
-└─────────────────┬────────────────────────────┘
-                  │
-┌─────────────────▼────────────────────────────┐
-│              Hardware                        │
-└──────────────────────────────────────────────┘
+```mermaid
+graph TD
+    A[User Interfaces<br/>CLI, TUI, Voice Python] --> B[Zenus Core Python<br/>• Intent Translation LLM<br/>• Context Management<br/>• Tool Orchestration<br/>• Memory & Learning]
+    B -->|Python API calls| C[Host Operating System<br/>Linux / macOS / Windows]
+    C --> D[Hardware]
+    
+    style A fill:#e1f5ff
+    style B fill:#fff4e6
+    style C fill:#ffebee
+    style D fill:#f3e5f5
 ```
 
 **Problems**:
@@ -94,45 +82,18 @@
 
 ### Future Architecture (v2.0+)
 
-```
-┌──────────────────────────────────────────────┐
-│            User Interfaces                   │
-│      CLI, TUI, Voice, Web (Python)           │
-└─────────────────┬────────────────────────────┘
-                  │
-┌─────────────────▼────────────────────────────┐
-│       AI/ML Intelligence Layer (Python)      │
-│  • LLM integration (Claude, DeepSeek, etc.)  │
-│  • Intent translation & understanding        │
-│  • Context management & memory               │
-│  • Machine learning models                   │
-│  • High-level orchestration                  │
-└─────────────────┬────────────────────────────┘
-                  │ Zenus syscalls (custom API)
-┌─────────────────▼────────────────────────────┐
-│      Services Layer (Rust/C++/Zig)           │
-│  • Process orchestration                     │
-│  • Resource management                       │
-│  • Security policy enforcement               │
-│  • Service management                        │
-│  • Network services                          │
-│  • IPC mechanisms                            │
-└─────────────────┬────────────────────────────┘
-                  │ Standard syscalls
-┌─────────────────▼────────────────────────────┐
-│         Zenus Kernel (Rust/C++/Zig)          │
-│  • Process scheduler                         │
-│  • Memory manager (paging, heap)             │
-│  • File system (VFS + implementations)       │
-│  • Device drivers (disk, network, GPU)       │
-│  • Interrupt handling                        │
-│  • Hardware abstraction layer                │
-└─────────────────┬────────────────────────────┘
-                  │ Direct hardware access
-┌─────────────────▼────────────────────────────┐
-│              Hardware                        │
-│  CPU, RAM, Disk, Network, GPU, etc.          │
-└──────────────────────────────────────────────┘
+```mermaid
+graph TD
+    A[User Interfaces<br/>CLI, TUI, Voice, Web Python] --> B[AI/ML Intelligence Layer Python<br/>• LLM integration Claude, DeepSeek<br/>• Intent translation & understanding<br/>• Context management & memory<br/>• Machine learning models<br/>• High-level orchestration]
+    B -->|Zenus syscalls custom API| C[Services Layer Rust/C++/Zig<br/>• Process orchestration<br/>• Resource management<br/>• Security policy enforcement<br/>• Service management<br/>• Network services<br/>• IPC mechanisms]
+    C -->|Standard syscalls| D[Zenus Kernel Rust/C++/Zig<br/>• Process scheduler<br/>• Memory manager paging, heap<br/>• File system VFS + implementations<br/>• Device drivers disk, network, GPU<br/>• Interrupt handling<br/>• Hardware abstraction layer]
+    D -->|Direct hardware access| E[Hardware<br/>CPU, RAM, Disk, Network, GPU, etc.]
+    
+    style A fill:#e1f5ff
+    style B fill:#fff4e6
+    style C fill:#e8f5e9
+    style D fill:#f3e5f5
+    style E fill:#fce4ec
 ```
 
 **Benefits**:
@@ -240,33 +201,29 @@
 **Challenge**: Python is interpreted, kernel is native code.
 
 **Solution 1: Embedded Python Runtime**
-```
-Userspace:
-┌─────────────────────────────────┐
-│    Python Interpreter (CPython) │
-│    ↓                            │
-│    C Extension Module           │  ← Custom syscalls
-│    ↓                            │
-│    libc wrapper                 │
-└─────────────────┬───────────────┘
-                  │ syscall instruction
-Kernel Space:     │
-┌─────────────────▼───────────────┐
-│    Zenus Kernel                 │
-└─────────────────────────────────┘
+
+```mermaid
+graph TD
+    A[Python Interpreter CPython<br/>Userspace] --> B[C Extension Module<br/>Custom syscalls]
+    B --> C[libc wrapper]
+    C -->|syscall instruction| D[Zenus Kernel<br/>Kernel Space]
+    
+    style A fill:#fff4e6
+    style B fill:#e1f5ff
+    style C fill:#e8f5e9
+    style D fill:#f3e5f5
 ```
 
 **Solution 2: IPC via Shared Memory**
-```
-Python Process          Services Daemon (Rust)
-┌───────────────┐       ┌─────────────────────┐
-│ Write to      │═══════│ Read from           │
-│ shared buffer │       │ shared buffer       │
-└───────────────┘       └──────────┬──────────┘
-                                   │ syscall
-                        ┌──────────▼──────────┐
-                        │   Zenus Kernel      │
-                        └─────────────────────┘
+
+```mermaid
+graph LR
+    A[Python Process<br/>Write to shared buffer] -.Shared Memory.-> B[Services Daemon Rust<br/>Read from shared buffer]
+    B -->|syscall| C[Zenus Kernel]
+    
+    style A fill:#fff4e6
+    style B fill:#e8f5e9
+    style C fill:#f3e5f5
 ```
 
 **Chosen Approach**: Hybrid
@@ -335,44 +292,44 @@ data = zenus_syscall("read_file", path="/etc/config")
 ### Decision 2: Kernel Architecture
 
 **Microkernel**:
+
+```mermaid
+graph TD
+    A[User Space] --> B[File System]
+    A --> C[Network Stack]
+    A --> D[Drivers]
+    
+    B -->|IPC| E[Minimal Kernel<br/>IPC, Scheduling,<br/>Memory Management,<br/>Interrupt Handling]
+    C -->|IPC| E
+    D -->|IPC| E
+    
+    style A fill:#e1f5ff
+    style E fill:#f3e5f5
 ```
-┌────────────────────────────────────────┐
-│ User Space                             │
-│  ┌─────────┐ ┌─────────┐ ┌──────────┐│
-│  │  File   │ │ Network │ │  Drivers ││
-│  │ System  │ │  Stack  │ │          ││
-│  └────┬────┘ └────┬────┘ └────┬─────┘│
-│       │  IPC      │  IPC      │  IPC  │
-└───────┼───────────┼───────────┼───────┘
-        │           │           │
-┌───────▼───────────▼───────────▼───────┐
-│ Kernel (minimal): IPC, Scheduling,    │
-│ Memory Management, Interrupt Handling  │
-└────────────────────────────────────────┘
-```
+
 Pros: Isolation, debuggability, modularity  
 Cons: IPC overhead, complexity
 
 **Monolithic**:
+
+```mermaid
+graph TD
+    A[Kernel<br/>Scheduler, Memory, FS, Net, Drivers, Everything]
+    
+    style A fill:#f3e5f5
 ```
-┌────────────────────────────────────────┐
-│ Kernel: Scheduler, Memory, FS, Net,   │
-│ Drivers, Everything                    │
-└────────────────────────────────────────┘
-```
+
 Pros: Performance, simplicity  
 Cons: One crash kills all, harder to debug
 
 **Hybrid (Recommended)**:
-```
-┌────────────────────────────────────────┐
-│ User Space: File system, Some drivers  │
-└─────────────────┬──────────────────────┘
-                  │ syscalls
-┌─────────────────▼──────────────────────┐
-│ Kernel: Core (sched, mem, IPC) +      │
-│ Performance-critical (network, disk)   │
-└────────────────────────────────────────┘
+
+```mermaid
+graph TD
+    A[User Space<br/>File system, Some drivers] -->|syscalls| B[Kernel<br/>Core sched, mem, IPC +<br/>Performance-critical network, disk]
+    
+    style A fill:#e1f5ff
+    style B fill:#f3e5f5
 ```
 Pros: Balance of performance and modularity  
 Cons: Design complexity
