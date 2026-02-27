@@ -10,7 +10,15 @@ from rich.table import Table
 from rich.syntax import Syntax
 from rich.text import Text
 from rich import box
-from typing import List, Dict
+from typing import List, Dict, Any
+
+# Import visualization system
+try:
+    from zenus_visualization import Visualizer
+    VISUALIZATION_ENABLED = True
+except ImportError:
+    VISUALIZATION_ENABLED = False
+    Visualizer = None
 
 
 console = Console()
@@ -36,8 +44,8 @@ def print_info(message: str):
     console.print(f"ℹ {message}", style="bold cyan")
 
 
-def print_step(step_num: int, tool: str, action: str, risk: int, result: str = None):
-    """Print execution step with color coding and rich formatting"""
+def print_step(step_num: int, tool: str, action: str, risk: int, result: Any = None):
+    """Print execution step with color coding and automatic visualization"""
     
     # Risk color coding
     risk_colors = {
@@ -64,7 +72,25 @@ def print_step(step_num: int, tool: str, action: str, risk: int, result: str = N
     )
     
     if result:
-        # Try to format result if it's structured data
+        # Use visualization system if available
+        if VISUALIZATION_ENABLED and Visualizer:
+            # Determine context hint from tool/action
+            context = None
+            if "scan" in action.lower() or "list" in action.lower():
+                context = "file_list"
+            elif "process" in action.lower():
+                context = "process_list"
+            elif "disk" in action.lower():
+                context = "disk_usage"
+            
+            try:
+                Visualizer.visualize(result, context)
+                return  # Skip old formatting
+            except Exception as e:
+                # Fallback on visualization error (silent fallback to old formatting)
+                pass
+        
+        # Fallback: Try to format result if it's structured data
         result_str = str(result)
         
         # Check if result looks like it should be formatted nicely

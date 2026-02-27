@@ -22,6 +22,7 @@ pyautogui = "^0.9.54"
 pillow = "^12.1.1"
 matplotlib = "^3.8.0"
 numpy = "^1.24.0"
+zenus-visualization = {path = "../visualization", develop = true}
 
 [tool.poetry.extras]
 browser = ["playwright"]

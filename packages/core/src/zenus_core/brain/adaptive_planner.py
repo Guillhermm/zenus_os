@@ -137,7 +137,7 @@ class AdaptivePlanner:
             
             # Execute
             output = action(**step.args)
-            print(f"  Step {step_num}: {step.tool}.{step.action} -> {output}")
+            # Note: Result display handled by orchestrator via print_step()
             
             if self.logger:
                 self.logger.log_step_result(

@@ -1,0 +1,18 @@
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+name = "zenus-visualization"
+version = "0.1.0"
+description = "Data visualization system for Zenus OS"
+authors = ["Zeni"]
+readme = "README.md"
+packages = [{include = "zenus_visualization", from = "src"}]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+rich = "^13.7.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.4.0"
