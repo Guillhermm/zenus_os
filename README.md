@@ -40,6 +40,22 @@ Understands your high-level goal and proposes COMPLETE workflows including safet
 
 ---
 
+## 🚀 Advanced Features (Experimental)
+
+### 🤖 **Multi-Agent Collaboration**
+Deploy specialized AI agents (Researcher, Planner, Executor, Validator) that work together to solve complex tasks. Like having a team of experts collaborating on your behalf!
+
+**Use for**: Complex projects, research-heavy tasks, multi-step workflows
+
+### 🔍 **Proactive Monitoring**
+Background system that watches for issues and fixes them BEFORE you notice. Auto-cleans disk space, restarts crashed services, monitors SSL certificates, and more.
+
+**Always running**: Zero cost, prevents disasters, saves time
+
+**[Read advanced features documentation →](MULTI_AGENT_AND_MONITORING.md)**
+
+---
+
 ## 🌟 Core Features
 
 ### 🧠 **Intelligent Understanding**

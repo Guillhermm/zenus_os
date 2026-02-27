@@ -22,6 +22,8 @@ from zenus_core.brain.llm.schemas import IntentIR
 from zenus_core.brain.tree_of_thoughts import get_tree_of_thoughts
 from zenus_core.brain.prompt_evolution import get_prompt_evolution
 from zenus_core.brain.goal_inference import get_goal_inference
+from zenus_core.brain.multi_agent import get_multi_agent_system
+from zenus_core.monitoring import get_proactive_monitor
 from zenus_core.memory.action_tracker import get_action_tracker
 from zenus_core.execution.parallel_executor import get_parallel_executor
 from zenus_core.execution.intent_cache import get_intent_cache
@@ -73,7 +75,9 @@ class Orchestrator:
         enable_parallel: bool = True,
         enable_tree_of_thoughts: bool = True,
         enable_prompt_evolution: bool = True,
-        enable_goal_inference: bool = True
+        enable_goal_inference: bool = True,
+        enable_multi_agent: bool = False,  # Experimental feature
+        enable_proactive_monitoring: bool = False  # Experimental feature
     ):
         self.llm = get_llm()
         self.logger = get_logger()
@@ -140,6 +144,8 @@ class Orchestrator:
         self.enable_tree_of_thoughts = enable_tree_of_thoughts
         self.enable_prompt_evolution = enable_prompt_evolution
         self.enable_goal_inference = enable_goal_inference
+        self.enable_multi_agent = enable_multi_agent
+        self.enable_proactive_monitoring = enable_proactive_monitoring
         
         # 🌳 Tree of Thoughts - Explore multiple solution paths
         self.tree_of_thoughts = get_tree_of_thoughts(self.llm, self.logger) if enable_tree_of_thoughts else None
@@ -149,6 +155,15 @@ class Orchestrator:
         
         # 🔮 Goal Inference - Understand high-level intent
         self.goal_inference = get_goal_inference(self.llm, self.logger) if enable_goal_inference else None
+        
+        # 🤖 Multi-Agent System - Collaborative problem solving
+        self.multi_agent = get_multi_agent_system(self.llm, self.logger, self) if enable_multi_agent else None
+        
+        # 🔍 Proactive Monitor - Prevent problems before they occur
+        self.proactive_monitor = get_proactive_monitor(self.logger, self) if enable_proactive_monitoring else None
+        if self.proactive_monitor and enable_proactive_monitoring:
+            # Start monitoring session
+            self.proactive_monitor.start_monitoring()
     
     def execute_command(
         self, 
@@ -889,6 +904,106 @@ class Orchestrator:
                     context_parts.append(f"\n=== Frequent Paths ===\n{', '.join(frequent_paths)}")
         
         return "\n".join(context_parts)
+    
+    def execute_with_multi_agent(self, task: str, context: Dict = None) -> str:
+        """
+        Execute task using multi-agent collaboration
+        
+        This uses specialized agents (Researcher, Planner, Executor, Validator)
+        working together for complex tasks.
+        
+        Args:
+            task: Complex task to solve
+            context: Additional context
+        
+        Returns:
+            Human-readable result
+        """
+        if not self.enable_multi_agent or not self.multi_agent:
+            return "Multi-agent collaboration is not enabled"
+        
+        try:
+            console.print("[cyan bold]🤖 Multi-Agent Collaboration:[/cyan bold] Deploying specialized agents...\n")
+            
+            # Run collaboration
+            session = self.multi_agent.collaborate(task, context or {})
+            
+            # Display results from each agent
+            console.print(f"[bold]Collaboration Summary:[/bold]")
+            console.print(f"Session ID: {session.session_id}")
+            console.print(f"Agents Involved: {', '.join([a.value for a in session.agents_involved])}")
+            console.print(f"Duration: {session.total_duration:.2f}s\n")
+            
+            for result in session.results:
+                agent_name = result.agent.value.capitalize()
+                status = "✓" if result.success else "✗"
+                color = "green" if result.success else "red"
+                
+                console.print(f"[{color}]{status} {agent_name} Agent[/{color}]")
+                console.print(f"  Confidence: {result.confidence:.0%}")
+                console.print(f"  Reasoning: {result.reasoning}")
+                console.print(f"  Duration: {result.duration:.2f}s\n")
+            
+            # Final result
+            if session.success:
+                console.print(f"[green bold]✓ Collaboration successful![/green bold]")
+                console.print(f"[dim]{session.final_result}[/dim]")
+                return session.final_result
+            else:
+                console.print(f"[red bold]✗ Collaboration failed[/red bold]")
+                console.print(f"[dim]{session.final_result}[/dim]")
+                return f"Error: {session.final_result}"
+                
+        except Exception as e:
+            error_msg = f"Multi-agent collaboration failed: {e}"
+            self.logger.log_error(error_msg, {"task": task})
+            return error_msg
+    
+    def run_health_check(self) -> Dict:
+        """
+        Run proactive monitoring health check
+        
+        Returns:
+            Health check status and any alerts
+        """
+        if not self.enable_proactive_monitoring or not self.proactive_monitor:
+            return {"status": "disabled", "message": "Proactive monitoring is not enabled"}
+        
+        try:
+            alerts = self.proactive_monitor.run_checks()
+            status = self.proactive_monitor.get_status()
+            
+            if alerts:
+                console.print(f"\n[yellow bold]🔍 Proactive Monitor:[/yellow bold] Found {len(alerts)} issue(s)\n")
+                
+                for alert in alerts:
+                    level_color = {
+                        "critical": "red",
+                        "warning": "yellow",
+                        "info": "cyan"
+                    }.get(alert.level.value, "white")
+                    
+                    console.print(f"[{level_color}]{alert.level.value.upper()}[/{level_color}]: {alert.message}")
+                    
+                    if alert.auto_remediated:
+                        console.print(f"  [green]✓ Auto-remediated[/green]: {alert.remediation_result}")
+                    elif alert.remediation_result:
+                        console.print(f"  [red]✗ Remediation failed[/red]: {alert.remediation_result}")
+                    console.print()
+            else:
+                console.print("[green]✓ All health checks passed[/green]")
+            
+            return {
+                "status": "ok",
+                "alerts": len(alerts),
+                "auto_remediated": sum(1 for a in alerts if a.auto_remediated),
+                "details": status
+            }
+            
+        except Exception as e:
+            error_msg = f"Health check failed: {e}"
+            self.logger.log_error(error_msg)
+            return {"status": "error", "message": error_msg}
     
     def _format_dry_run(self, intent: IntentIR) -> str:
         """Format dry-run output"""
