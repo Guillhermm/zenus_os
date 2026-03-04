@@ -134,8 +134,8 @@ class AnthropicLLM:
         
         # Try to read config.yaml directly
         try:
-            import yaml
             from pathlib import Path
+            import yaml
             
             # Search for config.yaml in standard locations
             config_paths = [
@@ -150,14 +150,20 @@ class AnthropicLLM:
                         if config_data and 'llm' in config_data:
                             config_model = config_data['llm'].get('model')
                             config_max_tokens = config_data['llm'].get('max_tokens')
+                            print(f"[AnthropicLLM] Loaded from {config_path}: model={config_model}, max_tokens={config_max_tokens}")
                             break
         except Exception as e:
-            # Config read failed, will use fallbacks below
-            pass
+            # Config read failed, log the error
+            print(f"[AnthropicLLM] WARNING: Failed to read config.yaml: {e}")
+            import traceback
+            traceback.print_exc()
         
         # Use config.yaml model if found, otherwise env var, otherwise default
         self.model = config_model or os.getenv("ANTHROPIC_MODEL", "claude-3-5-sonnet-20241022")
         self.max_tokens = config_max_tokens or int(os.getenv("ANTHROPIC_MAX_TOKENS", "4096"))
+        
+        if not config_model:
+            print(f"[AnthropicLLM] Using fallback model: {self.model} (config.yaml not found or failed to load)")
     
     def translate_intent(self, user_input: str, stream: bool = False) -> IntentIR:
         """

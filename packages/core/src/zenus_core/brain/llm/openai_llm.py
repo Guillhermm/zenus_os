@@ -69,10 +69,43 @@ class OpenAILLM:
             api_key=api_key,
             base_url=base_url
         )
+        
+        # Get model from config.yaml (read directly to avoid import issues)
+        config_model = None
+        config_max_tokens = None
+        
+        try:
+            from pathlib import Path
+            import yaml
+            
+            config_paths = [
+                Path.cwd() / "config.yaml",
+                Path.home() / ".zenus" / "config.yaml",
+            ]
+            
+            for config_path in config_paths:
+                if config_path.exists():
+                    with open(config_path, 'r') as f:
+                        config_data = yaml.safe_load(f)
+                        if config_data and 'llm' in config_data:
+                            config_model = config_data['llm'].get('model')
+                            config_max_tokens = config_data['llm'].get('max_tokens')
+                            print(f"[OpenAILLM] Loaded from {config_path}: model={config_model}, max_tokens={config_max_tokens}")
+                            break
+        except Exception as e:
+            print(f"[OpenAILLM] WARNING: Failed to read config.yaml: {e}")
+            import traceback
+            traceback.print_exc()
+        
+        self.model = config_model or os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+        self.max_tokens = config_max_tokens or int(os.getenv("OPENAI_MAX_TOKENS", "4096"))
+        
+        if not config_model:
+            print(f"[OpenAILLM] Using fallback model: {self.model}")
     
     def translate_intent(self, user_input: str, stream: bool = False) -> IntentIR:
         response = self.client.chat.completions.parse(
-            model="gpt-4o-mini",
+            model=self.model,
             messages=[
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": user_input},
@@ -100,7 +133,7 @@ class OpenAILLM:
             handler = get_stream_handler()
             
             response = self.client.chat.completions.create(
-                model="gpt-4o-mini",
+                model=self.model,
                 messages=[
                     {
                         "role": "system",
@@ -120,7 +153,7 @@ class OpenAILLM:
         else:
             # Non-streaming mode
             response = self.client.chat.completions.create(
-                model="gpt-4o-mini",
+                model=self.model,
                 messages=[
                     {
                         "role": "system",
