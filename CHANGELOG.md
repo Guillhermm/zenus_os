@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **API Key Diagnostic Tool** (`test_api_key.py`): Test Anthropic API key validity and diagnose authentication errors
+  - Shows key format, length, and potential issues (whitespace, quotes, wrong prefix)
+  - Tests actual API connection with simple message
+  - Provides actionable error messages for common issues
+
 ### Fixed
 - **Config System Integration**: LLM factory now properly reads from `config.yaml` with environment variable fallback for backwards compatibility
   - Priority: config.yaml > ZENUS_LLM env var > default (anthropic)
@@ -48,6 +54,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - If only one model available, uses it for all task complexities
   - Added safety check: if complexity analyzer recommends unavailable model, uses primary instead
   - Result: No more DeepSeek attempts when fallback is disabled (FINALLY FIXED)
+  
+- **API Key Sanitization**: Anthropic (and other LLM backends) now strip whitespace and quotes from API keys
+  - Fixes common .env formatting mistakes (e.g., `ANTHROPIC_API_KEY="sk-ant-..."` with quotes)
+  - Prevents 401 authentication errors caused by extra whitespace
   
 - **Robust JSON Extraction**: Enhanced JSON parsing to handle markdown-wrapped responses
   - Strips ```json``` code fences automatically

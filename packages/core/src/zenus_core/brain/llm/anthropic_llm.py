@@ -119,6 +119,13 @@ class AnthropicLLM:
                 "Add it to .env or run: ./install.sh"
             )
         
+        # Clean the API key: strip whitespace and quotes
+        api_key = api_key.strip()
+        # Remove quotes if present (common mistake in .env files)
+        if (api_key.startswith('"') and api_key.endswith('"')) or \
+           (api_key.startswith("'") and api_key.endswith("'")):
+            api_key = api_key[1:-1]
+        
         self.client = Anthropic(api_key=api_key)
         self.model = os.getenv("ANTHROPIC_MODEL", "claude-3-5-sonnet-20241022")
         self.max_tokens = int(os.getenv("ANTHROPIC_MAX_TOKENS", "4096"))

@@ -231,6 +231,12 @@ class DeepSeekLLM:
                 "Add it to .env or run: ./install.sh"
             )
         
+        # Clean the API key: strip whitespace and quotes
+        api_key = api_key.strip()
+        if (api_key.startswith('"') and api_key.endswith('"')) or \
+           (api_key.startswith("'") and api_key.endswith("'")):
+            api_key = api_key[1:-1]
+        
         self.client = OpenAI(
             api_key=api_key,
             base_url=base_url
