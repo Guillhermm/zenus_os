@@ -70,10 +70,20 @@ echo "  LLM Backend Configuration"
 echo "════════════════════════════════════"
 echo ""
 
-# Skip LLM config if .env already exists
-if [ -f "$PROJECT_DIR/.env" ]; then
-    echo "✓ .env already configured"
-    echo "  To reconfigure, delete .env and run install again"
+# Config directory
+CONFIG_DIR="$HOME/.zenus"
+CONFIG_FILE="$CONFIG_DIR/config.yaml"
+
+# Create config directory
+mkdir -p "$CONFIG_DIR"
+
+# Skip LLM config if config.yaml already exists (or legacy .env)
+if [ -f "$CONFIG_FILE" ]; then
+    echo "✓ config.yaml already exists at $CONFIG_FILE"
+    echo "  To reconfigure, delete it and run install again"
+elif [ -f "$PROJECT_DIR/.env" ]; then
+    echo "✓ Legacy .env detected, will continue working"
+    echo "  Consider migrating to config.yaml: cp config.yaml.example ~/.zenus/config.yaml"
 else
     echo "Choose your LLM backend:"
     echo ""
@@ -98,7 +108,8 @@ else
 
     read -p "Enter choice [1-4]: " llm_choice
 
-    cp .env.example .env
+    # Start with example config
+    cp "$PROJECT_DIR/config.yaml.example" "$CONFIG_FILE"
 
     case $llm_choice in
         1)
@@ -156,8 +167,9 @@ else
             echo "Pulling model $MODEL (this may take a few minutes)..."
             ollama pull $MODEL
             
-            sed -i "s/^ZENUS_LLM=.*/ZENUS_LLM=ollama/" .env
-            sed -i "s/^OLLAMA_MODEL=.*/OLLAMA_MODEL=$MODEL/" .env
+            # Update config.yaml
+            sed -i "s/provider: anthropic/provider: ollama/" "$CONFIG_FILE"
+            sed -i "s/model: claude-3-5-sonnet-20241022/model: $MODEL/" "$CONFIG_FILE"
             
             echo "✓ Ollama configured with $MODEL"
             ;;
@@ -165,8 +177,12 @@ else
         2)
             echo ""
             read -p "Enter your Anthropic API key: " api_key
-            sed -i "s/^ZENUS_LLM=.*/ZENUS_LLM=anthropic/" .env
-            sed -i "s/^# ANTHROPIC_API_KEY=.*/ANTHROPIC_API_KEY=$api_key/" .env
+            
+            # Update config.yaml (provider already set to anthropic in example)
+            # Store API key in environment variable (config.yaml + secrets pattern)
+            echo "" >> ~/.bashrc
+            echo "# Zenus OS - Anthropic API Key" >> ~/.bashrc
+            echo "export ANTHROPIC_API_KEY='$api_key'" >> ~/.bashrc
             
             echo ""
             echo "Choose Claude model:"
@@ -183,31 +199,53 @@ else
                 *) CLAUDE_MODEL="claude-3-5-sonnet-20241022" ;;
             esac
             
-            sed -i "s/^# ANTHROPIC_MODEL=.*/ANTHROPIC_MODEL=$CLAUDE_MODEL/" .env
+            sed -i "s/model: claude-3-5-sonnet-20241022/model: $CLAUDE_MODEL/" "$CONFIG_FILE"
             echo "✓ Anthropic configured with $CLAUDE_MODEL"
+            echo "  API key stored in ~/.bashrc (run: source ~/.bashrc)"
             ;;
             
         3)
             echo ""
             read -p "Enter your OpenAI API key: " api_key
-            sed -i "s/^ZENUS_LLM=.*/ZENUS_LLM=openai/" .env
-            sed -i "s/^# OPENAI_API_KEY=.*/OPENAI_API_KEY=$api_key/" .env
+            
+            # Update config.yaml
+            sed -i "s/provider: anthropic/provider: openai/" "$CONFIG_FILE"
+            sed -i "s/model: claude-3-5-sonnet-20241022/model: gpt-4o/" "$CONFIG_FILE"
+            
+            # Store API key in environment
+            echo "" >> ~/.bashrc
+            echo "# Zenus OS - OpenAI API Key" >> ~/.bashrc
+            echo "export OPENAI_API_KEY='$api_key'" >> ~/.bashrc
+            
             echo "✓ OpenAI configured"
+            echo "  API key stored in ~/.bashrc (run: source ~/.bashrc)"
             ;;
             
         4)
             echo ""
             read -p "Enter your DeepSeek API key: " api_key
-            sed -i "s/^ZENUS_LLM=.*/ZENUS_LLM=deepseek/" .env
-            sed -i "s/^# DEEPSEEK_API_KEY=.*/DEEPSEEK_API_KEY=$api_key/" .env
+            
+            # Update config.yaml
+            sed -i "s/provider: anthropic/provider: deepseek/" "$CONFIG_FILE"
+            sed -i "s/model: claude-3-5-sonnet-20241022/model: deepseek-chat/" "$CONFIG_FILE"
+            
+            # Store API key in environment
+            echo "" >> ~/.bashrc
+            echo "# Zenus OS - DeepSeek API Key" >> ~/.bashrc
+            echo "export DEEPSEEK_API_KEY='$api_key'" >> ~/.bashrc
+            
             echo "✓ DeepSeek configured"
+            echo "  API key stored in ~/.bashrc (run: source ~/.bashrc)"
             ;;
             
         *)
             echo "Invalid choice, skipping LLM configuration"
-            echo "You can configure manually by editing .env"
+            echo "You can configure manually by editing: $CONFIG_FILE"
             ;;
     esac
+    
+    echo ""
+    echo "✓ Configuration written to: $CONFIG_FILE"
 fi
 
 echo ""
@@ -264,4 +302,8 @@ echo ""
 echo "Or run directly:"
 echo "  $PROJECT_DIR/zenus.sh"
 echo "  $PROJECT_DIR/zenus-tui.sh"
+echo ""
+echo "Configuration:"
+echo "  ~/.zenus/config.yaml     # Main config (edit to customize)"
+echo "  config.yaml.example      # Reference for all settings"
 echo ""

@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Config System Integration**: LLM factory now properly reads from `config.yaml` with environment variable fallback for backwards compatibility
   - Priority: config.yaml > ZENUS_LLM env var > default (anthropic)
   - Enables proper YAML-based configuration instead of requiring .env files
+  - **Install script updated**: Now creates `~/.zenus/config.yaml` instead of `.env` (backwards compatible with existing .env)
   
 - **Dynamic Model Router**: Router now only uses models that are actually configured/available
   - Detects available providers by checking API keys and service availability
