@@ -4,49 +4,80 @@
 CONFIG_FILE="$(cd "$(dirname "$0")" && pwd)/config.yaml"
 
 if [ ! -f "$CONFIG_FILE" ]; then
-    echo "Config file not found: $CONFIG_FILE"
+    echo "❌ Config file not found: $CONFIG_FILE"
     exit 1
 fi
 
-echo "Current fallback settings:"
-grep -A5 "fallback:" "$CONFIG_FILE"
+echo "Current config.yaml settings:"
+echo "─────────────────────────────"
+grep -A3 "^llm:" "$CONFIG_FILE" | head -4
+echo ""
+grep -A5 "^fallback:" "$CONFIG_FILE"
+echo "─────────────────────────────"
 echo ""
 
-read -p "Disable fallback and only use Anthropic? (y/N): " disable
+# Get primary provider from config
+PRIMARY=$(grep "provider:" "$CONFIG_FILE" | head -1 | awk '{print $2}')
+echo "Primary LLM: $PRIMARY"
+echo ""
+
+read -p "Disable fallback and ONLY use $PRIMARY? (y/N): " disable
 
 if [ "$disable" = "y" ] || [ "$disable" = "Y" ]; then
-    # Use Python to properly edit YAML
+    echo ""
+    echo "Updating config.yaml..."
+    
+    # Create a Python script to update YAML properly
     python3 << PYEOF
-import yaml
+import sys
+try:
+    import yaml
+except ImportError:
+    print("❌ PyYAML not installed. Installing...")
+    import subprocess
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "pyyaml", "-q"])
+    import yaml
 
 config_file = "$CONFIG_FILE"
 
 with open(config_file, 'r') as f:
     config = yaml.safe_load(f)
 
-# Disable fallback
+# Get primary provider
+primary = config['llm']['provider']
+
+# Disable fallback and set providers to only primary
 config['fallback']['enabled'] = False
-config['fallback']['providers'] = ['anthropic']
+config['fallback']['providers'] = [primary]
 
 with open(config_file, 'w') as f:
     yaml.dump(config, f, default_flow_style=False, sort_keys=False)
 
-print("✓ Fallback disabled - only Anthropic will be used")
+print(f"✓ Fallback disabled")
+print(f"✓ Providers set to: [{primary}]")
 PYEOF
     
     if [ $? -eq 0 ]; then
         echo ""
-        echo "Updated fallback settings:"
-        grep -A5 "fallback:" "$CONFIG_FILE"
-    else
-        echo "Error updating config. Manual edit required:"
-        echo "  nano $CONFIG_FILE"
+        echo "Updated config.yaml:"
+        echo "─────────────────────────────"
+        grep -A5 "^fallback:" "$CONFIG_FILE"
+        echo "─────────────────────────────"
         echo ""
-        echo "Change:"
-        echo "  enabled: false"
-        echo "  providers:"
-        echo "    - anthropic"
+        echo "✅ Done! Zenus will now ONLY use $PRIMARY"
+    else
+        echo ""
+        echo "❌ Automatic update failed. Manual edit needed:"
+        echo "   nano $CONFIG_FILE"
+        echo ""
+        echo "Change fallback section to:"
+        echo "  fallback:"
+        echo "    enabled: false"
+        echo "    providers:"
+        echo "      - $PRIMARY"
     fi
 else
     echo "No changes made"
 fi
+
+echo ""

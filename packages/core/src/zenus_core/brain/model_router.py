@@ -93,10 +93,24 @@ class ModelRouter:
         # Detect which providers have API keys
         available_with_keys = get_available_providers()
         
-        # Only use providers that are:
-        # 1. In the config fallback list
-        # 2. Have API keys configured
-        if fallback_providers:
+        # Determine which providers to use
+        if not enable_fallback:
+            # Fallback disabled: ONLY use the primary provider from config
+            try:
+                from zenus_core.config.loader import get_config
+                config = get_config()
+                primary_provider = config.llm.provider
+                # Only include primary if it has a key
+                if primary_provider in available_with_keys:
+                    self.available_providers = [primary_provider]
+                else:
+                    # Primary doesn't have key, use any available
+                    self.available_providers = available_with_keys[:1] if available_with_keys else []
+            except Exception:
+                # Config failed, use first available
+                self.available_providers = available_with_keys[:1] if available_with_keys else []
+        elif fallback_providers:
+            # Fallback enabled: use providers from config that have keys
             self.available_providers = [
                 p for p in fallback_providers 
                 if p in available_with_keys

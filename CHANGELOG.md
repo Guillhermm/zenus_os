@@ -39,7 +39,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Prevents errors when only one LLM provider is configured
   - **CRITICAL**: Router now reads from config.yaml `fallback.enabled` and `fallback.providers`
   - Config loader updated to find `config.yaml` in project directory (was only checking `zenus.yaml`)
-  - If fallback disabled in config, router will ONLY use the primary model (no DeepSeek attempts)
+  - **CRITICAL FIX**: When `fallback.enabled=false`, router now ONLY uses `llm.provider`, ignores `fallback.providers` list
+  - Previous bug: Even with fallback disabled, router used entire providers list if they had keys
+  - Result: No more DeepSeek attempts when fallback is disabled
   
 - **Robust JSON Extraction**: Enhanced JSON parsing to handle markdown-wrapped responses
   - Strips ```json``` code fences automatically
