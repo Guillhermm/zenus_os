@@ -127,8 +127,17 @@ class AnthropicLLM:
             api_key = api_key[1:-1]
         
         self.client = Anthropic(api_key=api_key)
-        self.model = os.getenv("ANTHROPIC_MODEL", "claude-3-5-sonnet-20241022")
-        self.max_tokens = int(os.getenv("ANTHROPIC_MAX_TOKENS", "4096"))
+        
+        # Get model from config.yaml, fallback to env var, then default
+        try:
+            from zenus_core.config.loader import get_config
+            config = get_config()
+            self.model = config.llm.model
+            self.max_tokens = config.llm.max_tokens
+        except Exception:
+            # Config failed, use environment variables or defaults
+            self.model = os.getenv("ANTHROPIC_MODEL", "claude-3-5-sonnet-20241022")
+            self.max_tokens = int(os.getenv("ANTHROPIC_MAX_TOKENS", "4096"))
     
     def translate_intent(self, user_input: str, stream: bool = False) -> IntentIR:
         """
