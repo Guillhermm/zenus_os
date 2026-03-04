@@ -65,15 +65,45 @@ class ModelRouter:
     def __init__(
         self,
         stats_path: Optional[str] = None,
-        enable_fallback: bool = True,
-        log_decisions: bool = True
+        enable_fallback: Optional[bool] = None,
+        log_decisions: bool = True,
+        fallback_providers: Optional[List[str]] = None
     ):
         self.complexity_analyzer = TaskComplexityAnalyzer()
+        
+        # Try to load from config.yaml if not explicitly provided
+        if enable_fallback is None or fallback_providers is None:
+            try:
+                from zenus_core.config.loader import get_config
+                config = get_config()
+                if enable_fallback is None:
+                    enable_fallback = config.fallback.enabled
+                if fallback_providers is None:
+                    fallback_providers = config.fallback.providers
+            except Exception:
+                # Config loading failed, use defaults
+                if enable_fallback is None:
+                    enable_fallback = False  # Default to disabled for safety
+                if fallback_providers is None:
+                    fallback_providers = []
+        
         self.enable_fallback = enable_fallback
         self.log_decisions = log_decisions
         
-        # Detect available providers dynamically
-        self.available_providers = get_available_providers()
+        # Detect which providers have API keys
+        available_with_keys = get_available_providers()
+        
+        # Only use providers that are:
+        # 1. In the config fallback list
+        # 2. Have API keys configured
+        if fallback_providers:
+            self.available_providers = [
+                p for p in fallback_providers 
+                if p in available_with_keys
+            ]
+        else:
+            # No config, use whatever has keys
+            self.available_providers = available_with_keys
         
         # Build capability map only for available providers
         self.available_capabilities = {

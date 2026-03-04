@@ -27,3 +27,4 @@ build/
 .zenus/
 logs/
 *.log
+config.yaml

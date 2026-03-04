@@ -65,6 +65,7 @@ class ConfigLoader:
         
         # Check standard locations
         search_paths = [
+            Path.cwd() / "config.yaml",           # Project config (running from source)
             Path.cwd() / "zenus.yaml",
             Path.cwd() / "zenus.yml",
             Path.cwd() / ".zenus.yaml",

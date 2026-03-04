@@ -332,6 +332,13 @@ if [ "$SKIP_CONFIG" = "false" ]; then
     if [ "$configure_fallback" = "n" ] || [ "$configure_fallback" = "N" ]; then
         # Disable fallback in config
         sed -i '/^fallback:/,/^[^ ]/ s/enabled: true/enabled: false/' "$CONFIG_FILE"
+        # Clear the providers list to only include primary (prevents router from trying others)
+        sed -i "/^fallback:/,/^[^ ]/ {
+            /providers:/,/^[^ ]/ {
+                /providers:/!d
+                a\\    - $PRIMARY_PROVIDER
+            }
+        }" "$CONFIG_FILE"
         echo "✓ Fallback disabled (single provider mode)"
     else
         echo ""

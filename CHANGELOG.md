@@ -37,6 +37,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Builds fallback chains dynamically based on what's configured
   - No longer requires both Anthropic AND DeepSeek - works with any single model
   - Prevents errors when only one LLM provider is configured
+  - **CRITICAL**: Router now reads from config.yaml `fallback.enabled` and `fallback.providers`
+  - Config loader updated to find `config.yaml` in project directory (was only checking `zenus.yaml`)
+  - If fallback disabled in config, router will ONLY use the primary model (no DeepSeek attempts)
   
 - **Robust JSON Extraction**: Enhanced JSON parsing to handle markdown-wrapped responses
   - Strips ```json``` code fences automatically
