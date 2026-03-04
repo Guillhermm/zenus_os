@@ -1,9 +1,12 @@
 from dotenv import load_dotenv # type: ignore
 import os
+from pathlib import Path
 from zenus_core.brain.llm.schemas import IntentIR
 
 
-load_dotenv()
+# Load secrets from standard locations
+load_dotenv()  # Current directory
+load_dotenv(Path.home() / ".zenus" / ".env")  # User config directory
 
 
 SYSTEM_PROMPT = """
