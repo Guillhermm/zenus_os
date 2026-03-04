@@ -12,13 +12,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Priority: config.yaml > ZENUS_LLM env var > default (anthropic)
   - Enables proper YAML-based configuration instead of requiring .env files
   
-- **Secure Install Script (Complete Rewrite)**: Now properly creates config files and handles secrets securely
-  - Creates `~/.zenus/config.yaml` for configuration (always created, not conditional)
-  - Creates `~/.zenus/.env` for API keys (chmod 600 for security, NOT in ~/.bashrc)
+- **Secure Install Script (Complete Rewrite)**: Fixed file creation bugs and added proper validation
+  - **FIXED**: Config files now actually created (was silently failing)
+  - **FIXED**: Explicit SKIP_CONFIG boolean logic (no more conditional edge cases)
+  - Creates `~/.zenus/config.yaml` for configuration (verified at end)
+  - Creates `~/.zenus/.env` for API keys (chmod 600, verified at end)
   - Asks for primary LLM provider with full setup flow
   - **NEW**: Optional fallback provider configuration (multi-provider support)
   - **NEW**: Collects API keys for all selected providers in one flow
+  - **NEW**: Updated model lists from official documentation:
+    - Anthropic: claude-3-5-sonnet-20241022, claude-3-5-haiku-20241022, claude-3-opus-20240229
+    - DeepSeek: deepseek-chat, deepseek-coder (latest models)
+    - OpenAI: gpt-4o, gpt-4o-mini, o1-preview, o1-mini (added o1 reasoning models)
+    - Ollama: llama3.2, qwen2.5, phi3, mistral, codellama (popular models)
   - Validates configuration before completing
+  - Verbose output shows exactly what's happening
   - Backwards compatible with existing .env files
   
 - **Dynamic Model Router**: Router now only uses models that are actually configured/available
