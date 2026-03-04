@@ -66,53 +66,129 @@ cd "$PROJECT_DIR"
 
 echo ""
 echo "════════════════════════════════════"
-echo "  LLM Backend Configuration"
+echo "  LLM Configuration"
 echo "════════════════════════════════════"
 echo ""
 
 # Config directory
 CONFIG_DIR="$HOME/.zenus"
 CONFIG_FILE="$CONFIG_DIR/config.yaml"
+SECRETS_FILE="$CONFIG_DIR/.env"
 
 # Create config directory
 mkdir -p "$CONFIG_DIR"
 
-# Skip LLM config if config.yaml already exists (or legacy .env)
-if [ -f "$CONFIG_FILE" ]; then
-    echo "✓ config.yaml already exists at $CONFIG_FILE"
-    echo "  To reconfigure, delete it and run install again"
-elif [ -f "$PROJECT_DIR/.env" ]; then
-    echo "✓ Legacy .env detected, will continue working"
-    echo "  Consider migrating to config.yaml: cp config.yaml.example ~/.zenus/config.yaml"
-else
-    echo "Choose your LLM backend:"
+# Check if already configured
+if [ -f "$CONFIG_FILE" ] && [ -f "$SECRETS_FILE" ]; then
+    echo "✓ Configuration already exists"
+    echo "  Config: $CONFIG_FILE"
+    echo "  Secrets: $SECRETS_FILE"
     echo ""
-    echo "1) Ollama (Local, FREE - recommended for privacy)"
+    read -p "Reconfigure? (y/N): " reconfigure
+    if [ "$reconfigure" != "y" ] && [ "$reconfigure" != "Y" ]; then
+        echo "Skipping configuration"
+        # Jump to aliases section
+        skip_config=true
+    fi
+fi
+
+if [ "$skip_config" != "true" ]; then
+    # Copy base config
+    cp "$PROJECT_DIR/config.yaml.example" "$CONFIG_FILE"
+    
+    # Create/clear secrets file
+    > "$SECRETS_FILE"
+    chmod 600 "$SECRETS_FILE"
+    
+    echo "Choose your PRIMARY LLM backend:"
+    echo ""
+    echo "1) Anthropic Claude (recommended for complex tasks)"
+    echo "   - Excellent reasoning and code generation"
+    echo "   - claude-3-5-sonnet recommended"
+    echo "   - Costs ~\$0.003 per command"
+    echo ""
+    echo "2) DeepSeek (good balance of performance and cost)"
+    echo "   - Strong code capabilities"
+    echo "   - Very affordable (~\$0.0003 per command)"
+    echo ""
+    echo "3) OpenAI (fast and reliable)"
+    echo "   - Costs ~\$0.001 per command"
+    echo ""
+    echo "4) Ollama (Local, FREE - privacy-first)"
     echo "   - Runs on your hardware"
     echo "   - No API key needed"
     echo "   - Requires 4-16GB RAM"
     echo ""
-    echo "2) Anthropic Claude (Cloud, requires API key)"
-    echo "   - Excellent reasoning and code"
-    echo "   - claude-3-5-sonnet recommended"
-    echo "   - Costs ~\$0.003 per command"
-    echo ""
-    echo "3) OpenAI (Cloud, requires API key)"
-    echo "   - Fast and reliable"
-    echo "   - Costs ~\$0.001 per command"
-    echo ""
-    echo "4) DeepSeek (Cloud, requires API key)"
-    echo "   - Good performance"
-    echo "   - Lower cost than OpenAI"
-    echo ""
 
-    read -p "Enter choice [1-4]: " llm_choice
+    read -p "Enter choice [1-4]: " primary_choice
 
-    # Start with example config
-    cp "$PROJECT_DIR/config.yaml.example" "$CONFIG_FILE"
+    PRIMARY_PROVIDER=""
+    PRIMARY_MODEL=""
 
-    case $llm_choice in
+    case $primary_choice in
         1)
+            PRIMARY_PROVIDER="anthropic"
+            echo ""
+            read -sp "Enter your Anthropic API key: " api_key
+            echo ""
+            echo "ANTHROPIC_API_KEY=$api_key" >> "$SECRETS_FILE"
+            
+            echo ""
+            echo "Choose Claude model:"
+            echo "1) claude-3-5-sonnet-20241022 (recommended)"
+            echo "2) claude-3-5-haiku-20241022 (faster, cheaper)"
+            echo "3) claude-3-opus-20240229 (most capable)"
+            
+            read -p "Enter choice [1-3]: " model_choice
+            
+            case $model_choice in
+                1) PRIMARY_MODEL="claude-3-5-sonnet-20241022" ;;
+                2) PRIMARY_MODEL="claude-3-5-haiku-20241022" ;;
+                3) PRIMARY_MODEL="claude-3-opus-20240229" ;;
+                *) PRIMARY_MODEL="claude-3-5-sonnet-20241022" ;;
+            esac
+            
+            echo "✓ Anthropic configured with $PRIMARY_MODEL"
+            ;;
+            
+        2)
+            PRIMARY_PROVIDER="deepseek"
+            echo ""
+            read -sp "Enter your DeepSeek API key: " api_key
+            echo ""
+            echo "DEEPSEEK_API_KEY=$api_key" >> "$SECRETS_FILE"
+            PRIMARY_MODEL="deepseek-chat"
+            
+            echo "✓ DeepSeek configured"
+            ;;
+            
+        3)
+            PRIMARY_PROVIDER="openai"
+            echo ""
+            read -sp "Enter your OpenAI API key: " api_key
+            echo ""
+            echo "OPENAI_API_KEY=$api_key" >> "$SECRETS_FILE"
+            
+            echo ""
+            echo "Choose OpenAI model:"
+            echo "1) gpt-4o (recommended)"
+            echo "2) gpt-4o-mini (faster, cheaper)"
+            echo "3) gpt-4-turbo"
+            
+            read -p "Enter choice [1-3]: " model_choice
+            
+            case $model_choice in
+                1) PRIMARY_MODEL="gpt-4o" ;;
+                2) PRIMARY_MODEL="gpt-4o-mini" ;;
+                3) PRIMARY_MODEL="gpt-4-turbo" ;;
+                *) PRIMARY_MODEL="gpt-4o" ;;
+            esac
+            
+            echo "✓ OpenAI configured with $PRIMARY_MODEL"
+            ;;
+            
+        4)
+            PRIMARY_PROVIDER="ollama"
             echo ""
             echo "Setting up Ollama..."
             
@@ -158,94 +234,121 @@ else
             read -p "Enter choice [1-3]: " model_choice
             
             case $model_choice in
-                1) MODEL="phi3:mini" ;;
-                2) MODEL="llama3.2:3b" ;;
-                3) MODEL="qwen2.5:3b" ;;
-                *) MODEL="phi3:mini" ;;
+                1) PRIMARY_MODEL="phi3:mini" ;;
+                2) PRIMARY_MODEL="llama3.2:3b" ;;
+                3) PRIMARY_MODEL="qwen2.5:3b" ;;
+                *) PRIMARY_MODEL="phi3:mini" ;;
             esac
             
-            echo "Pulling model $MODEL (this may take a few minutes)..."
-            ollama pull $MODEL
+            echo "Pulling model $PRIMARY_MODEL (this may take a few minutes)..."
+            ollama pull $PRIMARY_MODEL
             
-            # Update config.yaml
-            sed -i "s/provider: anthropic/provider: ollama/" "$CONFIG_FILE"
-            sed -i "s/model: claude-3-5-sonnet-20241022/model: $MODEL/" "$CONFIG_FILE"
-            
-            echo "✓ Ollama configured with $MODEL"
-            ;;
-            
-        2)
-            echo ""
-            read -p "Enter your Anthropic API key: " api_key
-            
-            # Update config.yaml (provider already set to anthropic in example)
-            # Store API key in environment variable (config.yaml + secrets pattern)
-            echo "" >> ~/.bashrc
-            echo "# Zenus OS - Anthropic API Key" >> ~/.bashrc
-            echo "export ANTHROPIC_API_KEY='$api_key'" >> ~/.bashrc
-            
-            echo ""
-            echo "Choose Claude model:"
-            echo "1) claude-3-5-sonnet-20241022 (recommended)"
-            echo "2) claude-3-5-haiku-20241022 (faster, cheaper)"
-            echo "3) claude-3-opus-20240229 (most capable)"
-            
-            read -p "Enter choice [1-3]: " model_choice
-            
-            case $model_choice in
-                1) CLAUDE_MODEL="claude-3-5-sonnet-20241022" ;;
-                2) CLAUDE_MODEL="claude-3-5-haiku-20241022" ;;
-                3) CLAUDE_MODEL="claude-3-opus-20240229" ;;
-                *) CLAUDE_MODEL="claude-3-5-sonnet-20241022" ;;
-            esac
-            
-            sed -i "s/model: claude-3-5-sonnet-20241022/model: $CLAUDE_MODEL/" "$CONFIG_FILE"
-            echo "✓ Anthropic configured with $CLAUDE_MODEL"
-            echo "  API key stored in ~/.bashrc (run: source ~/.bashrc)"
-            ;;
-            
-        3)
-            echo ""
-            read -p "Enter your OpenAI API key: " api_key
-            
-            # Update config.yaml
-            sed -i "s/provider: anthropic/provider: openai/" "$CONFIG_FILE"
-            sed -i "s/model: claude-3-5-sonnet-20241022/model: gpt-4o/" "$CONFIG_FILE"
-            
-            # Store API key in environment
-            echo "" >> ~/.bashrc
-            echo "# Zenus OS - OpenAI API Key" >> ~/.bashrc
-            echo "export OPENAI_API_KEY='$api_key'" >> ~/.bashrc
-            
-            echo "✓ OpenAI configured"
-            echo "  API key stored in ~/.bashrc (run: source ~/.bashrc)"
-            ;;
-            
-        4)
-            echo ""
-            read -p "Enter your DeepSeek API key: " api_key
-            
-            # Update config.yaml
-            sed -i "s/provider: anthropic/provider: deepseek/" "$CONFIG_FILE"
-            sed -i "s/model: claude-3-5-sonnet-20241022/model: deepseek-chat/" "$CONFIG_FILE"
-            
-            # Store API key in environment
-            echo "" >> ~/.bashrc
-            echo "# Zenus OS - DeepSeek API Key" >> ~/.bashrc
-            echo "export DEEPSEEK_API_KEY='$api_key'" >> ~/.bashrc
-            
-            echo "✓ DeepSeek configured"
-            echo "  API key stored in ~/.bashrc (run: source ~/.bashrc)"
+            echo "OLLAMA_MODEL=$PRIMARY_MODEL" >> "$SECRETS_FILE"
+            echo "✓ Ollama configured with $PRIMARY_MODEL"
             ;;
             
         *)
-            echo "Invalid choice, skipping LLM configuration"
-            echo "You can configure manually by editing: $CONFIG_FILE"
+            echo "Invalid choice"
+            exit 1
             ;;
     esac
     
+    # Update config.yaml with primary provider
+    sed -i "s/provider: anthropic/provider: $PRIMARY_PROVIDER/" "$CONFIG_FILE"
+    sed -i "s/model: claude-3-5-sonnet-20241022/model: $PRIMARY_MODEL/" "$CONFIG_FILE"
+    
     echo ""
-    echo "✓ Configuration written to: $CONFIG_FILE"
+    echo "════════════════════════════════════"
+    echo "  Fallback Configuration (Optional)"
+    echo "════════════════════════════════════"
+    echo ""
+    echo "Zenus can route simple tasks to cheaper models and fallback"
+    echo "to more powerful models when needed."
+    echo ""
+    read -p "Configure fallback providers? (Y/n): " configure_fallback
+    
+    FALLBACK_PROVIDERS=""
+    
+    if [ "$configure_fallback" != "n" ] && [ "$configure_fallback" != "N" ]; then
+        echo ""
+        echo "Available fallback providers:"
+        if [ "$PRIMARY_PROVIDER" != "anthropic" ]; then
+            echo "  [1] Anthropic Claude"
+        fi
+        if [ "$PRIMARY_PROVIDER" != "deepseek" ]; then
+            echo "  [2] DeepSeek"
+        fi
+        if [ "$PRIMARY_PROVIDER" != "openai" ]; then
+            echo "  [3] OpenAI"
+        fi
+        if [ "$PRIMARY_PROVIDER" != "ollama" ]; then
+            echo "  [4] Ollama (local)"
+        fi
+        echo ""
+        echo "Enter numbers separated by space (e.g., '2 4' for DeepSeek and Ollama)"
+        read -p "Fallback providers: " fallback_choices
+        
+        for choice in $fallback_choices; do
+            case $choice in
+                1)
+                    if [ "$PRIMARY_PROVIDER" != "anthropic" ]; then
+                        read -sp "Enter Anthropic API key: " api_key
+                        echo ""
+                        echo "ANTHROPIC_API_KEY=$api_key" >> "$SECRETS_FILE"
+                        FALLBACK_PROVIDERS="$FALLBACK_PROVIDERS anthropic"
+                        echo "✓ Anthropic added as fallback"
+                    fi
+                    ;;
+                2)
+                    if [ "$PRIMARY_PROVIDER" != "deepseek" ]; then
+                        read -sp "Enter DeepSeek API key: " api_key
+                        echo ""
+                        echo "DEEPSEEK_API_KEY=$api_key" >> "$SECRETS_FILE"
+                        FALLBACK_PROVIDERS="$FALLBACK_PROVIDERS deepseek"
+                        echo "✓ DeepSeek added as fallback"
+                    fi
+                    ;;
+                3)
+                    if [ "$PRIMARY_PROVIDER" != "openai" ]; then
+                        read -sp "Enter OpenAI API key: " api_key
+                        echo ""
+                        echo "OPENAI_API_KEY=$api_key" >> "$SECRETS_FILE"
+                        FALLBACK_PROVIDERS="$FALLBACK_PROVIDERS openai"
+                        echo "✓ OpenAI added as fallback"
+                    fi
+                    ;;
+                4)
+                    if [ "$PRIMARY_PROVIDER" != "ollama" ]; then
+                        # Ollama already set up or skip if not installed
+                        if command -v ollama &> /dev/null; then
+                            FALLBACK_PROVIDERS="$FALLBACK_PROVIDERS ollama"
+                            echo "✓ Ollama added as fallback"
+                        else
+                            echo "⚠️  Ollama not installed, skipping"
+                        fi
+                    fi
+                    ;;
+            esac
+        done
+        
+        # Update fallback providers in config.yaml
+        if [ -n "$FALLBACK_PROVIDERS" ]; then
+            echo ""
+            echo "✓ Fallback enabled with:$FALLBACK_PROVIDERS"
+            echo "  You can customize the fallback order in: $CONFIG_FILE"
+            echo "  (Look for the 'fallback:' section)"
+        fi
+    else
+        # Disable fallback in config.yaml
+        # Find the line with "enabled: true" under fallback section and change it
+        sed -i '/fallback:/,/^[^ ]/ { /enabled: true/s/true/false/ }' "$CONFIG_FILE"
+        echo "✓ Fallback disabled"
+    fi
+    
+    echo ""
+    echo "✓ Configuration saved:"
+    echo "  Config: $CONFIG_FILE"
+    echo "  Secrets: $SECRETS_FILE (secure, chmod 600)"
 fi
 
 echo ""
@@ -290,11 +393,15 @@ echo "════════════════════════�
 echo "  Installation Complete!"
 echo "════════════════════════════════════"
 echo ""
-echo "To use the new aliases, run:"
+echo "Configuration files:"
+echo "  $CONFIG_FILE"
+echo "  $SECRETS_FILE (secure)"
+echo ""
+echo "To start using Zenus, run:"
 echo "  source ~/.bashrc"
 echo ""
 echo "Then you can use:"
-echo "  zenus                    # Start interactive shell"
+echo "  zenus                    # Interactive shell"
 echo "  zenus help               # Show help"
 echo "  zenus \"<command>\"        # Direct execution"
 echo "  zenus-tui                # Launch TUI interface"
@@ -302,8 +409,4 @@ echo ""
 echo "Or run directly:"
 echo "  $PROJECT_DIR/zenus.sh"
 echo "  $PROJECT_DIR/zenus-tui.sh"
-echo ""
-echo "Configuration:"
-echo "  ~/.zenus/config.yaml     # Main config (edit to customize)"
-echo "  config.yaml.example      # Reference for all settings"
 echo ""
