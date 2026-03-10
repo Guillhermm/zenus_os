@@ -47,7 +47,7 @@ class SolutionPath:
     def to_dict(self) -> Dict:
         result = asdict(self)
         result['quality'] = self.quality.value
-        result['intent'] = self.intent.to_dict()
+        result['intent'] = self.intent.model_dump()
         return result
 
 

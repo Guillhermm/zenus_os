@@ -167,7 +167,7 @@ class SelfReflection:
         steps_text = ""
         for i, step in enumerate(intent.steps, 1):
             steps_text += f"{i}. {step.action}({step.args})\n"
-            steps_text += f"   Goal: {step.goal}\n"
+            steps_text += f"   Tool: {step.tool}\n"
             if step.risk:
                 steps_text += f"   Risk: {step.risk}\n"
         

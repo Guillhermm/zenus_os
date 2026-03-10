@@ -4,7 +4,7 @@ Tests for revolutionary features: Tree of Thoughts, Prompt Evolution, Goal Infer
 
 import pytest
 from unittest.mock import Mock, MagicMock, patch
-from zenus_core.brain.tree_of_thoughts import TreeOfThoughts, SolutionPath, PathQuality, GoalType
+from zenus_core.brain.tree_of_thoughts import TreeOfThoughts, SolutionPath, PathQuality
 from zenus_core.brain.prompt_evolution import PromptEvolution, PromptVersion
 from zenus_core.brain.goal_inference import GoalInference, GoalType, ImplicitStep
 from zenus_core.brain.llm.schemas import IntentIR, Step
@@ -20,9 +20,8 @@ class TestTreeOfThoughts:
         llm.generate = Mock(return_value='{"paths": [{"description": "Test path", "steps": [], "confidence": 0.8, "pros": ["Fast"], "cons": ["Limited"], "estimated_steps": 2, "estimated_time": "fast", "risk_level": "low", "reasoning": "Test"}]}')
         llm.translate_intent = Mock(return_value=IntentIR(
             goal="Test goal",
-            steps=[Step(action="test", args={}, goal="test")],
-            explanation="Test",
-            expected_result="Success"
+            requires_confirmation=False,
+            steps=[Step(tool="TestTool", action="test", args={}, risk=0)],
         ))
         return llm
     
@@ -129,6 +128,8 @@ class TestPromptEvolution:
     
     def test_variant_creation(self, prompt_evo):
         """Test creating A/B test variants"""
+        # Initialize default version by calling get_prompt first
+        prompt_evo.get_prompt("test command")
         variant_id = prompt_evo.create_variant(
             "default",
             "Added error handling",
@@ -250,7 +251,7 @@ class TestIntegration:
         mock_llm = Mock()
         mock_llm.generate = Mock(return_value='{"paths": [{"description": "Test", "steps": [], "confidence": 0.8, "pros": [], "cons": [], "estimated_steps": 1, "estimated_time": "fast", "risk_level": "low", "reasoning": "Test"}]}')
         mock_llm.translate_intent = Mock(return_value=IntentIR(
-            goal="Test", steps=[], explanation="", expected_result=""
+            goal="Test", requires_confirmation=False, steps=[]
         ))
         
         mock_logger = Mock(spec=AuditLogger)

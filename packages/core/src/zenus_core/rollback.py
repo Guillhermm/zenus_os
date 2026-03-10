@@ -243,12 +243,15 @@ class RollbackEngine:
             if strategy == "delete":
                 # Delete a created file
                 path = data.get("path")
-                if path and os.path.exists(path):
-                    if os.path.isfile(path):
-                        os.remove(path)
-                    elif os.path.isdir(path):
-                        shutil.rmtree(path)
-            
+                if not path:
+                    raise RollbackError("No path specified for delete rollback")
+                if not os.path.exists(path):
+                    raise RollbackError(f"Cannot rollback file creation: path no longer exists: {path}")
+                if os.path.isfile(path):
+                    os.remove(path)
+                elif os.path.isdir(path):
+                    shutil.rmtree(path)
+
             elif strategy == "delete_copy":
                 # Delete a copied file
                 path = data.get("path")

@@ -42,10 +42,16 @@ class GoalTracker:
     """
     
     def __init__(self, max_iterations: int = 10):
-        self.llm = get_llm()
+        self._llm = None
         self.max_iterations = max_iterations
         self.current_iteration = 0
         self.observation_history = []
+
+    @property
+    def llm(self):
+        if self._llm is None:
+            self._llm = get_llm()
+        return self._llm
     
     def check_goal(
         self,

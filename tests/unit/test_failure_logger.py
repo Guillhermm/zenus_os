@@ -6,7 +6,7 @@ import pytest
 import tempfile
 import os
 from pathlib import Path
-from memory.failure_logger import FailureLogger, Failure
+from zenus_core.memory.failure_logger import FailureLogger, Failure
 
 
 @pytest.fixture

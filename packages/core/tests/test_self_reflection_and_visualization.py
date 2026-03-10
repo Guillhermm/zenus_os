@@ -54,9 +54,8 @@ class TestSelfReflection:
         
         intent = IntentIR(
             goal="Read file",
-            steps=[Step(action="read_file", args={"path": "/tmp/test.txt"}, goal="Read test file")],
-            explanation="Reading a file",
-            expected_result="File contents"
+            requires_confirmation=False,
+            steps=[Step(tool="FileOps", action="read_file", args={"path": "/tmp/test.txt"}, risk=0)],
         )
         
         reflection = self_reflection.reflect_on_plan("read the file", intent)
@@ -70,7 +69,7 @@ class TestSelfReflection:
         from zenus_core.brain.self_reflection import PlanReflection, ConfidenceLevel, StepReflection
         from zenus_core.brain.llm.schemas import IntentIR, Step
         
-        intent = IntentIR(goal="test", steps=[Step(action="test", args={}, goal="test")], explanation="", expected_result="")
+        intent = IntentIR(goal="test", requires_confirmation=False, steps=[Step(tool="TestTool", action="test", args={}, risk=0)])
         
         # High confidence - should proceed
         reflection = PlanReflection(
@@ -109,7 +108,11 @@ class TestSelfReflection:
 
 class TestDataVisualization:
     """Test Data Visualization feature"""
-    
+
+    @pytest.fixture(autouse=True)
+    def require_matplotlib(self):
+        pytest.importorskip("matplotlib", reason="matplotlib not installed")
+
     def test_chart_generation(self):
         """Test creating a chart"""
         from zenus_core.visualization.chart_generator import ChartGenerator, ChartType
@@ -221,7 +224,11 @@ class TestDataVisualization:
 
 class TestIntegration:
     """Integration tests"""
-    
+
+    @pytest.fixture(autouse=True)
+    def require_matplotlib(self):
+        pytest.importorskip("matplotlib", reason="matplotlib not installed")
+
     def test_features_coexist(self):
         """Test that both features can coexist"""
         from zenus_core.brain.self_reflection import SelfReflection

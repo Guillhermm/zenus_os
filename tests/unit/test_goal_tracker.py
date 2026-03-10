@@ -5,8 +5,8 @@ Validates goal achievement detection and iteration limiting
 """
 
 import pytest
-from brain.goal_tracker import GoalTracker, GoalStatus
-from brain.llm.schemas import IntentIR, Step
+from zenus_core.brain.goal_tracker import GoalTracker, GoalStatus
+from zenus_core.brain.llm.schemas import IntentIR, Step
 
 
 def test_goal_tracker_initialization():

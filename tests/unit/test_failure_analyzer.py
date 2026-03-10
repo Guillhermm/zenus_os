@@ -5,9 +5,9 @@ Tests for Failure Analyzer
 import pytest
 import tempfile
 import os
-from brain.failure_analyzer import FailureAnalyzer
-from memory.failure_logger import FailureLogger, Failure
-from brain.llm.schemas import IntentIR, Step
+from zenus_core.brain.failure_analyzer import FailureAnalyzer
+from zenus_core.memory.failure_logger import FailureLogger, Failure
+from zenus_core.brain.llm.schemas import IntentIR, Step
 
 
 @pytest.fixture

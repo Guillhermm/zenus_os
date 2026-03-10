@@ -4,10 +4,10 @@ Tests for plan execution
 
 import pytest
 from unittest.mock import Mock
-from brain.llm.schemas import IntentIR, Step
-from brain.planner import execute_plan
-from safety.policy import SafetyError
-from tools.file_ops import FileOps
+from zenus_core.brain.llm.schemas import IntentIR, Step
+from zenus_core.brain.planner import execute_plan
+from zenus_core.safety.policy import SafetyError
+from zenus_core.tools.file_ops import FileOps
 
 
 class TestPlanner:
@@ -15,7 +15,7 @@ class TestPlanner:
     
     def setup_method(self):
         """Reset tool registry before each test"""
-        from tools import registry
+        from zenus_core.tools import registry
         # Store original and reset
         self.original_tools = registry.TOOLS.copy()
         registry.TOOLS.clear()
@@ -23,7 +23,7 @@ class TestPlanner:
     
     def teardown_method(self):
         """Restore tool registry after each test"""
-        from tools import registry
+        from zenus_core.tools import registry
         registry.TOOLS.clear()
         registry.TOOLS.update(self.original_tools)
     
@@ -34,7 +34,7 @@ class TestPlanner:
         mock_tool.scan = Mock(return_value=["file1.txt", "file2.txt"])
         
         # Replace in registry
-        from tools import registry
+        from zenus_core.tools import registry
         registry.TOOLS["FileOps"] = mock_tool
         
         step = Step(tool="FileOps", action="scan", args={"path": "/tmp"}, risk=0)
@@ -67,7 +67,7 @@ class TestPlanner:
                 calls.append(("touch", kwargs))
                 return "Touched"
         
-        from tools import registry
+        from zenus_core.tools import registry
         registry.TOOLS["FileOps"] = MockTool()
         
         steps = [
@@ -97,7 +97,7 @@ class TestPlanner:
     
     def test_raises_on_missing_tool(self):
         """Should raise ValueError if tool not found"""
-        from tools import registry
+        from zenus_core.tools import registry
         # Remove FileOps
         del registry.TOOLS["FileOps"]
         
@@ -113,7 +113,7 @@ class TestPlanner:
             def scan(self):
                 return "result"
         
-        from tools import registry
+        from zenus_core.tools import registry
         registry.TOOLS["FileOps"] = MockTool()
         
         step = Step(tool="FileOps", action="nonexistent", args={}, risk=0)
@@ -128,7 +128,7 @@ class TestPlanner:
         mock_tool.scan = Mock(return_value="result")
         mock_logger = Mock()
         
-        from tools import registry
+        from zenus_core.tools import registry
         registry.TOOLS["FileOps"] = mock_tool
         
         step = Step(tool="FileOps", action="scan", args={}, risk=0)
