@@ -497,37 +497,47 @@ pytest -k "not slow"
 
 ```
 zenus_os/
-├── src/
-│   ├── brain/              # Intelligence layer
-│   │   ├── llm/           # LLM adapters (OpenAI, DeepSeek, Ollama)
-│   │   ├── planner.py     # Execution planning
-│   │   ├── task_analyzer.py       # Complexity analysis
-│   │   ├── failure_analyzer.py    # Failure learning
-│   │   ├── dependency_analyzer.py # Parallel scheduling
-│   │   └── suggestion_engine.py   # Proactive suggestions
-│   ├── cli/               # User interface
-│   │   ├── orchestrator.py  # Main execution orchestrator
-│   │   ├── router.py        # Command routing
-│   │   ├── rollback.py      # Undo engine
-│   │   └── formatter.py     # Output formatting
-│   ├── tools/             # Tool implementations
-│   │   ├── file_ops.py    # File operations
-│   │   ├── system_ops.py  # System management
-│   │   ├── browser_ops.py # Browser automation
-│   │   └── ... (10 tools total)
-│   ├── memory/            # Memory systems
-│   │   ├── failure_logger.py   # Failure tracking
-│   │   ├── action_tracker.py   # Rollback tracking
-│   │   ├── session_memory.py   # Session context
-│   │   └── intent_history.py   # Audit trail
-│   ├── execution/         # Execution layer
-│   │   └── parallel_executor.py # Concurrent execution
-│   ├── safety/            # Safety policies
-│   ├── sandbox/           # Sandboxing
-│   ├── audit/             # Audit logging
-│   └── zenusd/            # Main entry point
-├── tests/                 # Test suite (61+ tests)
+├── packages/
+│   ├── core/              # zenus-core: shared engine
+│   │   └── src/zenus_core/
+│   │       ├── orchestrator.py    # Main execution coordinator
+│   │       ├── rollback.py        # Undo engine
+│   │       ├── brain/             # Intelligence layer
+│   │       │   ├── llm/          # LLM adapters (Anthropic, OpenAI, DeepSeek, Ollama)
+│   │       │   ├── planner.py    # Execution planning
+│   │       │   ├── task_analyzer.py       # Complexity analysis
+│   │       │   ├── failure_analyzer.py    # Failure learning
+│   │       │   ├── dependency_analyzer.py # Parallel scheduling
+│   │       │   ├── tree_of_thoughts.py    # Multi-path exploration
+│   │       │   ├── prompt_evolution.py    # Self-improving prompts
+│   │       │   ├── goal_inference.py      # High-level goal understanding
+│   │       │   ├── self_reflection.py     # Pre-execution plan critique
+│   │       │   └── multi_agent.py         # Multi-agent collaboration
+│   │       ├── tools/             # Tool implementations (10 tools)
+│   │       │   ├── file_ops.py    # File operations
+│   │       │   ├── git_ops.py     # Git + GitHub Issues API
+│   │       │   ├── system_ops.py  # System management
+│   │       │   ├── browser_ops.py # Browser automation
+│   │       │   └── ... (10 tools total)
+│   │       ├── memory/            # Memory systems
+│   │       ├── output/            # Shared output utilities (console, streaming, progress)
+│   │       ├── shell/             # Interactive shell handlers
+│   │       ├── execution/         # Parallel executor
+│   │       ├── safety/            # Safety policies
+│   │       ├── sandbox/           # Sandboxing
+│   │       └── audit/             # Audit logging
+│   ├── cli/               # zenus-cli: command-line entry point
+│   │   └── src/zenus_cli/
+│   │       ├── router.py          # CLI argument parsing
+│   │       └── zenusd/main.py     # Entry point
+│   ├── tui/               # zenus-tui: terminal dashboard
+│   ├── voice/             # zenus-voice: voice interface
+│   └── visualization/     # zenus-visualization: chart/table rendering
+├── tests/                 # Root test suite (137 unit tests)
+│   ├── unit/              # Unit tests
+│   └── integration/       # Integration tests
 ├── docs/                  # Documentation
+├── config.yaml            # LLM and feature configuration
 └── README.md
 ```
 

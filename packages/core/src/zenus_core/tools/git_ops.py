@@ -1,19 +1,24 @@
 """
 Git Operations
 
-Advanced git operations beyond basic commands.
+Advanced git operations beyond basic commands, plus GitHub Issues API.
 """
 
 import subprocess
 import os
-from typing import Optional, List
+import json
+from typing import Optional, List, Dict, Any
+import requests
 from zenus_core.tools.base import Tool
+
+
+GITHUB_API = "https://api.github.com"
 
 
 class GitOps(Tool):
     """
-    Advanced git operations
-    
+    Advanced git operations plus GitHub Issues API.
+
     Capabilities:
     - Clone repositories
     - Commit with smart messages
@@ -21,8 +26,226 @@ class GitOps(Tool):
     - Push/pull operations
     - View history and diffs
     - Stash operations
+    - GitHub Issues: create, list, close
+    - Create issues from ROADMAP.md
     """
-    
+
+    def _github_token(self) -> Optional[str]:
+        """Read GitHub token from environment or config"""
+        token = os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN")
+        if not token:
+            try:
+                import yaml
+                config_path = os.path.join(
+                    os.path.dirname(__file__), "..", "..", "..", "..", "..", "..", "config.yaml"
+                )
+                config_path = os.path.normpath(config_path)
+                if os.path.exists(config_path):
+                    with open(config_path) as f:
+                        cfg = yaml.safe_load(f)
+                    token = cfg.get("github_token")
+            except Exception:
+                pass
+        return token
+
+    def _github_request(
+        self,
+        method: str,
+        path: str,
+        data: Optional[Dict] = None,
+        token: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Make a GitHub API request"""
+        token = token or self._github_token()
+        if not token:
+            return {"error": "No GitHub token found. Set GITHUB_TOKEN environment variable or github_token in config.yaml"}
+
+        headers = {
+            "Authorization": f"token {token}",
+            "Accept": "application/vnd.github+json",
+            "X-GitHub-Api-Version": "2022-11-28",
+        }
+        url = f"{GITHUB_API}{path}"
+        try:
+            resp = requests.request(method, url, headers=headers, json=data, timeout=15)
+            resp.raise_for_status()
+            if resp.status_code == 204:
+                return {"success": True}
+            return resp.json()
+        except requests.HTTPError as e:
+            try:
+                detail = e.response.json().get("message", str(e))
+            except Exception:
+                detail = str(e)
+            return {"error": f"GitHub API error {e.response.status_code}: {detail}"}
+        except Exception as e:
+            return {"error": str(e)}
+
+    def create_issue(
+        self,
+        repo: str,
+        title: str,
+        body: str = "",
+        labels: Optional[List[str]] = None,
+        milestone: Optional[int] = None,
+    ) -> str:
+        """
+        Create a GitHub issue.
+
+        Args:
+            repo: Repository in 'owner/name' format
+            title: Issue title
+            body: Issue body (Markdown supported)
+            labels: List of label names
+            milestone: Milestone number
+        """
+        payload: Dict[str, Any] = {"title": title, "body": body}
+        if labels:
+            payload["labels"] = labels
+        if milestone:
+            payload["milestone"] = milestone
+
+        result = self._github_request("POST", f"/repos/{repo}/issues", data=payload)
+        if "error" in result:
+            return f"Error: {result['error']}"
+        return f"Created issue #{result['number']}: {result['html_url']}"
+
+    def list_issues(
+        self,
+        repo: str,
+        state: str = "open",
+        labels: Optional[str] = None,
+        limit: int = 30,
+    ) -> str:
+        """
+        List GitHub issues.
+
+        Args:
+            repo: Repository in 'owner/name' format
+            state: 'open', 'closed', or 'all'
+            labels: Comma-separated label filter
+            limit: Max issues to return (default 30)
+        """
+        params = f"?state={state}&per_page={min(limit, 100)}"
+        if labels:
+            params += f"&labels={labels}"
+        result = self._github_request("GET", f"/repos/{repo}/issues{params}")
+        if isinstance(result, dict) and "error" in result:
+            return f"Error: {result['error']}"
+        if not isinstance(result, list):
+            return "Unexpected response from GitHub API"
+        if not result:
+            return f"No {state} issues found in {repo}"
+        lines = [f"Issues in {repo} ({state}):"]
+        for issue in result:
+            label_str = ", ".join(l["name"] for l in issue.get("labels", []))
+            label_part = f" [{label_str}]" if label_str else ""
+            lines.append(f"  #{issue['number']}: {issue['title']}{label_part}")
+        return "\n".join(lines)
+
+    def close_issue(self, repo: str, issue_number: int, comment: str = "") -> str:
+        """
+        Close a GitHub issue.
+
+        Args:
+            repo: Repository in 'owner/name' format
+            issue_number: Issue number to close
+            comment: Optional comment to add before closing
+        """
+        if comment:
+            self._github_request(
+                "POST",
+                f"/repos/{repo}/issues/{issue_number}/comments",
+                data={"body": comment},
+            )
+        result = self._github_request(
+            "PATCH",
+            f"/repos/{repo}/issues/{issue_number}",
+            data={"state": "closed"},
+        )
+        if "error" in result:
+            return f"Error: {result['error']}"
+        return f"Closed issue #{issue_number} in {repo}"
+
+    def create_issues_from_roadmap(
+        self,
+        repo: str,
+        roadmap_path: str = "ROADMAP.md",
+        phase_filter: Optional[str] = None,
+        dry_run: bool = True,
+    ) -> str:
+        """
+        Parse ROADMAP.md and create GitHub issues for unchecked items.
+
+        Args:
+            repo: Repository in 'owner/name' format
+            roadmap_path: Path to ROADMAP.md (default: project root)
+            phase_filter: Only create issues for items containing this string in their phase header
+            dry_run: If True, show what would be created without creating (default True)
+        """
+        roadmap_path = os.path.expanduser(roadmap_path)
+        if not os.path.exists(roadmap_path):
+            return f"Error: Roadmap not found at {roadmap_path}"
+
+        with open(roadmap_path) as f:
+            content = f.read()
+
+        issues_to_create = []
+        current_phase = ""
+        current_section = ""
+
+        for line in content.splitlines():
+            # Track phase headers (## Phase N: ...)
+            if line.startswith("## "):
+                current_phase = line.lstrip("# ").strip()
+                current_section = ""
+            elif line.startswith("### "):
+                current_section = line.lstrip("# ").strip()
+            # Unchecked todo items: - [ ] ...
+            elif line.strip().startswith("- [ ] "):
+                if phase_filter and phase_filter.lower() not in current_phase.lower():
+                    continue
+                task = line.strip()[6:].strip()  # Remove "- [ ] "
+                body_parts = [f"**Phase**: {current_phase}"]
+                if current_section:
+                    body_parts.append(f"**Section**: {current_section}")
+                body_parts.append(f"\nFrom [ROADMAP.md]({roadmap_path})")
+                issues_to_create.append({
+                    "title": task,
+                    "body": "\n".join(body_parts),
+                    "labels": ["roadmap"],
+                })
+
+        if not issues_to_create:
+            return "No unchecked roadmap items found" + (f" matching '{phase_filter}'" if phase_filter else "")
+
+        if dry_run:
+            lines = [f"[DRY RUN] Would create {len(issues_to_create)} issues in {repo}:"]
+            for i, issue in enumerate(issues_to_create[:20], 1):
+                lines.append(f"  {i}. {issue['title']}")
+            if len(issues_to_create) > 20:
+                lines.append(f"  ... and {len(issues_to_create) - 20} more")
+            lines.append("\nRun with dry_run=False to create issues.")
+            return "\n".join(lines)
+
+        created = []
+        errors = []
+        for issue in issues_to_create:
+            result = self._github_request("POST", f"/repos/{repo}/issues", data=issue)
+            if "error" in result:
+                errors.append(f"  Failed '{issue['title']}': {result['error']}")
+            else:
+                created.append(f"  #{result['number']}: {issue['title']}")
+
+        lines = [f"Created {len(created)}/{len(issues_to_create)} issues in {repo}:"]
+        lines.extend(created[:10])
+        if len(created) > 10:
+            lines.append(f"  ... and {len(created) - 10} more")
+        if errors:
+            lines.append(f"\nErrors ({len(errors)}):")
+            lines.extend(errors)
+        return "\n".join(lines)
+
     def _run_git(self, args: List[str], cwd: Optional[str] = None) -> str:
         """Run git command"""
         cmd = ["git"] + args

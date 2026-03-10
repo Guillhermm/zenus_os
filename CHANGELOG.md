@@ -8,6 +8,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **GitHub Issues API in GitOps**: `GitOps` tool now supports full GitHub Issues workflow
+  - `create_issue(repo, title, body, labels, milestone)` — creates a single issue
+  - `list_issues(repo, state, labels, limit)` — lists issues with filtering
+  - `close_issue(repo, issue_number, comment)` — closes an issue with optional comment
+  - `create_issues_from_roadmap(repo, roadmap_path, phase_filter, dry_run)` — parses ROADMAP.md and bulk-creates issues for unchecked `[ ]` items; defaults to dry_run=True for safety
+  - Token read from `GITHUB_TOKEN` env var or `github_token` in `config.yaml`
+
+### Changed
+- **Monorepo restructuring**: Dissolved `zenus_core/cli/` into proper responsibility-based modules
+  - `zenus_core.orchestrator` — core engine (shared by CLI, TUI, Voice)
+  - `zenus_core.rollback` — rollback engine (business logic, not CLI-specific)
+  - `zenus_core.output.*` — shared display utilities (`console`, `streaming`, `progress`)
+  - `zenus_core.shell.*` — interactive shell handlers (`commands`, `explain`, `response_generator`)
+  - `zenus_cli.router` — CLI-only argument parser (correctly placed in CLI package)
+  - Merged `explainer.py` + `explainability.py` → `zenus_core.shell.explain`
+  - Renamed `FeedbackGenerator` → `ResponseGenerator` to distinguish from `FeedbackCollector`
+  - Renamed schema classes `CircuitBreakerConfig/RetryConfig` → `CircuitBreakerSettings/RetrySettings`
+  - Renamed `SandboxedTool` → `SandboxedToolBase`; new `ToolSandboxWrapper`/`ToolSandboxRegistry` for composition pattern
+
+### Fixed
+- **CI/CD pipeline**: All unit tests in `tests/unit/` now use fully qualified imports (`zenus_core.*`, `zenus_cli.*`) matching the Poetry monorepo structure
+- **`tests/conftest.py`**: Fixed `sys.path` to correctly point at `packages/core/src` and `packages/cli/src`
+- **`GoalTracker`**: LLM is now lazy-loaded via a property — avoids importing `anthropic` at module init time (fixes test failures in environments without the package)
+- **`RollbackEngine`**: Raises `RollbackError` when a file to delete is already gone, rather than silently succeeding (fixes `test_rollback_partial_failure`)
+- **`SelfReflection`**: Fixed `step.goal` reference → `step.tool` (`Step` schema has no `goal` field)
+- **`TreeOfThoughts`**: Fixed `intent.to_dict()` → `intent.model_dump()` (Pydantic v2)
+- **Revolutionary features tests**: Updated `Step`/`IntentIR` test fixtures to include required `tool`, `risk`, `requires_confirmation` fields; added `pytest.importorskip("matplotlib")` for visualization tests
+
+### Added
 - **API Key Diagnostic Tool** (`test_api_key.py`): Test Anthropic API key validity and diagnose authentication errors
   - Shows key format, length, and potential issues (whitespace, quotes, wrong prefix)
   - Tests actual API connection with simple message

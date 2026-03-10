@@ -55,18 +55,22 @@ graph TD
 
 ## Core Components
 
-### 1. CLI Layer (`src/cli/`)
+### 1. CLI Layer (`packages/cli/src/zenus_cli/`)
+
+**Router** (`router.py`):
+- Command-line argument parsing
+- Mode selection (direct, interactive, rollback, history)
+- Flag handling (dry-run, iterative)
+- Entry point: `zenus_cli.zenusd.main`
+
+### 2. Core Engine (`packages/core/src/zenus_core/`)
 
 **Orchestrator** (`orchestrator.py`):
 - Main execution coordinator
 - Manages pipeline flow
 - Integrates all intelligence components
 - Handles errors and retries
-
-**Router** (`router.py`):
-- Command-line argument parsing
-- Mode selection (direct, interactive, rollback, history)
-- Flag handling (dry-run, iterative)
+- Shared across CLI, TUI, and Voice packages
 
 **Rollback Engine** (`rollback.py`):
 - Executes inverse operations
@@ -74,13 +78,20 @@ graph TD
 - Checkpoint management
 - Dry-run support
 
-**Formatter** (`formatter.py`):
-- Rich console output
-- Color-coded messages
-- Progress indicators
-- Error display
+**Output Utilities** (`output/`):
+- `console.py` — Rich console output and color-coded messages
+- `streaming.py` — Streaming LLM output handling
+- `progress.py` — Progress indicators and spinners
+- Used by brain/llm backends, execution layer, and shell handlers
 
-### 2. Brain Layer (`src/brain/`)
+**Shell Handlers** (`shell/`):
+- `commands.py` — Built-in shell commands (status, history, rollback)
+- `explain.py` — Explainability system (ExplainMode, Explainer, ExplainabilityDashboard)
+- `response_generator.py` — Response formatting (ResponseGenerator)
+- `shell_helpers.py` — Interactive shell utilities
+- Called by Orchestrator during interactive mode
+
+### 3. Brain Layer (`packages/core/src/zenus_core/brain/`)
 
 **LLM Integration** (`llm/`):
 - Factory pattern for multiple providers
@@ -118,7 +129,7 @@ graph TD
 - `adaptive_planner.py`: Retry with observation
 - `sandboxed_planner.py`: Safety-enforced execution
 
-### 3. Memory Layer (`src/memory/`)
+### 4. Memory Layer (`packages/core/src/zenus_core/memory/`)
 
 **Failure Logger** (`failure_logger.py`):
 - SQLite-backed persistence
@@ -148,7 +159,7 @@ graph TD
 - JSONL format
 - Query capabilities
 
-### 4. Execution Layer (`src/execution/`)
+### 5. Execution Layer (`packages/core/src/zenus_core/execution/`)
 
 **Parallel Executor** (`parallel_executor.py`):
 - ThreadPoolExecutor-based
@@ -162,7 +173,7 @@ graph TD
 - I/O throttling
 - Concurrent operation limits
 
-### 5. Tools Layer (`src/tools/`)
+### 6. Tools Layer (`packages/core/src/zenus_core/tools/`)
 
 **Registry** (`registry.py`):
 - Tool registration and discovery
@@ -181,7 +192,7 @@ graph TD
 - `container_ops.py`: Docker/Podman
 - `text_ops.py`: Text processing
 
-### 6. Safety Layer (`src/safety/`)
+### 7. Safety Layer (`packages/core/src/zenus_core/safety/`)
 
 **Validator**:
 - Path validation
@@ -189,12 +200,13 @@ graph TD
 - Resource limit enforcement
 - Command whitelisting
 
-**Sandbox** (`src/sandbox/`):
-- chroot-like boundaries
-- System file protection
-- Resource isolation
+**Sandbox** (`packages/core/src/zenus_core/sandbox/`):
+- Two usage patterns: inheritance (`SandboxedToolBase`) and composition (`ToolSandboxWrapper`)
+- Path-based access control (read/write allowed paths)
+- Execution timeout via `SIGALRM`
+- `ToolSandboxRegistry` wraps an entire tool dict with sandbox enforcement
 
-### 7. Audit Layer (`src/audit/`)
+### 8. Audit Layer (`packages/core/src/zenus_core/audit/`)
 
 **Logger** (`logger.py`):
 - Structured logging
@@ -773,38 +785,38 @@ Execution
 ### Adding New Tools
 
 ```python
-from tools.base import BaseTool
+from zenus_core.tools.base import Tool
 
-class MyCustomTool(BaseTool):
-    def list_operations(self):
-        return ["my_action"]
-    
-    def execute(self, action: str, args: dict):
-        if action == "my_action":
-            return self.my_action(**args)
-    
-    def my_action(self, param1: str):
+class MyCustomTool(Tool):
+    def my_action(self, param1: str) -> str:
         # Implementation
-        return {"result": "success"}
+        return "result"
+```
+
+Register it in `zenus_core/tools/registry.py`:
+```python
+from zenus_core.tools.my_tool import MyCustomTool
+TOOLS["MyTool"] = MyCustomTool()
 ```
 
 ### Adding LLM Providers
 
 ```python
-from brain.llm.base import LLMBackend
+from zenus_core.brain.llm.base import LLMBackend
 
 class MyLLM(LLMBackend):
     def translate_intent(self, user_input: str) -> IntentIR:
         # Call your LLM API
-        # Parse response
-        # Return Intent IR
+        # Parse response to IntentIR
         pass
 ```
+
+Register in `zenus_core/brain/llm/factory.py`.
 
 ### Adding Rollback Strategies
 
 ```python
-# In action_tracker.py
+# In zenus_core/memory/action_tracker.py
 if tool == "MyTool" and operation == "my_op":
     return {
         "possible": True,
@@ -812,11 +824,32 @@ if tool == "MyTool" and operation == "my_op":
         "data": {"needed_data": value}
     }
 
-# In rollback.py
+# In zenus_core/rollback.py
 elif strategy == "my_reverse_op":
     # Execute reverse operation
     pass
 ```
+
+### GitHub Issues Integration
+
+GitOps includes a GitHub API client for issue management:
+
+```python
+from zenus_core.tools.git_ops import GitOps
+
+git = GitOps()
+
+# Create a single issue
+git.create_issue("owner/repo", "Fix login bug", body="...", labels=["bug"])
+
+# List open issues
+git.list_issues("owner/repo", state="open")
+
+# Create issues from ROADMAP.md (dry_run=True by default)
+git.create_issues_from_roadmap("owner/repo", phase_filter="Phase 1", dry_run=False)
+```
+
+Requires `GITHUB_TOKEN` environment variable or `github_token` in `config.yaml`.
 
 ---
 
