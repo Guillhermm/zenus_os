@@ -8,7 +8,7 @@ from typing import List
 from zenus_core.brain.llm.schemas import IntentIR
 
 
-class FeedbackGenerator:
+class ResponseGenerator:
     """
     Generates conversational feedback from execution results
     

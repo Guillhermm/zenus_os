@@ -43,16 +43,16 @@ class FallbackConfig(BaseModel):
     )
 
 
-class CircuitBreakerConfig(BaseModel):
-    """Circuit breaker configuration"""
+class CircuitBreakerSettings(BaseModel):
+    """Circuit breaker configuration (schema only; runtime config lives in zenus_core.error)"""
     enabled: bool = Field(default=True, description="Enable circuit breakers")
     failure_threshold: int = Field(default=5, description="Failures before opening")
     timeout_seconds: float = Field(default=60.0, description="Timeout before retry")
     success_threshold: int = Field(default=2, description="Successes to close")
 
 
-class RetryConfig(BaseModel):
-    """Retry configuration"""
+class RetrySettings(BaseModel):
+    """Retry configuration (schema only; runtime config lives in zenus_core.error)"""
     enabled: bool = Field(default=True, description="Enable retry logic")
     max_attempts: int = Field(default=3, description="Maximum retry attempts")
     initial_delay_seconds: float = Field(default=1.0, description="Initial delay")
@@ -121,8 +121,8 @@ class ZenusConfig(BaseModel):
     fallback: FallbackConfig = Field(default_factory=FallbackConfig)
     
     # Error Handling
-    circuit_breaker: CircuitBreakerConfig = Field(default_factory=CircuitBreakerConfig)
-    retry: RetryConfig = Field(default_factory=RetryConfig)
+    circuit_breaker: CircuitBreakerSettings = Field(default_factory=CircuitBreakerSettings)
+    retry: RetrySettings = Field(default_factory=RetrySettings)
     
     # Performance
     cache: CacheConfig = Field(default_factory=CacheConfig)

@@ -45,7 +45,7 @@ from zenus_core.memory.world_model import WorldModel
 from zenus_core.memory.intent_history import IntentHistory
 from zenus_core.context.context_manager import get_context_manager
 from zenus_core.output.progress import ProgressIndicator
-from zenus_core.shell.feedback import FeedbackGenerator
+from zenus_core.shell.response_generator import ResponseGenerator
 from zenus_core.shell.explain import ExplainMode
 from zenus_core.output.console import (
     print_success, print_error, print_goal, 
@@ -111,7 +111,7 @@ class Orchestrator:
             self.intent_history = IntentHistory()
         
         self.progress = ProgressIndicator() if show_progress else None
-        self.feedback = FeedbackGenerator(self.llm)
+        self.feedback = ResponseGenerator(self.llm)
         self.failure_analyzer = FailureAnalyzer()
         self.action_tracker = get_action_tracker()
         self.enable_parallel = enable_parallel
@@ -436,7 +436,7 @@ class Orchestrator:
                 max_risk = max([step.risk for step in intent.steps])
                 if max_risk >= 3 and not dry_run:
                     console.print("\n[yellow]⚠️  High-risk operation detected[/yellow]")
-                    from zenus_core.shell.explainer import get_explainer
+                    from zenus_core.shell.explain import get_explainer
                     explainer = get_explainer()
                     explainer.explain_intent(user_input, intent)
                     
@@ -445,7 +445,7 @@ class Orchestrator:
             
             # Step 3: Show explanation if requested
             if explain:
-                from zenus_core.shell.explainer import get_explainer
+                from zenus_core.shell.explain import get_explainer
                 explainer = get_explainer()
                 
                 # Show detailed explanation

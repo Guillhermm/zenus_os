@@ -157,16 +157,17 @@ class SandboxExecutor:
         return max(0, remaining)
 
 
-class SandboxedTool:
+class SandboxedToolBase:
     """
-    Base class for sandboxed tools
-    
-    Tools that inherit from this get automatic sandboxing
+    Base class for sandboxed tools (inheritance pattern).
+
+    Tools that inherit from this get automatic sandboxing via execute_safe().
+    For the wrapping/composition pattern see sandbox.tool_wrapper.ToolSandboxWrapper.
     """
-    
+
     def __init__(self, constraints: Optional[SandboxConstraints] = None):
         self.sandbox = SandboxExecutor(constraints)
-    
+
     def execute_safe(self, method: Callable, *args, **kwargs) -> Any:
         """Execute method with sandbox constraints"""
         return self.sandbox.execute(method, *args, **kwargs)

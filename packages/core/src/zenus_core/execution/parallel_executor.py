@@ -21,7 +21,7 @@ from dataclasses import dataclass
 
 
 @dataclass
-class ExecutionResult:
+class StepExecutionResult:
     """Result of executing a step"""
     step_index: int
     success: bool
