@@ -7,7 +7,6 @@ import tempfile
 import shutil
 import pytest
 from pathlib import Path
-from zenus_core.brain.planner import create_intent, execute_plan
 from zenus_core.tools.file_ops import FileOps
 
 
