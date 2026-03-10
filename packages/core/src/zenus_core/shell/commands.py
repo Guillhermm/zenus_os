@@ -124,7 +124,7 @@ def handle_update_command():
 
 def handle_explain_command(orchestrator, arg: str = "last"):
     """Explain a past execution"""
-    from zenus_core.cli.explainability import get_explainability_dashboard
+    from zenus_core.shell.explainability import get_explainability_dashboard
     
     dashboard = get_explainability_dashboard()
     

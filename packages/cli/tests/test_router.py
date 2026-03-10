@@ -3,7 +3,7 @@ Tests for CLI command router
 """
 
 import pytest
-from zenus_core.cli.router import CommandRouter, CLICommand
+from zenus_cli.router import CommandRouter, CLICommand
 
 
 class TestCommandRouter:

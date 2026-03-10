@@ -77,7 +77,7 @@ def main():
     
     try:
         # Import Zenus orchestrator
-        from zenus_core.cli.orchestrator import Orchestrator
+        from zenus_core.orchestrator import Orchestrator
         
         # Create orchestrator
         print("Initializing Zenus...")

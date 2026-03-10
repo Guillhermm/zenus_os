@@ -7,7 +7,7 @@ import tempfile
 import os
 from pathlib import Path
 from zenus_core.memory.action_tracker import ActionTracker
-from zenus_core.cli.rollback import RollbackEngine, RollbackError
+from zenus_core.rollback import RollbackEngine, RollbackError
 
 
 @pytest.fixture

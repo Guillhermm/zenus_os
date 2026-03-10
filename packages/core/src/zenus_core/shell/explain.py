@@ -6,7 +6,7 @@ Show reasoning and details before execution.
 
 from typing import List, Dict
 from zenus_core.brain.llm.schemas import IntentIR
-from zenus_core.cli.formatter import (
+from zenus_core.output.console import (
     print_explanation, 
     print_similar_commands,
     console

@@ -44,10 +44,10 @@ from zenus_core.memory.session_memory import SessionMemory
 from zenus_core.memory.world_model import WorldModel
 from zenus_core.memory.intent_history import IntentHistory
 from zenus_core.context.context_manager import get_context_manager
-from zenus_core.cli.progress import ProgressIndicator
-from zenus_core.cli.feedback import FeedbackGenerator
-from zenus_core.cli.explain import ExplainMode
-from zenus_core.cli.formatter import (
+from zenus_core.output.progress import ProgressIndicator
+from zenus_core.shell.feedback import FeedbackGenerator
+from zenus_core.shell.explain import ExplainMode
+from zenus_core.output.console import (
     print_success, print_error, print_goal, 
     print_step, console
 )
@@ -436,7 +436,7 @@ class Orchestrator:
                 max_risk = max([step.risk for step in intent.steps])
                 if max_risk >= 3 and not dry_run:
                     console.print("\n[yellow]⚠️  High-risk operation detected[/yellow]")
-                    from zenus_core.cli.explainer import get_explainer
+                    from zenus_core.shell.explainer import get_explainer
                     explainer = get_explainer()
                     explainer.explain_intent(user_input, intent)
                     
@@ -445,7 +445,7 @@ class Orchestrator:
             
             # Step 3: Show explanation if requested
             if explain:
-                from zenus_core.cli.explainer import get_explainer
+                from zenus_core.shell.explainer import get_explainer
                 explainer = get_explainer()
                 
                 # Show detailed explanation
@@ -1098,7 +1098,7 @@ class Orchestrator:
         # Try to use enhanced shell (with tab completion, syntax highlighting)
         enhanced_shell = None
         try:
-            from zenus_core.cli.enhanced_shell import create_enhanced_shell
+            from zenus_core.shell.enhanced_shell import create_enhanced_shell
             enhanced_shell = create_enhanced_shell()
         except ImportError:
             # Enhanced shell not available - fall back to basic readline
@@ -1164,31 +1164,31 @@ class Orchestrator:
                 
                 # Handle special commands
                 if user_input == "status":
-                    from zenus_core.cli.commands import handle_status_command
+                    from zenus_core.shell.commands import handle_status_command
                     handle_status_command(self)
                     continue
                 
                 if user_input.startswith("memory"):
-                    from zenus_core.cli.commands import handle_memory_command
+                    from zenus_core.shell.commands import handle_memory_command
                     parts = user_input.split()
                     subcommand = parts[1] if len(parts) > 1 else "stats"
                     handle_memory_command(self, subcommand)
                     continue
                 
                 if user_input == "update":
-                    from zenus_core.cli.commands import handle_update_command
+                    from zenus_core.shell.commands import handle_update_command
                     handle_update_command()
                     continue
                 
                 if user_input.startswith("explain"):
-                    from zenus_core.cli.commands import handle_explain_command
+                    from zenus_core.shell.commands import handle_explain_command
                     parts = user_input.split()
                     arg = parts[1] if len(parts) > 1 else "last"
                     handle_explain_command(self, arg)
                     continue
                 
                 if user_input.startswith("workflow"):
-                    from zenus_core.cli.commands import handle_workflow_command
+                    from zenus_core.shell.commands import handle_workflow_command
                     parts = user_input.split()
                     subcommand = parts[1] if len(parts) > 1 else "list"
                     args = parts[2:] if len(parts) > 2 else []
@@ -1231,7 +1231,7 @@ class Orchestrator:
                 command_count += 1
                 if command_count % 10 == 0:
                     try:
-                        from zenus_core.cli.commands import check_and_suggest_patterns
+                        from zenus_core.shell.commands import check_and_suggest_patterns
                         check_and_suggest_patterns(self)
                     except:
                         pass  # Silently fail if pattern detection fails
