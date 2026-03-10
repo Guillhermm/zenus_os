@@ -295,15 +295,19 @@ class GitOps(Tool):
         """Check repository status"""
         return self._run_git(["status"], cwd=path)
     
-    def add(self, files: str, path: str = ".") -> str:
+    def add(self, files, path: str = ".") -> str:
         """
         Stage files
-        
+
         Args:
-            files: Files to stage ("." for all, or specific paths)
+            files: Files to stage ("." for all, a single path, or a list of paths)
             path: Repository path
         """
-        return self._run_git(["add", files], cwd=path)
+        if isinstance(files, list):
+            args = ["add"] + files
+        else:
+            args = ["add", files]
+        return self._run_git(args, cwd=path)
     
     def commit(self, message: str, path: str = ".") -> str:
         """Commit staged changes"""
@@ -337,8 +341,11 @@ class GitOps(Tool):
         
         if delete:
             return self._run_git(["branch", "-d", name], cwd=path)
-        
-        return self._run_git(["branch", name], cwd=path)
+
+        result = self._run_git(["branch", name], cwd=path)
+        if result.startswith("Error:"):
+            return result
+        return f"Branch '{name}' created"
     
     def checkout(self, branch: str, create: bool = False, path: str = ".") -> str:
         """
@@ -353,11 +360,16 @@ class GitOps(Tool):
         if create:
             args.append("-b")
         args.append(branch)
-        return self._run_git(args, cwd=path)
+        result = self._run_git(args, cwd=path)
+        if result.startswith("Error:"):
+            return result
+        # git checkout writes "Switched to branch '...'" to stderr (not stdout)
+        prefix = "new branch" if create else "branch"
+        return result or f"Switched to {prefix} '{branch}'"
     
-    def log(self, lines: int = 10, path: str = ".") -> str:
+    def log(self, limit: int = 10, path: str = ".") -> str:
         """View commit history"""
-        return self._run_git(["log", f"-{lines}", "--oneline"], cwd=path)
+        return self._run_git(["log", f"-{limit}", "--oneline"], cwd=path)
     
     def diff(self, file: Optional[str] = None, path: str = ".") -> str:
         """Show changes"""

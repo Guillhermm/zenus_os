@@ -18,12 +18,15 @@ class SystemOps(Tool):
     def disk_usage(self, path: str = "/"):
         """Get disk usage for a path"""
         path = os.path.expanduser(path)
-        usage = shutil.disk_usage(path)
+        try:
+            usage = shutil.disk_usage(path)
+        except (FileNotFoundError, OSError):
+            return f"Error: path not found or inaccessible: {path}"
         total_gb = usage.total / (1024 ** 3)
         used_gb = usage.used / (1024 ** 3)
         free_gb = usage.free / (1024 ** 3)
         percent = (usage.used / usage.total) * 100
-        
+
         return (
             f"Disk {path}: "
             f"{used_gb:.1f}GB used / {total_gb:.1f}GB total "
@@ -46,10 +49,23 @@ class SystemOps(Tool):
     
     def cpu_info(self):
         """Get CPU usage information"""
-        cpu_percent = psutil.cpu_percent(interval=1)
+        cpu_percent = psutil.cpu_percent(interval=None)
         cpu_count = psutil.cpu_count()
-        
+
         return f"CPU: {cpu_percent}% used ({cpu_count} cores)"
+
+    def get_system_info(self) -> str:
+        """Get general system information (OS, CPU, architecture)"""
+        import platform
+        lines = [
+            f"OS: {platform.system()} {platform.release()}",
+            f"Version: {platform.version()[:60]}",
+            f"Architecture: {platform.machine()}",
+            f"Processor: {platform.processor() or platform.machine()}",
+            f"CPU Cores: {psutil.cpu_count()} logical, {psutil.cpu_count(logical=False)} physical",
+            f"Python: {platform.python_version()}",
+        ]
+        return "\n".join(lines)
     
     def list_processes(self, limit: int = 10):
         """List top processes by memory usage"""
@@ -148,8 +164,8 @@ class SystemOps(Tool):
         """
         lines = []
         
-        # CPU
-        cpu_percent = psutil.cpu_percent(interval=1)
+        # CPU — interval=None uses cached value to avoid blocking for 1s
+        cpu_percent = psutil.cpu_percent(interval=None)
         cpu_count = psutil.cpu_count()
         lines.append(f"CPU: {cpu_percent}% used ({cpu_count} cores)")
         
