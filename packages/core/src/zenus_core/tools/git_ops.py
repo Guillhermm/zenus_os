@@ -7,6 +7,7 @@ Advanced git operations beyond basic commands, plus GitHub Issues API.
 import subprocess
 import os
 import json
+from pathlib import Path
 from typing import Optional, List, Dict, Any
 import requests
 from zenus_core.tools.base import Tool
@@ -32,12 +33,26 @@ class GitOps(Tool):
 
     def _github_token(self) -> Optional[str]:
         """Read GitHub token from environment or config"""
+        # Explicitly load .env files before reading env vars — do not rely on
+        # the LLM factory having been imported first (tools can run without LLM)
+        try:
+            from dotenv import load_dotenv, find_dotenv
+            dotenv_path = find_dotenv(usecwd=True)
+            if dotenv_path:
+                load_dotenv(dotenv_path, override=False)
+            zenus_env = Path.home() / ".zenus" / ".env"
+            if zenus_env.exists():
+                load_dotenv(zenus_env, override=False)
+        except ImportError:
+            pass
+
         token = os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN")
         if not token:
             try:
                 import yaml
+                # 5 levels up from packages/core/src/zenus_core/tools/ → project root
                 config_path = os.path.join(
-                    os.path.dirname(__file__), "..", "..", "..", "..", "..", "..", "config.yaml"
+                    os.path.dirname(__file__), "..", "..", "..", "..", "..", "config.yaml"
                 )
                 config_path = os.path.normpath(config_path)
                 if os.path.exists(config_path):

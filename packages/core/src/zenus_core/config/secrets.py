@@ -72,6 +72,10 @@ class SecretsManager:
             
             # Custom
             "ZENUS_API_KEY",
+
+            # GitHub
+            "GITHUB_TOKEN",
+            "GH_TOKEN",
         ]
         
         for key in secret_keys:
