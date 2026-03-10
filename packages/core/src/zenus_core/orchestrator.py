@@ -242,7 +242,8 @@ class Orchestrator:
                     return self.execute_iterative(
                         user_input,
                         max_iterations=task_complexity.estimated_steps * 2,  # Dynamic max
-                        dry_run=dry_run
+                        dry_run=dry_run,
+                        force_provider=force_provider,
                     )
             
             # Step 1: Build context from memory
@@ -348,30 +349,19 @@ class Orchestrator:
                     # Cache miss, call LLM
                     # IMPORTANT: Always use streaming to avoid Anthropic timeouts
                     try:
-                        # Temporarily set model for this request
-                        import os
-                        original_model = os.environ.get('ZENUS_LLM')
-                        os.environ['ZENUS_LLM'] = selected_model
-                        
-                        # Refresh LLM instance with new model
-                        self.llm = get_llm()
-                        
+                        # Use the routed provider for this request
+                        self.llm = get_llm(force_provider=selected_model)
+
                         # Show thinking indicator
                         if self.progress:
                             with self.progress.thinking("Understanding your request"):
                                 intent = self.llm.translate_intent(enhanced_input, stream=True)
                         else:
                             intent = self.llm.translate_intent(enhanced_input, stream=True)
-                        
+
                         # Cache the result
                         self.intent_cache.set(user_input, context, intent)
-                        
-                        # Restore original model
-                        if original_model:
-                            os.environ['ZENUS_LLM'] = original_model
-                        else:
-                            os.environ.pop('ZENUS_LLM', None)
-                    
+
                     except Exception as e:
                         error_msg = f"Failed to understand command: {str(e)}"
                         self.logger.log_error(error_msg, {"user_input": user_input})
@@ -749,13 +739,10 @@ class Orchestrator:
 
         # Route to appropriate model (iterative = likely complex)
         selected_model, complexity = self.router.route(user_input, iterative=True, force_model=force_provider)
-        
-        # Set model for iterative execution
-        import os
-        original_model = os.environ.get('ZENUS_LLM')
-        os.environ['ZENUS_LLM'] = selected_model
-        self.llm = get_llm()  # Refresh with new model
-        
+
+        # Instantiate the chosen LLM for this execution
+        self.llm = get_llm(force_provider=selected_model)
+
         print_goal(f"Starting iterative execution: {user_input}")
         console.print(f"[dim]Batch size: {max_iterations} iterations per batch[/dim]")
         console.print(f"[dim]Using model: {selected_model} (complexity: {complexity.score:.2f})[/dim]\n")
@@ -957,14 +944,7 @@ class Orchestrator:
             self.logger.log_error(error_msg, {"user_input": user_input})
             print_error(error_msg)
             return error_msg
-        
-        finally:
-            # Restore original model
-            if original_model:
-                os.environ['ZENUS_LLM'] = original_model
-            else:
-                os.environ.pop('ZENUS_LLM', None)
-    
+
     def _build_context(self, user_input: str) -> str:
         """Build context string from memory and environment"""
         context_parts = []

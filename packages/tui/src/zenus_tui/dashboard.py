@@ -865,40 +865,46 @@ class ZenusDashboard(App):
         status_bar = self.query_one("#status-bar", StatusBar)
         status_bar.update_status(last_result="Rollback not yet implemented")
 
-    async def action_pick_model(self) -> None:
+    def action_pick_model(self) -> None:
         """Open model picker modal (Ctrl+M)."""
         current_provider = self.active_provider or "anthropic"
         current_model = self.active_model or ""
 
-        result = await self.push_screen_wait(
-            ModelPickerScreen(current_provider, current_model)
+        def on_dismiss(result) -> None:
+            """Called by Textual when the modal is closed."""
+            if result is None:
+                return  # Cancelled
+
+            provider, model = result
+            self.active_provider = provider
+            self.active_model = model
+
+            # Update subtitle to reflect session override
+            self.sub_title = f"{provider} / {model}  [override]"
+
+            # Persist as the new default in config.yaml (runs in thread pool)
+            def save():
+                try:
+                    from zenus_core.shell.commands import _update_config_provider
+                    _update_config_provider(provider, model)
+                    self.call_from_thread(
+                        self.notify,
+                        f"Default set to {provider}/{model}",
+                        severity="information",
+                    )
+                except Exception as e:
+                    self.call_from_thread(
+                        self.notify,
+                        f"Session override active. Config save failed: {e}",
+                        severity="warning",
+                    )
+
+            self.run_worker(asyncio.get_event_loop().run_in_executor(None, save))
+
+        self.push_screen(
+            ModelPickerScreen(current_provider, current_model),
+            callback=on_dismiss,
         )
-
-        if result is None:
-            return  # Cancelled
-
-        provider, model = result
-        self.active_provider = provider
-        self.active_model = model
-
-        # Update subtitle to reflect session override
-        self.sub_title = f"{provider} / {model}  [session override]"
-
-        # Persist as the new default in config.yaml
-        try:
-            loop = asyncio.get_event_loop()
-            await loop.run_in_executor(
-                None,
-                lambda: self._save_model_to_config(provider, model),
-            )
-            self.notify(f"Default set to {provider}/{model}", severity="information")
-        except Exception as e:
-            self.notify(f"Session override active. Config save failed: {e}", severity="warning")
-
-    @staticmethod
-    def _save_model_to_config(provider: str, model: str) -> None:
-        from zenus_core.shell.commands import _update_config_provider
-        _update_config_provider(provider, model)
 
 
 def main():
