@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
-# Zenus TUI Launcher
+# Zenus TUI Launcher — uses the shared project venv (.venv/)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+VENV="$SCRIPT_DIR/.venv"
 
-cd "$SCRIPT_DIR/packages/tui"
-poetry run zenus-tui "$@"
+if [ ! -f "$VENV/bin/zenus-tui" ]; then
+    echo "❌ zenus-tui not installed. Run: ./install.sh" >&2
+    exit 1
+fi
+
+cd "$SCRIPT_DIR"
+exec "$VENV/bin/zenus-tui" "$@"

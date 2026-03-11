@@ -68,7 +68,7 @@ class VisionOps:
     @property
     def screen_size(self):
         """Get screen size"""
-        return self.self.pyautogui.size()
+        return self.pyautogui.size()
     
     # ====================
     # Screenshot Operations

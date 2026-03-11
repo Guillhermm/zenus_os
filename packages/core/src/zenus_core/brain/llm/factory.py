@@ -18,42 +18,87 @@ from zenus_core.config.loader import get_config
 # This works both for running from source and installed packages
 load_dotenv(find_dotenv(usecwd=True))
 
+# Maps provider name → required env var
+_PROVIDER_KEY_MAP = {
+    "anthropic": "ANTHROPIC_API_KEY",
+    "openai":    "OPENAI_API_KEY",
+    "deepseek":  "DEEPSEEK_API_KEY",
+    "ollama":    None,  # No API key needed
+}
+
+_SETUP_HINTS = {
+    "anthropic": "export ANTHROPIC_API_KEY=sk-ant-...\nor add it to .env",
+    "openai":    "export OPENAI_API_KEY=sk-...\nor add it to .env",
+    "deepseek":  "export DEEPSEEK_API_KEY=sk-...\nor add it to .env",
+    "ollama":    "Start Ollama: ollama serve\nThen pull a model: ollama pull llama3.1:8b",
+}
+
+
+def _check_provider_credentials(backend: str) -> None:
+    """Raise a clear, actionable error if the provider's credentials are missing."""
+    required_key = _PROVIDER_KEY_MAP.get(backend)
+    if required_key and not os.getenv(required_key):
+        hint = _SETUP_HINTS.get(backend, "")
+        raise EnvironmentError(
+            f"\n"
+            f"  Provider '{backend}' is configured but {required_key} is not set.\n"
+            f"\n"
+            f"  Fix:\n"
+            f"    {hint}\n"
+            f"\n"
+            f"  To switch provider: zenus model set <anthropic|openai|deepseek|ollama>\n"
+            f"  To list options:    zenus model list\n"
+        )
+
+
 def get_llm(force_provider: Optional[str] = None):
     """
-    Get LLM instance based on configuration
-    
+    Get LLM instance based on configuration.
+
     Priority:
-    1. force_provider argument (router override)
-    2. ZENUS_LLM environment variable (backwards compatibility)
-    3. config.yaml llm.provider setting
-    
+    1. force_provider argument (per-command override)
+    2. config.yaml llm.provider setting
+    3. ZENUS_LLM environment variable (backwards compatibility)
+
     Args:
-        force_provider: Override provider (used by router)
-    
+        force_provider: Override provider for this call only.
+
     Returns:
         LLM instance
+
+    Raises:
+        EnvironmentError: If the selected provider's credentials are missing.
+        ValueError: If an unknown provider name is given.
     """
-    # Try to load from config.yaml first
     backend = None
     model = None
-    
+
     try:
         config = get_config()
         backend = config.llm.provider
         model = config.llm.model
     except Exception:
-        # Config loading failed, fall back to env vars
-        pass
-    
-    # Override with force_provider (router)
+        pass  # Fall through to env-var fallback
+
+    # Per-command override (highest priority)
     if force_provider:
         backend = force_provider
-    
-    # Fall back to environment variable (backwards compatibility)
+
+    # Last-resort fallback — only if config AND env are both absent
     if not backend:
-        backend = os.getenv("ZENUS_LLM", "anthropic")
-    
-    # Create LLM instance
+        backend = os.getenv("ZENUS_LLM")
+
+    if not backend:
+        raise EnvironmentError(
+            "\n"
+            "  No LLM provider configured.\n"
+            "  Run the setup wizard:  ./install.sh\n"
+            "  Or set manually:       zenus model set anthropic\n"
+        )
+
+    # Validate credentials before attempting to instantiate the backend
+    _check_provider_credentials(backend)
+
     if backend == "deepseek":
         return DeepSeekLLM()
     elif backend == "anthropic":
@@ -64,9 +109,12 @@ def get_llm(force_provider: Optional[str] = None):
     elif backend == "openai":
         return OpenAILLM()
     else:
-        # Unknown provider, default to anthropic
-        print(f"⚠️  Unknown provider '{backend}', defaulting to anthropic")
-        return AnthropicLLM()
+        raise ValueError(
+            f"\n"
+            f"  Unknown provider '{backend}'.\n"
+            f"  Valid options: anthropic, openai, deepseek, ollama\n"
+            f"  Fix: zenus model set anthropic\n"
+        )
 
 
 def get_available_providers() -> list[str]:

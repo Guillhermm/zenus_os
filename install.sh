@@ -44,22 +44,34 @@ echo "  Installing Zenus Packages..."
 echo "════════════════════════════════════"
 echo ""
 
-# Install core package first
+# Use a single shared virtual environment at the project root.
+# This avoids the "multiple Poetry venvs" problem where zenus, zenus-cli,
+# and zenus-tui each get separate isolated environments that don't share
+# packages, causing ModuleNotFoundError across commands.
+
+VENV_DIR="$PROJECT_DIR/.venv"
+
+if [ ! -d "$VENV_DIR" ]; then
+    echo "→ Creating shared virtual environment..."
+    python3 -m venv "$VENV_DIR"
+fi
+
+PIP="$VENV_DIR/bin/pip"
+PYTHON="$VENV_DIR/bin/python"
+
+echo "→ Upgrading pip..."
+"$PIP" install --upgrade pip --quiet
+
 echo "→ Installing zenus-core..."
-cd "$PROJECT_DIR/packages/core"
-poetry install --no-interaction --quiet
+"$PIP" install -e "$PROJECT_DIR/packages/core" --quiet
 echo "✓ zenus-core installed"
 
-# Install CLI package
 echo "→ Installing zenus-cli..."
-cd "$PROJECT_DIR/packages/cli"
-poetry install --no-interaction --quiet
+"$PIP" install -e "$PROJECT_DIR/packages/cli" --quiet
 echo "✓ zenus-cli installed"
 
-# Install TUI package
 echo "→ Installing zenus-tui..."
-cd "$PROJECT_DIR/packages/tui"
-poetry install --no-interaction --quiet
+"$PIP" install -e "$PROJECT_DIR/packages/tui" --quiet
 echo "✓ zenus-tui installed"
 
 cd "$PROJECT_DIR"

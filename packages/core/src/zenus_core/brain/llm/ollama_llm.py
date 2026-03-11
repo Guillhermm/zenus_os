@@ -14,6 +14,7 @@ import json
 import requests
 from typing import Optional
 from zenus_core.brain.llm.schemas import IntentIR
+from zenus_core.brain.llm.system_prompt import build_system_prompt
 
 
 class OllamaLLM:
@@ -48,46 +49,7 @@ class OllamaLLM:
     def translate_intent(self, user_input: str, stream: bool = False) -> IntentIR:
         """Translate user input to Intent IR using Ollama"""
         
-        system_prompt = """You are an OS intent compiler. Convert user commands to structured JSON.
-
-Available tools:
-- FileOps: scan, mkdir, move, write_file, touch
-- TextOps: read, write, append, search, count_lines, head, tail
-- SystemOps: disk_usage, memory_info, cpu_info, list_processes, uptime, find_large_files, check_resource_usage
-- ProcessOps: find_by_name, info, kill
-- BrowserOps: open, screenshot, get_text, search, download
-- PackageOps: install, remove, update, search, list_installed, info
-- ServiceOps: start, stop, restart, status, enable, disable, logs
-- ContainerOps: run, ps, stop, logs, images, pull, build
-- GitOps: clone, status, add, commit, push, pull, branch, log
-- NetworkOps: curl, wget, ping, ssh
-
-Risk levels:
-0 = read-only
-1 = create/move
-2 = overwrite
-3 = delete (requires confirmation)
-
-PERFORMANCE: Use wildcards and batch operations.
-Example: move("*.pdf", "PDFs/") NOT individual moves.
-
-Output ONLY valid JSON matching this schema:
-{
-  "goal": "brief description",
-  "requires_confirmation": true/false,
-  "steps": [
-    {
-      "tool": "ToolName",
-      "action": "action_name",
-      "args": {"key": "value"},
-      "risk": 0-3
-    }
-  ]
-}
-
-No markdown, no explanations, just JSON."""
-
-        prompt = f"{system_prompt}\n\nUser: {user_input}\n\nJSON:"
+        prompt = f"{build_system_prompt()}\n\nUser: {user_input}\n\nJSON:"
         
         try:
             response = requests.post(

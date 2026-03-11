@@ -1,7 +1,12 @@
-#!/bin/bash
-# Zenus OS launcher script for monorepo
+#!/usr/bin/env bash
+# Zenus OS launcher — uses the shared project venv (.venv/)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+VENV="$SCRIPT_DIR/.venv"
 
-# Run zenus via Poetry in the CLI package
-cd "$SCRIPT_DIR/packages/cli"
-poetry run zenus "$@"
+if [ ! -f "$VENV/bin/zenus" ]; then
+    echo "❌ Zenus not installed. Run: ./install.sh" >&2
+    exit 1
+fi
+
+cd "$SCRIPT_DIR"
+exec "$VENV/bin/zenus" "$@"

@@ -2,63 +2,11 @@ from dotenv import load_dotenv, find_dotenv # type: ignore
 import json
 import os
 from zenus_core.brain.llm.schemas import IntentIR
+from zenus_core.brain.llm.system_prompt import build_system_prompt
 
 
 # Load secrets - find_dotenv searches up directory tree for .env
 load_dotenv(find_dotenv(usecwd=True))
-
-
-SYSTEM_PROMPT = """
-You are an operating system intent compiler.
-
-You MUST output a JSON object that EXACTLY matches this schema:
-
-{
-  "goal": string,
-  "requires_confirmation": true | false,
-  "steps": [
-    {
-      "tool": string,
-      "action": string,
-      "args": object,
-      "risk": 0 | 1 | 2 | 3
-    }
-  ]
-}
-
-Rules:
-- Convert user intent into structured OS actions
-- NEVER invent tools
-- NEVER include destructive actions unless explicitly requested
-- Assume Linux filesystem
-- Prefer safe, minimal steps
-
-Allowed tools:
-- FileOps: scan, mkdir, move, write_file, touch
-- TextOps: read, write, append, search, count_lines, head, tail
-- SystemOps: disk_usage, memory_info, cpu_info, list_processes, uptime, find_large_files, check_resource_usage
-- ProcessOps: find_by_name, info, kill
-- BrowserOps: open, screenshot, get_text, search, download
-- PackageOps: install, remove, update, search, list_installed, info
-- ServiceOps: start, stop, restart, status, enable, disable, logs
-- ContainerOps: run, ps, stop, logs, images, pull, build
-- GitOps: clone, status, add, commit, push, pull, branch, log
-- NetworkOps: curl, wget, ping, ssh
-
-Risk levels:
-0 = read-only (info gathering)
-1 = create/move (safe modifications)
-2 = overwrite (data changes)
-3 = delete/kill (destructive, requires explicit confirmation)
-
-PERFORMANCE (CRITICAL):
-- Use wildcards and batch operations instead of individual files
-- Example: move("*.pdf", "PDFs/") NOT individual file moves
-- Minimize tool calls by grouping operations
-- Use patterns: *.pdf, *.jpg, *.txt
-
-Return ONLY valid JSON matching the schema.
-"""
 
 
 def extract_json(text: str) -> dict:
@@ -182,7 +130,7 @@ class AnthropicLLM:
             with self.client.messages.stream(
                 model=self.model,
                 max_tokens=self.max_tokens,
-                system=SYSTEM_PROMPT,
+                system=build_system_prompt(),
                 messages=[
                     {"role": "user", "content": user_input}
                 ]
@@ -196,7 +144,7 @@ class AnthropicLLM:
             response = self.client.messages.create(
                 model=self.model,
                 max_tokens=self.max_tokens,
-                system=SYSTEM_PROMPT,
+                system=build_system_prompt(),
                 messages=[
                     {"role": "user", "content": user_input}
                 ]
