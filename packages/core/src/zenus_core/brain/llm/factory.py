@@ -14,8 +14,13 @@ from zenus_core.brain.llm.anthropic_llm import AnthropicLLM
 from zenus_core.brain.llm.ollama_llm import OllamaLLM
 from zenus_core.config.loader import get_config
 
-# Load secrets - find_dotenv searches up the directory tree for .env
-# This works both for running from source and installed packages
+# Load secrets from multiple locations (first match wins via override=False):
+# 1. ~/.zenus/.env  — user-level secrets (system-wide install)
+# 2. find_dotenv()  — project .env when running from source
+from pathlib import Path as _Path
+_user_env = _Path.home() / ".zenus" / ".env"
+if _user_env.exists():
+    load_dotenv(_user_env)
 load_dotenv(find_dotenv(usecwd=True))
 
 # Maps provider name → required env var

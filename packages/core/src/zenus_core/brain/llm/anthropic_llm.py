@@ -1,11 +1,15 @@
 from dotenv import load_dotenv, find_dotenv # type: ignore
 import json
 import os
+from pathlib import Path
 from zenus_core.brain.llm.schemas import IntentIR
 from zenus_core.brain.llm.system_prompt import build_system_prompt
 
 
-# Load secrets - find_dotenv searches up directory tree for .env
+# Load secrets: ~/.zenus/.env first (system-wide), then project .env (from source)
+_user_env = Path.home() / ".zenus" / ".env"
+if _user_env.exists():
+    load_dotenv(_user_env)
 load_dotenv(find_dotenv(usecwd=True))
 
 

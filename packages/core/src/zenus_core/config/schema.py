@@ -138,6 +138,12 @@ class ZenusConfig(BaseModel):
     
     # Custom settings
     custom: Dict[str, Any] = Field(default_factory=dict, description="Custom settings")
+
+    @field_validator("custom", mode="before")
+    @classmethod
+    def _normalize_custom(cls, v: Any) -> Dict[str, Any]:
+        """Coerce None or missing custom field to an empty dict."""
+        return v if isinstance(v, dict) else {}
     
     class Config:
         """Pydantic config"""

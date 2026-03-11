@@ -83,11 +83,13 @@ echo "════════════════════════�
 echo ""
 
 # Config files locations
-# When running from source: .env in project directory
-# config.yaml can be in ~/.zenus/ for user preferences OR project directory
+# .env is written to BOTH the project dir (running from source) AND ~/.zenus/
+# so that `zenus` works from any directory after installation.
 SECRETS_FILE="$PROJECT_DIR/.env"
+USER_SECRETS_FILE="$HOME/.zenus/.env"
 CONFIG_FILE="$PROJECT_DIR/config.yaml"
 
+mkdir -p "$HOME/.zenus"
 echo "Running from source, using project directory for config"
 
 # Check if already configured
@@ -118,10 +120,13 @@ if [ "$SKIP_CONFIG" = "false" ]; then
     cp "$PROJECT_DIR/config.yaml.example" "$CONFIG_FILE"
     echo "✓ Created: $CONFIG_FILE"
     
-    # Create secrets file
+    # Create secrets files (project-level and user-level)
     > "$SECRETS_FILE"
     chmod 600 "$SECRETS_FILE"
     echo "✓ Created: $SECRETS_FILE (chmod 600)"
+    > "$USER_SECRETS_FILE"
+    chmod 600 "$USER_SECRETS_FILE"
+    echo "✓ Created: $USER_SECRETS_FILE (chmod 600)"
     
     echo ""
     echo "Choose your PRIMARY LLM backend:"
@@ -164,7 +169,8 @@ if [ "$SKIP_CONFIG" = "false" ]; then
             fi
             
             echo "ANTHROPIC_API_KEY=$api_key" >> "$SECRETS_FILE"
-            
+            echo "ANTHROPIC_API_KEY=$api_key" >> "$USER_SECRETS_FILE"
+
             echo ""
             echo "Choose Claude model:"
             echo "1) claude-sonnet-4-6  (recommended - best speed/intelligence balance)"
@@ -197,7 +203,8 @@ if [ "$SKIP_CONFIG" = "false" ]; then
             fi
             
             echo "DEEPSEEK_API_KEY=$api_key" >> "$SECRETS_FILE"
-            
+            echo "DEEPSEEK_API_KEY=$api_key" >> "$USER_SECRETS_FILE"
+
             echo ""
             echo "Choose DeepSeek model:"
             echo "1) deepseek-chat      (recommended - DeepSeek-V3, general purpose, 8K output)"
@@ -228,7 +235,8 @@ if [ "$SKIP_CONFIG" = "false" ]; then
             fi
             
             echo "OPENAI_API_KEY=$api_key" >> "$SECRETS_FILE"
-            
+            echo "OPENAI_API_KEY=$api_key" >> "$USER_SECRETS_FILE"
+
             echo ""
             echo "Choose OpenAI model:"
             echo "1) gpt-4o        (recommended - flagship multimodal model)"
@@ -405,6 +413,7 @@ if [ "$SKIP_CONFIG" = "false" ]; then
                                 read -sp "Enter Anthropic API key: " api_key
                                 echo ""
                                 echo "ANTHROPIC_API_KEY=$api_key" >> "$SECRETS_FILE"
+                                echo "ANTHROPIC_API_KEY=$api_key" >> "$USER_SECRETS_FILE"
                                 echo "✓ Anthropic added as fallback"
                                 ;;
                             deepseek)
@@ -412,6 +421,7 @@ if [ "$SKIP_CONFIG" = "false" ]; then
                                 read -sp "Enter DeepSeek API key: " api_key
                                 echo ""
                                 echo "DEEPSEEK_API_KEY=$api_key" >> "$SECRETS_FILE"
+                                echo "DEEPSEEK_API_KEY=$api_key" >> "$USER_SECRETS_FILE"
                                 echo "✓ DeepSeek added as fallback"
                                 ;;
                             openai)
@@ -419,6 +429,7 @@ if [ "$SKIP_CONFIG" = "false" ]; then
                                 read -sp "Enter OpenAI API key: " api_key
                                 echo ""
                                 echo "OPENAI_API_KEY=$api_key" >> "$SECRETS_FILE"
+                                echo "OPENAI_API_KEY=$api_key" >> "$USER_SECRETS_FILE"
                                 echo "✓ OpenAI added as fallback"
                                 ;;
                             ollama)

@@ -34,8 +34,8 @@ class ZenusCompleter(Completer):
     
     # Special commands
     SPECIAL_COMMANDS = [
-        'status', 'memory', 'update', 'history', 'rollback', 
-        'explain', 'workflow', 'help', 'exit', 'quit'
+        'status', 'memory', 'model', 'history', 'rollback',
+        'update', 'explain', 'workflow', 'help', 'exit', 'quit'
     ]
     
     # Common action verbs for natural language

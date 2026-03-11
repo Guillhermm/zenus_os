@@ -1148,7 +1148,7 @@ class Orchestrator:
         
         console.print("\n[bold cyan]Zenus OS Interactive Shell[/bold cyan]")
         console.print("Type 'exit' or 'quit' to exit")
-        console.print("Special commands: status, memory, update, explain, workflow")
+        console.print("Special commands: status, memory, model, history, rollback, update, explain, workflow")
         if enhanced_shell:
             console.print("Enhanced mode: Tab completion, Ctrl+R search, multi-line (Esc+Enter)")
         else:

@@ -245,17 +245,19 @@ class ExecutionLog(ScrollableContainer):
         log.write(f"[{timestamp}] {command}  {status_icon}  {duration:.1f}s")
 
         if result:
-            for line in result.split("\n")[:5]:
+            for line in result.split("\n")[:10]:
                 if line.strip():
-                    log.write(f"  → {line[:120]}")
+                    log.write(f"  → {line[:200]}")
         else:
             log.write("  → (completed, no output)" if success else "  → (failed, no output)")
 
         log.write("")  # blank separator
+        log.scroll_end(animate=False)  # ensure newest entry is visible
 
     def add_progress(self, message: str):
         log = self.query_one("#execution-log", RichLog)
         log.write(f"⏳ {message}")
+        log.scroll_end(animate=False)
 
     def clear_log(self):
         log = self.query_one("#execution-log", RichLog)
