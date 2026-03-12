@@ -1,0 +1,195 @@
+name: Release
+
+# Triggered by version tags: v0.6.0, v1.0.0, v1.2.3-beta.1, etc.
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+*'
+
+permissions:
+  contents: write  # needed to create GitHub Releases
+
+jobs:
+  # ─── Gate: all tests must pass before any artifact is published ───────────
+  test:
+    name: Test gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install packages
+        run: |
+          python -m venv .venv
+          .venv/bin/pip install --upgrade pip --quiet
+          .venv/bin/pip install -e packages/visualization --quiet
+          .venv/bin/pip install -e packages/core --quiet
+          .venv/bin/pip install -e packages/cli --quiet
+          .venv/bin/pip install -e packages/tui --quiet
+          .venv/bin/pip install pytest pytest-asyncio --quiet
+
+      - name: Run tests
+        run: .venv/bin/pytest tests/ -v --tb=short
+
+  # ─── PyPI: publish all four packages in dependency order ─────────────────
+  publish-pypi:
+    name: Publish to PyPI
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Extract version from tag
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_ENV
+
+      - name: Set versions and patch path dependencies
+        run: |
+          VERSION="${{ env.VERSION }}"
+
+          # Bump version in all packages to match the tag
+          for pkg in visualization core cli tui; do
+            sed -i "s/^version = .*/version = \"$VERSION\"/" packages/$pkg/pyproject.toml
+          done
+
+          # Replace local path deps with versioned PyPI deps
+          # zenus-core depends on zenus-visualization
+          sed -i \
+            "s|zenus-visualization = {path = \"../visualization\", develop = true}|zenus-visualization = \"^$VERSION\"|g" \
+            packages/core/pyproject.toml
+
+          # zenus-cli and zenus-tui depend on zenus-core
+          sed -i \
+            "s|zenus-core = {path = \"../core\", develop = true}|zenus-core = \"^$VERSION\"|g" \
+            packages/cli/pyproject.toml
+          sed -i \
+            "s|zenus-core = {path = \"../core\", develop = true}|zenus-core = \"^$VERSION\"|g" \
+            packages/tui/pyproject.toml
+
+      - name: Install build tool
+        run: pip install build twine
+
+      - name: Build all packages
+        run: |
+          python -m build packages/visualization --outdir dist/visualization/
+          python -m build packages/core --outdir dist/core/
+          python -m build packages/cli --outdir dist/cli/
+          python -m build packages/tui --outdir dist/tui/
+
+      # Publish in dependency order — visualization first, then core, then cli+tui
+      # Uses PYPI_TOKEN secret. See docs/PUBLISHING.md for setup instructions.
+      - name: Publish zenus-visualization
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
+        run: twine upload dist/visualization/*
+
+      - name: Publish zenus-core
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
+        run: twine upload dist/core/*
+
+      - name: Publish zenus-cli
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
+        run: twine upload dist/cli/*
+
+      - name: Publish zenus-tui
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
+        run: twine upload dist/tui/*
+
+  # ─── Snap: build the self-contained Linux package ────────────────────────
+  build-snap:
+    name: Build Snap
+    needs: test
+    runs-on: ubuntu-latest
+    outputs:
+      snap-path: ${{ steps.build.outputs.snap }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Extract version from tag
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_ENV
+
+      - name: Stamp version into snapcraft.yaml
+        run: sed -i "s/^version: .*/version: '${{ env.VERSION }}'/" snap/snapcraft.yaml
+
+      - name: Build snap
+        id: build
+        uses: snapcore/action-build@v1
+
+      - name: Upload snap artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: snap
+          path: ${{ steps.build.outputs.snap }}
+          retention-days: 7
+
+  # ─── Snap Store: publish to the store (requires SNAPCRAFT_STORE_CREDENTIALS)
+  publish-snap:
+    name: Publish to Snap Store
+    needs: build-snap
+    runs-on: ubuntu-latest
+    # Skip gracefully if store credentials are not configured
+    if: ${{ vars.SNAP_PUBLISH == 'true' }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: snap
+          path: artifacts/
+
+      - name: Publish to Snap Store
+        uses: snapcore/action-publish@v1
+        env:
+          SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
+        with:
+          snap: artifacts/*.snap
+          release: stable
+
+  # ─── GitHub Release: create release and attach artifacts ─────────────────
+  github-release:
+    name: GitHub Release
+    # Requires PyPI publish and snap build; snap store publish is optional
+    needs: [publish-pypi, build-snap]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Extract version from tag
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_ENV
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: snap
+          path: artifacts/
+
+      - name: Extract release notes from CHANGELOG
+        run: |
+          # Extract the section for this version from CHANGELOG.md
+          awk "/^## \[${{ env.VERSION }}\]/{found=1; next} found && /^## \[/{exit} found{print}" \
+            CHANGELOG.md > release-notes.md
+          # Fall back to unreleased section if version section not found
+          if [ ! -s release-notes.md ]; then
+            awk "/^## \[Unreleased\]/{found=1; next} found && /^## \[/{exit} found{print}" \
+              CHANGELOG.md > release-notes.md
+          fi
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "Zenus v${{ env.VERSION }}"
+          body_path: release-notes.md
+          files: |
+            artifacts/*.snap
+            install.sh
+          prerelease: ${{ contains(github.ref, '-alpha') || contains(github.ref, '-beta') || contains(github.ref, '-rc') }}

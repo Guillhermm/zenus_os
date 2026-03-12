@@ -129,26 +129,37 @@ graph LR
 
 ---
 
-## Quick Start
+## Installation
 
-### Installation
+### Snap (recommended for Linux desktop)
 
 ```bash
-# Clone
+snap install --classic zenus
+```
+
+Or download from [GitHub Releases](https://github.com/Guillhermm/zenus/releases) and install locally:
+
+```bash
+snap install --classic --dangerous zenus_0.6.0_amd64.snap
+```
+
+### pip
+
+```bash
+pip install zenus-cli   # installs zenus and zenus-tui
+```
+
+### From source
+
+```bash
 git clone https://github.com/Guillhermm/zenus.git
 cd zenus
-
-# Run installer (creates venv, installs packages, configures LLM, sets up aliases)
-./install.sh
-
-# Reload shell
+./install.sh       # creates venv, installs packages, configures LLM, sets up aliases
 source ~/.bashrc
-
-# Verify
 zenus help
 ```
 
-The installer will guide you through choosing an LLM backend:
+The source installer guides you through choosing an LLM backend:
 
 | Backend | Cost | Notes |
 |---------|------|-------|
@@ -157,12 +168,10 @@ The installer will guide you through choosing an LLM backend:
 | **DeepSeek** | ~$0.0003/cmd | Strong performance at low cost. |
 | **OpenAI** | ~$0.001/cmd | gpt-4o and gpt-4.1 supported. |
 
-### Updating
+### Updating (source install)
 
 ```bash
-cd zenus
-git pull
-./update.sh
+cd zenus && git pull && ./update.sh
 ```
 
 ---

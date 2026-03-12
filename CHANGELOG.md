@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+---
+
+## [0.6.0] - 2026-03-12
+
 ### Added
 - **`ShellOps` meta-tool** (`shell` escape hatch): Allows the LLM to run arbitrary shell commands as IntentIR steps. Every invocation is logged, attributed, and gated by privilege tier. Hard-blocked patterns (fork bombs, `rm -rf /`, etc.) are always rejected.
 - **`CodeExec` tool**: LLM can write and run Python snippets or Bash scripts as IntentIR steps. Code runs in an isolated subprocess; stdout/stderr feed back into the ReAct observation loop. Output is capped at 8 000 chars to prevent context blowout.

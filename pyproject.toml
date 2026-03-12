@@ -3,7 +3,7 @@
 
 [tool.poetry]
 name = "zenus"
-version = "0.3.0"
+version = "0.6.0"
 description = "Zenus - AI-Mediated Operating System Layer"
 authors = ["Zenus Team"]
 readme = "README.md"

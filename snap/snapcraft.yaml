@@ -1,0 +1,72 @@
+name: zenus
+# version is stamped by the release workflow from the git tag
+version: 'dev'
+summary: AI-mediated system layer — natural language to system operations
+description: |
+  Zenus sits between you and the operating system. Describe what you want
+  in natural language; Zenus translates it into validated system operations,
+  executes them safely, and tracks everything so mistakes can be undone.
+
+  Features:
+  - Natural language to system operations
+  - Parallel execution with dependency analysis
+  - Undo/rollback (transaction-based)
+  - Failure learning and adaptive retry
+  - Self-reflection: critiques its own plan before executing
+  - Multi-LLM support: Anthropic, OpenAI, DeepSeek, Ollama
+  - TUI dashboard (zenus-tui)
+
+  Long-term vision: Zenus is designed to evolve into a full operating system
+  where intent replaces commands at every layer.
+
+# Classic confinement is required because Zenus is a system management tool
+# that needs unrestricted access to the filesystem, processes, packages, and
+# network — the same access a shell script or CLI tool would have.
+grade: stable
+confinement: classic
+base: core22
+
+apps:
+  zenus:
+    command: bin/zenus
+
+  zenus-tui:
+    command: bin/zenus-tui
+
+parts:
+  zenus:
+    plugin: nil
+    source: .
+    build-packages:
+      - python3
+      - python3-venv
+      - python3-pip
+    override-build: |
+      # Build a self-contained venv inside the snap
+      python3 -m venv $SNAPCRAFT_PART_INSTALL/venv
+      $SNAPCRAFT_PART_INSTALL/venv/bin/pip install --upgrade pip --quiet
+
+      # Install packages in dependency order
+      $SNAPCRAFT_PART_INSTALL/venv/bin/pip install \
+        $SNAPCRAFT_PART_SRC/packages/visualization --quiet
+      $SNAPCRAFT_PART_INSTALL/venv/bin/pip install \
+        $SNAPCRAFT_PART_SRC/packages/core --quiet
+      $SNAPCRAFT_PART_INSTALL/venv/bin/pip install \
+        $SNAPCRAFT_PART_SRC/packages/cli --quiet
+      $SNAPCRAFT_PART_INSTALL/venv/bin/pip install \
+        $SNAPCRAFT_PART_SRC/packages/tui --quiet
+
+      # Create wrapper scripts that use $SNAP so paths are correct at runtime
+      mkdir -p $SNAPCRAFT_PART_INSTALL/bin
+
+      cat > $SNAPCRAFT_PART_INSTALL/bin/zenus << 'EOF'
+      #!/bin/bash
+      exec "$SNAP/venv/bin/zenus" "$@"
+      EOF
+      chmod +x $SNAPCRAFT_PART_INSTALL/bin/zenus
+
+      cat > $SNAPCRAFT_PART_INSTALL/bin/zenus-tui << 'EOF'
+      #!/bin/bash
+      exec "$SNAP/venv/bin/zenus-tui" "$@"
+      EOF
+      chmod +x $SNAPCRAFT_PART_INSTALL/bin/zenus-tui
