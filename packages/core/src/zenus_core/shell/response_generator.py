@@ -37,31 +37,17 @@ class ResponseGenerator:
         """
         
         # Build context for LLM
-        steps_summary = "\n".join([
+        "\n".join([
             f"- {step.tool}.{step.action}: {result}"
             for step, result in zip(intent.steps, step_results)
         ])
         
-        prompt = f"""Summarize what was done in a natural, conversational way (1-2 sentences).
-
-User asked: {user_input}
-
-What happened:
-{steps_summary}
-
-Reply conversationally as if you did the work. Be specific about results.
-Examples:
-- "I organized 23 files into 4 folders by type"
-- "I found the file and it contains 156 lines"
-- "I created test.txt on your desktop with the content you specified"
-
-Your summary:"""
         
         try:
             # This is a simple text completion, not intent translation
             # For now, use a simplified approach
             return self._simple_summary(intent, step_results)
-        except:
+        except Exception:
             # Fallback to simple summary
             return self._simple_summary(intent, step_results)
     

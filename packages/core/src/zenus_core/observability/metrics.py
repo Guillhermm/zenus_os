@@ -14,7 +14,6 @@ import json
 from pathlib import Path
 from typing import Optional, Dict, Any, List
 from dataclasses import dataclass, asdict
-from datetime import datetime
 from collections import defaultdict
 
 
@@ -232,7 +231,7 @@ class MetricsCollector:
             
             self.buffer.clear()
         
-        except Exception as e:
+        except Exception:
             # Non-critical, just skip
             pass
     
@@ -287,7 +286,7 @@ class MetricsCollector:
                     if len(results) >= limit:
                         break
         
-        except Exception as e:
+        except Exception:
             pass
         
         return results

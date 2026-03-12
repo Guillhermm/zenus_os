@@ -9,7 +9,6 @@ Provides robust shell command execution with:
 """
 
 import subprocess
-import sys
 from typing import Optional, Tuple
 from rich.console import Console
 

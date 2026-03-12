@@ -112,7 +112,6 @@ class SystemOps(Tool):
             List of large files with sizes
         """
         import os
-        from pathlib import Path
         
         path = os.path.expanduser(path)
         min_size_bytes = min_size_mb * 1024 * 1024

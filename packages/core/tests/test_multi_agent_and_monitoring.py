@@ -3,14 +3,14 @@ Tests for Multi-Agent Collaboration and Proactive Monitoring
 """
 
 import pytest
-from unittest.mock import Mock, MagicMock, patch
+from unittest.mock import Mock, patch
 from zenus_core.brain.multi_agent import (
-    MultiAgentSystem, AgentRole, Agent, ResearcherAgent,
+    MultiAgentSystem, AgentRole, ResearcherAgent,
     PlannerAgent, ExecutorAgent, ValidatorAgent
 )
 from zenus_core.monitoring.proactive_monitor import (
     ProactiveMonitor, HealthCheck, HealthChecker, Remediator,
-    AlertLevel, HealthStatus
+    HealthStatus
 )
 
 

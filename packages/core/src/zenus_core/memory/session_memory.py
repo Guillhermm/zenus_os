@@ -7,7 +7,6 @@ Tracks recent intents, execution results, and context.
 
 from typing import Optional, List, Dict
 from datetime import datetime
-from zenus_core.brain.llm.schemas import IntentIR
 
 
 class SessionMemory:

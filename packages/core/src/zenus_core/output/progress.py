@@ -9,8 +9,7 @@ Real-time progress indicators for operations:
 """
 
 import time
-import sys
-from typing import Optional, Callable
+from typing import Optional
 from contextlib import contextmanager
 from rich.console import Console
 from rich.progress import (
@@ -22,9 +21,6 @@ from rich.progress import (
     TimeElapsedColumn,
     TimeRemainingColumn
 )
-from rich.live import Live
-from rich.table import Table
-from rich.panel import Panel
 
 
 console = Console()
@@ -229,9 +225,9 @@ class StreamingDisplay:
         self.console.print()
         
         if achieved:
-            self.console.print(f"[bold green]✓ Goal Achieved![/bold green]")
+            self.console.print("[bold green]✓ Goal Achieved![/bold green]")
         else:
-            self.console.print(f"[yellow]⟳ Goal not yet achieved[/yellow]")
+            self.console.print("[yellow]⟳ Goal not yet achieved[/yellow]")
             self.console.print(f"[dim]Confidence: {confidence:.0%}[/dim]")
         
         self.console.print(f"[dim]Reasoning: {reasoning}[/dim]")

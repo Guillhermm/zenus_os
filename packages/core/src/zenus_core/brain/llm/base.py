@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import List, Optional, Iterator
+from typing import List
 from zenus_core.brain.llm.schemas import IntentIR
 
 

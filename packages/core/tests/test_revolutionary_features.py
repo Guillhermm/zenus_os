@@ -3,10 +3,10 @@ Tests for revolutionary features: Tree of Thoughts, Prompt Evolution, Goal Infer
 """
 
 import pytest
-from unittest.mock import Mock, MagicMock, patch
+from unittest.mock import Mock
 from zenus_core.brain.tree_of_thoughts import TreeOfThoughts, SolutionPath, PathQuality
-from zenus_core.brain.prompt_evolution import PromptEvolution, PromptVersion
-from zenus_core.brain.goal_inference import GoalInference, GoalType, ImplicitStep
+from zenus_core.brain.prompt_evolution import PromptEvolution
+from zenus_core.brain.goal_inference import GoalInference, GoalType
 from zenus_core.brain.llm.schemas import IntentIR, Step
 from zenus_core.audit.logger import AuditLogger
 
@@ -215,7 +215,7 @@ class TestGoalInference:
     def test_risk_assessment(self, goal_inf):
         """Test risk assessment for different goals"""
         deploy_suggestion = goal_inf.infer_goal("deploy to production")
-        cleanup_suggestion = goal_inf.infer_goal("cleanup old files")
+        goal_inf.infer_goal("cleanup old files")
         test_suggestion = goal_inf.infer_goal("run tests")
         
         # Deploy and cleanup should be higher risk

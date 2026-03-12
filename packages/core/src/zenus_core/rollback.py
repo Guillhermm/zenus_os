@@ -10,14 +10,13 @@ Capabilities:
 - Safety validation
 """
 
-from typing import List, Optional, Dict, Tuple
+from typing import List, Dict
 from zenus_core.memory.action_tracker import get_action_tracker, Action
-from zenus_core.output.console import console, print_error, print_success
+from zenus_core.output.console import console
 import os
 import shutil
 import subprocess
 import json
-from pathlib import Path
 
 
 class RollbackError(Exception):

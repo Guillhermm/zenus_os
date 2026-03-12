@@ -14,7 +14,7 @@ def setup_readline_prompt():
     Prevents prompt disappearing when using arrow keys.
     """
     try:
-        import readline
+        import readline  # noqa: F401
         
         # Tell readline about invisible characters (color codes)
         # This prevents cursor position issues

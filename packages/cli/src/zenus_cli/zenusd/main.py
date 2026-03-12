@@ -107,7 +107,7 @@ def main():
                 console.print("\n[cyan]Recent Transactions:[/cyan]")
                 for tx in transactions:
                     status_color = "green" if tx["status"] == "completed" else "red"
-                    rollback_info = f" (rolled back)" if tx.get("rollback_status") else ""
+                    rollback_info = " (rolled back)" if tx.get("rollback_status") else ""
                     console.print(f"  [{status_color}]{tx['id']}[/{status_color}]: {tx['user_input']}{rollback_info}")
                     console.print(f"    Goal: {tx['intent_goal']}")
                     console.print(f"    Status: {tx['status']}")

@@ -6,7 +6,6 @@ Advanced git operations beyond basic commands, plus GitHub Issues API.
 
 import subprocess
 import os
-import json
 from pathlib import Path
 from typing import Optional, List, Dict, Any
 import requests
@@ -153,7 +152,7 @@ class GitOps(Tool):
             return f"No {state} issues found in {repo}"
         lines = [f"Issues in {repo} ({state}):"]
         for issue in result:
-            label_str = ", ".join(l["name"] for l in issue.get("labels", []))
+            label_str = ", ".join(lbl["name"] for lbl in issue.get("labels", []))
             label_part = f" [{label_str}]" if label_str else ""
             lines.append(f"  #{issue['number']}: {issue['title']}{label_part}")
         return "\n".join(lines)

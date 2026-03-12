@@ -14,9 +14,8 @@ Context includes:
 import os
 import subprocess
 import time
-from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Tuple
-from pathlib import Path
+from datetime import datetime
+from typing import Dict, List, Optional
 
 
 class ContextManager:
@@ -159,7 +158,7 @@ class ContextManager:
                     timeout=2
                 )
                 ahead = int(ahead_result.stdout.strip() or 0)
-            except:
+            except Exception:
                 ahead = 0
             
             return {
@@ -170,7 +169,7 @@ class ContextManager:
                 "ahead_commits": ahead
             }
         
-        except:
+        except Exception:
             return {
                 "is_repo": False,
                 "branch": None,
@@ -235,7 +234,7 @@ class ContextManager:
                 "dev_tools": active_tools
             }
         
-        except:
+        except Exception:
             return {
                 "total": 0,
                 "dev_tools": []
@@ -269,7 +268,7 @@ class ContextManager:
                         if now - mtime < 86400:  # 24 hours
                             rel_path = os.path.relpath(file_path, cwd)
                             recent.append((rel_path, mtime))
-                    except:
+                    except Exception:
                         continue
             
             # Sort by modification time (newest first)
@@ -277,7 +276,7 @@ class ContextManager:
             
             return [path for path, _ in recent[:self.max_recent_files]]
         
-        except:
+        except Exception:
             return []
     
     def get_system_context(self) -> Dict:
@@ -297,7 +296,7 @@ class ContextManager:
                 "low_disk": disk_usage > 0.9
             }
         
-        except:
+        except Exception:
             return {
                 "load_average": 0.0,
                 "disk_usage_percent": 0.0,

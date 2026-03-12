@@ -4,7 +4,6 @@ Tests for GoalTracker
 Validates goal achievement detection and iteration limiting
 """
 
-import pytest
 from zenus_core.brain.goal_tracker import GoalTracker, GoalStatus
 from zenus_core.brain.llm.schemas import IntentIR, Step
 
@@ -40,7 +39,7 @@ def test_goal_tracker_iteration_limit():
         )
     
     # Should now indicate max iterations reached
-    assert status.achieved == False
+    assert not status.achieved
     assert "Maximum iterations" in status.reasoning
     assert tracker.current_iteration == 3
 
@@ -128,7 +127,7 @@ NEXT_STEPS: None
     
     status = tracker._parse_reflection(reflection_text)
     
-    assert status.achieved == True
+    assert status.achieved
     assert status.confidence == 0.9
     assert "successfully listed" in status.reasoning
     assert status.next_steps == []
@@ -143,7 +142,7 @@ NEXT_STEPS: Retry with recursive scan, Check permissions
     
     status = tracker._parse_reflection(reflection_text)
     
-    assert status.achieved == False
+    assert not status.achieved
     assert status.confidence == 0.5
     assert "partial" in status.reasoning
     assert len(status.next_steps) == 2

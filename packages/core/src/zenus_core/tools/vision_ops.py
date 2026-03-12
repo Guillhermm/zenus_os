@@ -11,10 +11,9 @@ Features:
 - OCR text extraction
 """
 
-import os
 import base64
 from io import BytesIO
-from typing import Optional, Dict, List, Tuple
+from typing import Optional, Dict, Tuple
 
 
 class VisionOps:

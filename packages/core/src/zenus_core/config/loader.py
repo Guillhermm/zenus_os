@@ -7,8 +7,9 @@ Load configuration from YAML/TOML files with profile support.
 import os
 import yaml
 from pathlib import Path
-from typing import Optional, Dict, Any
+from typing import Optional, Dict
 
+from watchdog.observers import Observer
 from zenus_core.config.schema import ZenusConfig, Profile
 
 
@@ -110,7 +111,7 @@ class ConfigLoader:
             
         except Exception as e:
             print(f"❌ Error loading config: {e}")
-            print(f"Using default configuration")
+            print("Using default configuration")
             self.config = ZenusConfig(profile=self.profile)
     
     def _merge_dicts(self, base: Dict, override: Dict) -> Dict:

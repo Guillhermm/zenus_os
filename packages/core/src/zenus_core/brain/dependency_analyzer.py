@@ -10,7 +10,7 @@ Responsibilities:
 - Detect cycles and conflicts
 """
 
-from typing import List, Set, Dict, Tuple
+from typing import List, Set, Dict
 from zenus_core.brain.llm.schemas import IntentIR, Step
 from dataclasses import dataclass
 

@@ -5,7 +5,7 @@ Executes IntentIR plans by dispatching steps to registered tools.
 Does NOT handle display or confirmation, that is the orchestrator's job.
 """
 
-from typing import Optional, List
+from typing import List
 from zenus_core.tools.registry import TOOLS
 from zenus_core.tools.privilege import PrivilegeTier, check_privilege
 from zenus_core.safety.policy import check_step, SafetyError

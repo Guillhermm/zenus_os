@@ -8,9 +8,7 @@ Perfect for showing what changed after an operation.
 import difflib
 from typing import Union, List, Dict, Optional
 from rich.console import Console
-from rich.table import Table
 from rich.text import Text
-from rich.panel import Panel
 from io import StringIO
 import json
 

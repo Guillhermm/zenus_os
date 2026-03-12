@@ -5,14 +5,13 @@ Detects data types and renders beautiful visualizations automatically.
 """
 
 import re
-from typing import Any, Dict, List, Optional, Union
+from typing import Dict, List, Optional, Union
 from rich.console import Console
 from rich.table import Table
 from rich.panel import Panel
 from rich.syntax import Syntax
 from rich import box
 from rich.tree import Tree
-from rich.progress import Progress, BarColumn, TextColumn
 import json
 
 
@@ -87,7 +86,7 @@ class Visualizer:
                 parsed = json.loads(data)
                 Visualizer._visualize_dict(parsed, context)
                 return
-            except:
+            except Exception:
                 pass
         
         # Check for key-value pairs
@@ -286,7 +285,7 @@ class Visualizer:
                     
                     console.print(tree)
                     return
-            except:
+            except Exception:
                 pass
         
         # Fallback to plain display
@@ -300,7 +299,7 @@ class Visualizer:
     @staticmethod
     def _visualize_key_value(data: str) -> None:
         """Visualize key-value pairs as a table"""
-        lines = [l.strip() for l in data.split("\n") if l.strip() and ":" in l]
+        lines = [line.strip() for line in data.split("\n") if line.strip() and ":" in line]
         
         if len(lines) < 2:
             console.print(f"  → {data}", style="cyan")

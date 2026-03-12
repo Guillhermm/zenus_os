@@ -9,7 +9,6 @@ from typing import List, Dict, Optional, Any, Union
 from enum import Enum
 from rich.console import Console
 from rich.table import Table
-from rich.text import Text
 from io import StringIO
 import json
 
@@ -81,7 +80,7 @@ class TableFormatter:
         if sort_by and sort_by in normalized_data[0]:
             try:
                 normalized_data = sorted(normalized_data, key=lambda x: x.get(sort_by, ''))
-            except:
+            except Exception:
                 pass  # Sorting failed, continue unsorted
         
         # Apply limit

@@ -6,7 +6,6 @@ Falls back to Podman if Docker not available.
 """
 
 import subprocess
-import os
 from typing import Optional, List
 from zenus_core.tools.base import Tool
 
@@ -35,7 +34,7 @@ class ContainerOps(Tool):
                     timeout=2
                 )
                 return runtime
-            except:
+            except Exception:
                 continue
         return "none"
     

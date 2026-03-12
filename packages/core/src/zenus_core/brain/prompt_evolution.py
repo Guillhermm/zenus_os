@@ -18,7 +18,6 @@ from typing import List, Dict, Optional, Tuple
 from dataclasses import dataclass, asdict
 from pathlib import Path
 from datetime import datetime
-from collections import defaultdict
 
 
 @dataclass
@@ -294,7 +293,7 @@ Return JSON with: goal, steps, explanation, expected_result"""
         
         base_version = self.versions.get(variant.base_version)
         if not base_version:
-            raise ValueError(f"Base version not found")
+            raise ValueError("Base version not found")
         
         # Create new version from variant
         new_version_id = f"{variant.base_version}_v{len(self.versions) + 1}"

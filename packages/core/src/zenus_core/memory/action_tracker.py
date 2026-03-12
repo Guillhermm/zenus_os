@@ -16,7 +16,7 @@ import hashlib
 from datetime import datetime
 from typing import Optional, Dict, List, Any
 from pathlib import Path
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass
 import shutil
 import os
 

@@ -5,7 +5,6 @@ Tests for Failure Logger
 import pytest
 import tempfile
 import os
-from pathlib import Path
 from zenus_core.memory.failure_logger import FailureLogger, Failure
 
 

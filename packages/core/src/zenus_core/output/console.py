@@ -8,7 +8,6 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 from rich.syntax import Syntax
-from rich.text import Text
 from rich import box
 from typing import List, Dict, Any
 
@@ -86,7 +85,7 @@ def print_step(step_num: int, tool: str, action: str, risk: int, result: Any = N
             try:
                 Visualizer.visualize(result, context)
                 return  # Skip old formatting
-            except Exception as e:
+            except Exception:
                 # Fallback on visualization error (silent fallback to old formatting)
                 pass
         
@@ -105,9 +104,9 @@ def print_step(step_num: int, tool: str, action: str, risk: int, result: Any = N
             # Use rich formatter for complex output
             try:
                 from zenus_core.output import format_output
-                console.print(f"  → Result:")
+                console.print("  → Result:")
                 format_output(result_str, title=None)
-            except:
+            except Exception:
                 # Fallback to simple display
                 console.print(f"  → {result}", style="dim")
         else:

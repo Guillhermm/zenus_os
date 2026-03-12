@@ -9,17 +9,14 @@ Features:
 - Vi/Emacs key bindings
 """
 
-import os
 from pathlib import Path
-from typing import List, Optional
+from typing import Optional
 from prompt_toolkit import PromptSession
 from prompt_toolkit.completion import Completer, Completion, PathCompleter
 from prompt_toolkit.history import FileHistory
 from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
 from prompt_toolkit.styles import Style
-from prompt_toolkit.lexers import PygmentsLexer
 from prompt_toolkit.key_binding import KeyBindings
-from pygments.lexers.shell import BashLexer
 
 
 class ZenusCompleter(Completer):

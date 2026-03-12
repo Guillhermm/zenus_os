@@ -5,7 +5,6 @@ Determines if a task requires iterative execution or can be solved one-shot.
 Uses heuristics and LLM analysis to classify task complexity.
 """
 
-from typing import List
 import re
 
 
@@ -191,36 +190,11 @@ class TaskAnalyzer:
     def _llm_analysis(self, user_input: str) -> TaskComplexity:
         """Use LLM to analyze task complexity (fallback for uncertain cases)"""
         
-        prompt = f"""Analyze this user command for task complexity:
-
-Command: "{user_input}"
-
-Determine:
-1. Does this need ITERATIVE execution (multiple plan-execute-observe cycles)?
-2. Or can it be solved in ONE-SHOT (single plan and execution)?
-
-ITERATIVE tasks:
-- Require exploration or discovery (e.g., "read project and understand")
-- Depend on intermediate results (e.g., "analyze code, then refactor")
-- Need context building (e.g., "organize files by type and date")
-- Have conditional logic (e.g., "find duplicates and move them")
-
-ONE-SHOT tasks:
-- Simple, well-defined actions (e.g., "list files in ~/Documents")
-- No dependencies on observations (e.g., "create folder ~/test")
-- Single-step operations (e.g., "show disk usage")
-
-Respond with:
-NEEDS_ITERATION: [Yes/No]
-CONFIDENCE: [0.0-1.0]
-ESTIMATED_STEPS: [1-10]
-REASONING: [Brief explanation]
-"""
         
         try:
             # This would call LLM's reflect_on_goal or similar
             # For now, fall back to heuristic
             return self._heuristic_analysis(user_input.lower())
-        except:
+        except Exception:
             # If LLM fails, use heuristic
             return self._heuristic_analysis(user_input.lower())

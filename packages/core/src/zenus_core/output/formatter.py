@@ -10,7 +10,6 @@ Auto-detects data types and formats them beautifully:
 """
 
 import json
-import re
 from typing import Any, List, Dict, Optional
 from rich.console import Console
 from rich.table import Table
@@ -90,7 +89,7 @@ class OutputFormatter:
             try:
                 parsed = json.loads(data)
                 return self._dict_to_json(parsed, title)
-            except:
+            except Exception:
                 pass
         
         # Check for table-like structure

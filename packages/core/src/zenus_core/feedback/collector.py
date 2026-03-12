@@ -10,7 +10,7 @@ Collects user feedback on command executions:
 import json
 import time
 from pathlib import Path
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any
 from datetime import datetime
 from dataclasses import dataclass, asdict
 
@@ -180,7 +180,7 @@ class FeedbackCollector:
             # Invalidate stats cache
             self._stats_cache = None
         
-        except Exception as e:
+        except Exception:
             # Non-critical, just skip
             pass
     
@@ -252,7 +252,7 @@ class FeedbackCollector:
             
             return stats
         
-        except Exception as e:
+        except Exception:
             return stats
     
     def export_training_data(
@@ -344,7 +344,7 @@ class FeedbackCollector:
             
             return False
         
-        except:
+        except Exception:
             return False
     
     def _sanitize_text(self, text: str) -> str:

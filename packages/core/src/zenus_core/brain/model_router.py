@@ -13,11 +13,11 @@ import json
 import time
 from pathlib import Path
 from typing import Optional, Dict, List
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass
 from datetime import datetime
 
 from zenus_core.brain.task_complexity import TaskComplexityAnalyzer, ComplexityScore
-from zenus_core.brain.llm.factory import get_llm, get_available_providers
+from zenus_core.brain.llm.factory import get_available_providers
 
 
 @dataclass
@@ -199,14 +199,14 @@ class ModelRouter:
             # Fallback to primary or first available
             if self.primary_provider in self.available_providers:
                 selected_model = self.primary_provider
-                complexity.reasons.append(f"Fallback to primary (original not available)")
+                complexity.reasons.append("Fallback to primary (original not available)")
             elif self.available_providers:
                 selected_model = self.available_providers[0]
-                complexity.reasons.append(f"Using first available model")
+                complexity.reasons.append("Using first available model")
             else:
                 # No models available at all
                 selected_model = self.primary_provider
-                complexity.reasons.append(f"WARNING: No models available, using primary anyway")
+                complexity.reasons.append("WARNING: No models available, using primary anyway")
         
         # Log decision
         if self.log_decisions:
@@ -442,7 +442,7 @@ class ModelRouter:
         try:
             with open(self.stats_path, 'r') as f:
                 return json.load(f)
-        except:
+        except Exception:
             return {
                 'models': {},
                 'total_commands': 0,

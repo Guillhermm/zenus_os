@@ -13,7 +13,7 @@ import json
 import time
 from pathlib import Path
 from typing import Optional, Dict, Any
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass
 
 from zenus_core.brain.llm.schemas import IntentIR
 
@@ -135,7 +135,7 @@ class IntentCache:
         # Reconstruct IntentIR from cached data
         try:
             return IntentIR.model_validate(entry.intent_data)
-        except Exception as e:
+        except Exception:
             # Cache corrupted, remove entry
             del self.cache[cache_key]
             self.stats['misses'] += 1
@@ -276,7 +276,7 @@ class IntentCache:
             if 'stats' in data:
                 self.stats.update(data['stats'])
         
-        except Exception as e:
+        except Exception:
             # Corrupted cache, start fresh
             pass
     
@@ -294,7 +294,7 @@ class IntentCache:
             with open(self.cache_path, 'w') as f:
                 json.dump(data, f, indent=2)
         
-        except Exception as e:
+        except Exception:
             # Non-critical, just skip
             pass
 

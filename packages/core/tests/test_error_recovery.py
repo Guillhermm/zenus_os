@@ -2,11 +2,9 @@
 Tests for error recovery system
 """
 
-import pytest
 from zenus_core.execution.error_recovery import (
     ErrorRecovery,
-    RecoveryStrategy,
-    RecoveryResult
+    RecoveryStrategy
 )
 
 

@@ -7,7 +7,6 @@ Persists across sessions.
 
 import os
 import json
-from pathlib import Path
 from typing import Optional, Dict, List
 from datetime import datetime
 

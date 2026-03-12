@@ -3,7 +3,6 @@ Tests for smart caching layer
 """
 
 import time
-import pytest
 from zenus_core.execution.smart_cache import SmartCache, compute_cache_key
 
 

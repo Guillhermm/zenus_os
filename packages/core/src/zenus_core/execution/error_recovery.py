@@ -122,7 +122,7 @@ class ErrorRecovery:
             time.sleep(wait_time)
             
             try:
-                result = operation(*args, **kwargs)
+                operation(*args, **kwargs)
                 self.recovery_stats["retries"] += 1
                 return RecoveryResult(
                     success=True,
@@ -262,7 +262,7 @@ class ErrorRecovery:
         time.sleep(wait_time)
         
         try:
-            result = operation(*args, **kwargs)
+            operation(*args, **kwargs)
             self.recovery_stats["retries"] += 1
             return RecoveryResult(
                 success=True,

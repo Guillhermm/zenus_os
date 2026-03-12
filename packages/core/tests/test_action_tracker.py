@@ -6,7 +6,7 @@ import pytest
 import tempfile
 import os
 from pathlib import Path
-from zenus_core.memory.action_tracker import ActionTracker, Action
+from zenus_core.memory.action_tracker import ActionTracker
 
 
 @pytest.fixture
@@ -208,7 +208,7 @@ def test_get_recent_transactions(tracker):
 
 def test_create_checkpoint(tracker):
     """Test creating a checkpoint"""
-    tx_id = tracker.start_transaction("test", "test goal")
+    tracker.start_transaction("test", "test goal")
     
     # Create a temporary file to backup
     test_file = Path(tempfile.gettempdir()) / "checkpoint_test.txt"
@@ -236,7 +236,7 @@ def test_create_checkpoint(tracker):
 
 def test_checkpoint_duplicate_name(tracker):
     """Test that duplicate checkpoint names fail"""
-    tx_id = tracker.start_transaction("test", "test goal")
+    tracker.start_transaction("test", "test goal")
     
     success1 = tracker.create_checkpoint("dup_checkpoint", "First")
     success2 = tracker.create_checkpoint("dup_checkpoint", "Second")

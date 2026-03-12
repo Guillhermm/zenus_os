@@ -10,8 +10,7 @@ Requirements:
 """
 
 import os
-import subprocess
-from typing import Optional, Dict, Any, List
+from typing import Optional
 from zenus_core.tools.base import Tool
 
 
@@ -34,7 +33,7 @@ class BrowserOps(Tool):
     def _check_playwright(self) -> bool:
         """Check if Playwright is installed"""
         try:
-            import playwright
+            import playwright  # noqa: F401
             return True
         except ImportError:
             return False

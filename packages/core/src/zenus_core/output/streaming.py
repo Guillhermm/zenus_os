@@ -5,8 +5,6 @@ Provides real-time feedback during LLM inference and task execution.
 """
 
 import sys
-import threading
-import time
 from typing import Optional, Callable
 from rich.console import Console
 from rich.live import Live
@@ -42,7 +40,7 @@ class StreamHandler:
         for callback in self._cancel_callbacks:
             try:
                 callback()
-            except:
+            except Exception:
                 pass
     
     def stream_llm_tokens(self, stream_iterator, prefix: str = ""):

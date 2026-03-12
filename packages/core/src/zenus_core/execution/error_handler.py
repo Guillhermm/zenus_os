@@ -216,7 +216,7 @@ class ErrorHandler:
                 suggestions.append(f"Search for the package: zenus \"search for {package}\"")
                 suggestions.append("Update package lists: zenus \"update package lists\"")
                 suggestions.append("Check if it's available in different repositories")
-                suggestions.append(f"Try alternative package managers (snap, flatpak)")
+                suggestions.append("Try alternative package managers (snap, flatpak)")
             else:
                 path = args.get('path', 'file')
                 suggestions.append(f"Check if '{path}' exists")

@@ -10,17 +10,12 @@ from textual.app import App, ComposeResult
 from textual.containers import Container, Vertical, Horizontal, ScrollableContainer
 from textual.widgets import (
     Header, Footer, Static, Button, Input,
-    DataTable, TabbedContent, TabPane, Log,
-    Label, ProgressBar, RichLog, LoadingIndicator, Select,
+    DataTable, TabbedContent, TabPane, Label, RichLog, Select,
 )
 from textual.binding import Binding
-from textual.worker import Worker, WorkerState
 from textual.message import Message
 from textual.screen import ModalScreen
 from rich.text import Text
-from rich.table import Table as RichTable
-from rich.panel import Panel
-from rich.tree import Tree
 from datetime import datetime
 import asyncio
 from typing import Optional, List
@@ -460,7 +455,7 @@ class ExplainView(ScrollableContainer):
                     log.write(f"   [dim]Confidence: {step['confidence']:.0%}[/dim]")
         
         # Show result
-        log.write(f"\n[yellow]Result:[/yellow]")
+        log.write("\n[yellow]Result:[/yellow]")
         all_lines = result.split('\n')
         result_lines = all_lines[:10]  # First 10 lines
         for line in result_lines:
@@ -501,7 +496,8 @@ class SystemView(ScrollableContainer):
         log.clear()
         log.write("[bold cyan]🔄 System Overview[/bold cyan]\n")
         try:
-            import platform, os
+            import platform
+            import os
             now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             log.write(f"[yellow]Refreshed at:[/yellow] {now}")
             log.write(f"[yellow]Hostname:[/yellow] {platform.node()}")
@@ -959,20 +955,20 @@ class ZenusDashboard(App):
         try:
             history_view = self.query_one("#history-view", HistoryView)
             history_view.refresh_history()
-        except:
+        except Exception:
             pass
         
         try:
             memory_view = self.query_one("#memory-view", MemoryView)
             memory_view.refresh_memory()
-        except:
+        except Exception:
             pass
         
         # Update explain view
         try:
             explain_view = self.query_one("#explain-view", ExplainView)
             explain_view.show_explanation(command, result, self.last_steps)
-        except:
+        except Exception:
             pass
     
     def _check_patterns(self):
@@ -994,7 +990,7 @@ class ZenusDashboard(App):
                 
                 pattern_widget = self.query_one("#pattern-suggestion", PatternSuggestion)
                 pattern_widget.show_pattern(pattern.description, suggestion)
-        except Exception as e:
+        except Exception:
             pass  # Silent fail for pattern detection
     
     def action_tab(self, tab_name: str) -> None:

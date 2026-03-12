@@ -305,7 +305,7 @@ class PatternDetector:
         try:
             # Handle ISO format
             return datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
-        except:
+        except Exception:
             return None
 
 

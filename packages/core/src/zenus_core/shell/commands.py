@@ -5,9 +5,6 @@ Built-in commands that don't go through intent translation.
 """
 
 import os
-import sys
-from zenus_core.memory.session_memory import SessionMemory
-from zenus_core.memory.world_model import WorldModel
 from zenus_core.memory.intent_history import IntentHistory
 
 
@@ -15,8 +12,6 @@ def handle_status_command(orchestrator):
     """Show Zenus status"""
     from rich.console import Console
     from rich.panel import Panel
-    from rich.table import Table
-    from rich.text import Text
     from zenus_core.brain.llm.factory import get_available_providers
 
     console = Console()
@@ -280,8 +275,8 @@ def handle_memory_command(orchestrator, subcommand: str = "stats"):
     
     if subcommand == "stats":
         session_stats = orchestrator.session_memory.get_session_stats()
-        print(f"\n📊 Memory Statistics:\n")
-        print(f"Session:")
+        print("\n📊 Memory Statistics:\n")
+        print("Session:")
         print(f"  Intents: {session_stats['total_intents']}")
         print(f"  References: {session_stats['context_refs']}")
         print(f"  Duration: {session_stats['session_duration_seconds']:.0f}s")
@@ -289,7 +284,7 @@ def handle_memory_command(orchestrator, subcommand: str = "stats"):
         
         frequent = orchestrator.world_model.get_frequent_paths(5)
         if frequent:
-            print(f"Frequent Paths:")
+            print("Frequent Paths:")
             for path in frequent:
                 print(f"  - {path}")
         print()
@@ -376,7 +371,6 @@ def check_and_suggest_patterns(orchestrator):
     """
     from zenus_core.brain.pattern_detector import get_pattern_detector
     from zenus_core.brain.pattern_memory import get_pattern_memory
-    from zenus_core.memory.intent_history import IntentHistory
     from rich.console import Console
     from rich.panel import Panel
     
@@ -436,11 +430,11 @@ def check_and_suggest_patterns(orchestrator):
                 # Create cron job
                 cmd = pattern.commands[-1] if pattern.commands else pattern.description
                 
-                console.print(f"\n[green]Creating cron job:[/green]")
+                console.print("\n[green]Creating cron job:[/green]")
                 console.print(f"  Schedule: {pattern.suggested_cron}")
                 console.print(f"  Command: {cmd}")
-                console.print(f"\n[dim]Note: Cron integration coming soon![/dim]")
-                console.print(f"[dim]For now, you can manually add this to your crontab.[/dim]")
+                console.print("\n[dim]Note: Cron integration coming soon![/dim]")
+                console.print("[dim]For now, you can manually add this to your crontab.[/dim]")
             
             elif choice == 's':
                 # Show all patterns
@@ -452,7 +446,7 @@ def check_and_suggest_patterns(orchestrator):
                         console.print(f"   [dim]Cron: {p.suggested_cron}[/dim]")
                     console.print()
     
-    except Exception as e:
+    except Exception:
         # Silently fail - pattern detection is optional
         pass
 

@@ -4,8 +4,6 @@ Process Operations Tool
 Provides process management capabilities.
 """
 
-import os
-import signal
 import psutil
 from zenus_core.tools.base import Tool
 

@@ -5,8 +5,6 @@ Handle text file operations: read, write, append, search.
 """
 
 import os
-from pathlib import Path
-from typing import Optional
 from zenus_core.tools.base import Tool
 
 

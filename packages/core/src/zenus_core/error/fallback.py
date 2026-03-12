@@ -4,7 +4,7 @@ Graceful Degradation and Fallback System
 Provides automatic fallback strategies when primary methods fail.
 """
 
-from typing import Callable, Any, List, Optional, TypeVar, Generic
+from typing import Callable, List, Optional, TypeVar, Generic
 from dataclasses import dataclass
 from enum import Enum
 

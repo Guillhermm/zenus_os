@@ -243,7 +243,7 @@ Generate {num_paths} truly DIFFERENT approaches. Make them distinct in philosoph
     
     def _parse_intent_from_path(self, path_dict: Dict) -> IntentIR:
         """Convert path steps to IntentIR"""
-        from zenus_core.brain.llm.schemas import Step, Tool
+        from zenus_core.brain.llm.schemas import Step
         
         steps_data = path_dict.get("steps", [])
         steps = []

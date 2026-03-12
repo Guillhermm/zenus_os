@@ -8,7 +8,7 @@ Defines boundaries for tool execution to prevent:
 - Privilege escalation
 """
 
-from typing import List, Optional, Set
+from typing import Optional, Set
 from dataclasses import dataclass, field
 from pathlib import Path
 import os

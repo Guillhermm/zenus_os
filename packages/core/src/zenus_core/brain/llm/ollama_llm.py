@@ -12,7 +12,6 @@ Recommended models:
 
 import json
 import requests
-from typing import Optional
 from zenus_core.brain.llm.schemas import IntentIR
 from zenus_core.brain.llm.system_prompt import build_system_prompt
 
@@ -85,7 +84,7 @@ class OllamaLLM:
             
         except requests.exceptions.Timeout:
             raise RuntimeError("Ollama request timed out")
-        except json.JSONDecodeError as e:
+        except json.JSONDecodeError:
             raise RuntimeError(f"Invalid JSON from Ollama: {content}")
     
     def _extract_json(self, text: str) -> str:
@@ -122,7 +121,7 @@ class OllamaLLM:
                 # Streaming mode
                 from zenus_core.output.streaming import get_stream_handler
                 from rich.console import Console
-                handler = get_stream_handler()
+                get_stream_handler()
                 console = Console()
                 
                 console.print("[cyan]Reflecting: [/cyan]", end="")

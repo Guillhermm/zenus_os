@@ -9,9 +9,8 @@ import matplotlib
 matplotlib.use('Agg')  # Non-interactive backend
 import matplotlib.pyplot as plt
 import numpy as np
-from typing import List, Dict, Optional, Union, Tuple
+from typing import List, Dict, Optional, Union
 from enum import Enum
-from pathlib import Path
 import tempfile
 
 
@@ -168,7 +167,7 @@ class ChartGenerator:
             values = list(data)
         
         # Truncate long labels
-        labels = [l[:20] + '...' if len(str(l)) > 20 else str(l) for l in labels]
+        labels = [lbl[:20] + '...' if len(str(lbl)) > 20 else str(lbl) for lbl in labels]
         
         bars = ax.bar(labels, values, color='#3498db', alpha=0.8)
         
@@ -206,7 +205,7 @@ class ChartGenerator:
             values = data
         
         # Truncate long labels
-        labels = [l[:15] + '...' if len(str(l)) > 15 else str(l) for l in labels]
+        labels = [lbl[:15] + '...' if len(str(lbl)) > 15 else str(lbl) for lbl in labels]
         
         colors = plt.cm.Set3(range(len(values)))
         ax.pie(values, labels=labels, autopct='%1.1f%%', colors=colors, startangle=90)
@@ -237,7 +236,7 @@ class ChartGenerator:
         # Add values
         for i in range(matrix.shape[0]):
             for j in range(matrix.shape[1]):
-                text = ax.text(j, i, f'{matrix[i, j]:.1f}',
+                ax.text(j, i, f'{matrix[i, j]:.1f}',
                               ha="center", va="center", color="black", fontsize=8)
 
 

@@ -5,12 +5,12 @@ Ties together STT, TTS, and Zenus orchestrator for voice control.
 Handles conversational flow, interruptions, and context carryover.
 """
 
-from typing import Optional, List, Callable
+from typing import Optional, List
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 
-from zenus_voice.stt import SpeechToText, WhisperModel, TranscriptionResult
+from zenus_voice.stt import SpeechToText, WhisperModel
 from zenus_voice.tts import TextToSpeech, TTSEngine, Voice, TTSConfig
 
 

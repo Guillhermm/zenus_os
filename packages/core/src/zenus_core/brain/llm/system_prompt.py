@@ -5,7 +5,6 @@ Single source of truth for the instruction set sent to every LLM backend.
 The tool list is generated dynamically from the registry so it never goes stale.
 """
 
-from typing import Optional
 
 
 _BASE = """You are an operating system intent compiler.
@@ -71,7 +70,6 @@ def _build_tool_section(include_privileged: bool) -> str:
         import inspect
 
         lines = ["\nAVAILABLE TOOLS:\n"]
-        tool_cls_cache: dict = {}
 
         for tool_name, tool_instance in TOOLS.items():
             is_privileged = tool_name in PRIVILEGED_TOOLS

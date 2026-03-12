@@ -11,7 +11,6 @@ Features:
 """
 
 import json
-import os
 from pathlib import Path
 from typing import List, Dict, Optional, Any
 from dataclasses import dataclass, field, asdict

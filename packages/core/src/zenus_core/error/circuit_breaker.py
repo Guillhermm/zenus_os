@@ -4,11 +4,10 @@ Circuit Breaker Pattern
 Prevents cascade failures by detecting failing services and stopping requests temporarily.
 """
 
-import time
 from enum import Enum
 from typing import Callable, Any, Optional
-from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from dataclasses import dataclass
+from datetime import datetime
 
 
 class CircuitState(Enum):
@@ -93,7 +92,7 @@ class CircuitBreaker:
             self._on_success()
             return result
         
-        except Exception as e:
+        except Exception:
             self._on_failure()
             raise
     

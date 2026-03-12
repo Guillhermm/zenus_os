@@ -10,7 +10,6 @@ Consolidated explanation layer:
 from typing import Any, Dict, List, Optional
 from dataclasses import dataclass, field
 from datetime import datetime
-from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 from rich.tree import Tree
@@ -142,11 +141,11 @@ class Explainer:
         ))
         
         # User's request
-        console.print(f"\n[bold]Your Request:[/bold]")
+        console.print("\n[bold]Your Request:[/bold]")
         console.print(f"  {user_input}")
         
         # Goal interpretation
-        console.print(f"\n[bold]Goal Interpretation:[/bold]")
+        console.print("\n[bold]Goal Interpretation:[/bold]")
         console.print(f"  {intent.goal}")
         
         # Step breakdown
@@ -157,11 +156,11 @@ class Explainer:
         
         # Confirmation requirement
         if intent.requires_confirmation:
-            console.print(f"\n[yellow]⚠️  This operation requires confirmation (destructive changes)[/yellow]")
+            console.print("\n[yellow]⚠️  This operation requires confirmation (destructive changes)[/yellow]")
     
     def _explain_steps(self, steps: List[Step]) -> None:
         """Explain execution steps"""
-        console.print(f"\n[bold]Execution Plan:[/bold]")
+        console.print("\n[bold]Execution Plan:[/bold]")
         
         tree = Tree("📋 Steps")
         
@@ -194,7 +193,7 @@ class Explainer:
         """Explain risk assessment"""
         max_risk = max([step.risk for step in intent.steps])
         
-        console.print(f"\n[bold]Risk Assessment:[/bold]")
+        console.print("\n[bold]Risk Assessment:[/bold]")
         
         if max_risk == 0:
             console.print("  🟢 [green]Safe - Read-only operations[/green]")
@@ -229,20 +228,20 @@ class Explainer:
             border_style="cyan"
         ))
         
-        console.print(f"\n[bold]Your Request:[/bold]")
+        console.print("\n[bold]Your Request:[/bold]")
         console.print(f"  {user_input}")
         
-        console.print(f"\n[bold]Complexity Assessment:[/bold]")
+        console.print("\n[bold]Complexity Assessment:[/bold]")
         
         if needs_iteration:
-            console.print(f"  [yellow]→ Detected as ITERATIVE task[/yellow]")
+            console.print("  [yellow]→ Detected as ITERATIVE task[/yellow]")
             console.print(f"  Confidence: {confidence:.0%}")
             console.print(f"  Estimated iterations: ~{estimated_steps}")
         else:
-            console.print(f"  [green]→ Detected as ONE-SHOT task[/green]")
+            console.print("  [green]→ Detected as ONE-SHOT task[/green]")
             console.print(f"  Confidence: {confidence:.0%}")
         
-        console.print(f"\n[bold]Reasoning:[/bold]")
+        console.print("\n[bold]Reasoning:[/bold]")
         console.print(f"  {reasoning}")
     
     def explain_iteration(
@@ -263,15 +262,15 @@ class Explainer:
         """
         console.print(f"\n[bold cyan]═══ Iteration {iteration}/{total} Explanation ═══[/bold cyan]")
         
-        console.print(f"\n[bold]Current Goal:[/bold]")
+        console.print("\n[bold]Current Goal:[/bold]")
         console.print(f"  {intent.goal}")
         
         if observations:
-            console.print(f"\n[bold]Observations So Far:[/bold]")
+            console.print("\n[bold]Observations So Far:[/bold]")
             for i, obs in enumerate(observations[-3:], 1):  # Last 3
                 console.print(f"  {i}. {obs}")
         
-        console.print(f"\n[bold]Next Actions:[/bold]")
+        console.print("\n[bold]Next Actions:[/bold]")
         for i, step in enumerate(intent.steps, 1):
             console.print(f"  {i}. {step.tool}.{step.action}")
     
@@ -291,7 +290,7 @@ class Explainer:
         # Directory
         if "directory" in context:
             dir_ctx = context["directory"]
-            console.print(f"\n[bold]Location:[/bold]")
+            console.print("\n[bold]Location:[/bold]")
             console.print(f"  Path: {dir_ctx['path']}")
             if dir_ctx['project_type']:
                 console.print(f"  Project: {dir_ctx['project_type']} ({dir_ctx['project_name']})")
@@ -299,7 +298,7 @@ class Explainer:
         # Git
         if "git" in context and context["git"]["is_repo"]:
             git_ctx = context["git"]
-            console.print(f"\n[bold]Git Repository:[/bold]")
+            console.print("\n[bold]Git Repository:[/bold]")
             console.print(f"  Branch: {git_ctx['branch']}")
             console.print(f"  Status: {git_ctx['status']}")
             if git_ctx["ahead_commits"] > 0:
@@ -308,16 +307,16 @@ class Explainer:
         # Time
         if "time" in context:
             time_ctx = context["time"]
-            console.print(f"\n[bold]Time:[/bold]")
+            console.print("\n[bold]Time:[/bold]")
             console.print(f"  Current: {time_ctx['timestamp']}")
             console.print(f"  Time of day: {time_ctx['time_of_day']}")
             if time_ctx["is_weekend"]:
-                console.print(f"  Weekend detected")
+                console.print("  Weekend detected")
         
         # Processes
         if "processes" in context and context["processes"]["dev_tools"]:
             proc_ctx = context["processes"]
-            console.print(f"\n[bold]Running Tools:[/bold]")
+            console.print("\n[bold]Running Tools:[/bold]")
             console.print(f"  {', '.join(proc_ctx['dev_tools'])}")
     
     def confirm(self, prompt: str = "Proceed with execution?") -> bool:
@@ -342,7 +341,7 @@ class Explainer:
         Args:
             alternatives: List of alternative approaches
         """
-        console.print(f"\n[bold]Alternative Approaches:[/bold]")
+        console.print("\n[bold]Alternative Approaches:[/bold]")
         
         for i, alt in enumerate(alternatives, 1):
             console.print(f"\n  [cyan]{i}. {alt['name']}[/cyan]")
@@ -555,13 +554,13 @@ class ExplainabilityDashboard:
         
         # Arguments (if verbose)
         if verbose and step_exp.step.args:
-            console.print(f"  Arguments:")
+            console.print("  Arguments:")
             for key, value in step_exp.step.args.items():
                 console.print(f"    • {key}: {value}")
         
         # Alternatives considered
         if step_exp.alternatives:
-            console.print(f"  [dim]Alternatives considered:[/dim]")
+            console.print("  [dim]Alternatives considered:[/dim]")
             for alt in step_exp.alternatives:
                 console.print(f"    [dim]→ {alt}[/dim]")
         
@@ -655,7 +654,7 @@ class ExplainabilityDashboard:
         console.print(table)
         console.print()
         console.print(f"[dim]Showing {len(recent)} of {len(self.history)} total executions[/dim]")
-        console.print(f"[dim]Use 'zenus explain <number>' to see details[/dim]")
+        console.print("[dim]Use 'zenus explain <number>' to see details[/dim]")
 
 
 # Global instance

@@ -5,7 +5,6 @@ Tests for FileOps tool
 import os
 import tempfile
 import shutil
-import pytest
 from pathlib import Path
 from zenus_core.tools.file_ops import FileOps
 

@@ -142,7 +142,7 @@ class Orchestrator:
         try:
             from zenus_core.memory.semantic_search import SemanticSearch
             self.semantic_search = SemanticSearch()
-        except ImportError as e:
+        except ImportError:
             # sentence-transformers not installed, semantic search disabled
             pass
         except Exception as e:
@@ -284,7 +284,7 @@ class Orchestrator:
                                     # Enhance user input with suggested steps
                                     user_input = f"{user_input} [SUGGESTED WORKFLOW: {', '.join(goal_suggestion.complete_workflow)}]"
                                     console.print("[green]✓[/green] Using enhanced workflow\n")
-                            except:
+                            except Exception:
                                 console.print("[dim]Auto-accepting suggested workflow[/dim]\n")
             
             # Step 1.6: Route to appropriate model based on complexity
@@ -344,7 +344,7 @@ class Orchestrator:
                 if intent:
                     # Cache hit! Instant response, zero tokens
                     if self.show_progress:
-                        console.print(f"[dim green]✓ Cache hit (instant, $0.00)[/dim green]")
+                        console.print("[dim green]✓ Cache hit (instant, $0.00)[/dim green]")
                     
                     # Update router stats (cache hit counts as using selected model but zero tokens)
                     self.router.track_tokens(selected_model, 0)
@@ -524,7 +524,7 @@ class Orchestrator:
                 # End transaction successfully
                 self.action_tracker.end_transaction(transaction_id, "completed")
             
-            except Exception as e:
+            except Exception:
                 # End transaction with failure status
                 self.action_tracker.end_transaction(transaction_id, "failed")
                 raise
@@ -592,7 +592,7 @@ class Orchestrator:
                     cache_hit=cache_hit,
                     success=True
                 )
-            except:
+            except Exception:
                 pass  # Non-critical
             
             # Collect feedback (non-blocking)
@@ -600,7 +600,7 @@ class Orchestrator:
                 self.feedback_collector.collect(
                     user_input, intent, execution_time_ms, success=True
                 )
-            except:
+            except Exception:
                 pass  # Non-critical
             
             # Record prompt evolution result (for self-improvement)
@@ -613,7 +613,7 @@ class Orchestrator:
                         success=True,
                         result="Executed successfully"
                     )
-                except:
+                except Exception:
                     pass  # Non-critical
             
             return execution_summary
@@ -631,7 +631,7 @@ class Orchestrator:
                         steps=[],
                         success=False
                     )
-                except:
+                except Exception:
                     pass
             
             print_error(f"Failed to understand command: {error_msg}")
@@ -651,7 +651,7 @@ class Orchestrator:
                         success=False,
                         result=None
                     )
-                except:
+                except Exception:
                     pass  # Non-critical
             
             # Analyze failure and provide intelligent suggestions
@@ -695,7 +695,7 @@ class Orchestrator:
                         steps=[],
                         success=False
                     )
-                except:
+                except Exception:
                     pass
             
             print_error(error_msg)
@@ -826,7 +826,7 @@ class Orchestrator:
                         
                         # If result is very short or generic, add context
                         if not result_str or result_str in ["None", "(no output)", ""]:
-                            result_str = f"(command executed, no visible output)"
+                            result_str = "(command executed, no visible output)"
                         elif len(result_str) < 10:
                             result_str = f"(output: {result_str})"
                         else:
@@ -869,11 +869,11 @@ class Orchestrator:
                     
                     # Display reflection
                     if goal_status.achieved:
-                        console.print(f"\n[bold green]✓ Goal Achieved![/bold green]")
+                        console.print("\n[bold green]✓ Goal Achieved![/bold green]")
                         console.print(f"[dim]{goal_status.reasoning}[/dim]")
                         goal_achieved = True
                     else:
-                        console.print(f"\n[yellow]⟳ Goal not yet achieved[/yellow]")
+                        console.print("\n[yellow]⟳ Goal not yet achieved[/yellow]")
                         console.print(f"[dim]Confidence: {goal_status.confidence:.0%}[/dim]")
                         console.print(f"[dim]Reasoning: {goal_status.reasoning}[/dim]")
                         
@@ -888,10 +888,10 @@ class Orchestrator:
                         # If stuck for 3+ iterations, warn user
                         if stuck_count >= 3:
                             console.print(f"\n[red]⚠️  Appears to be stuck (same goal repeated {stuck_count} times with low progress)[/red]")
-                            console.print(f"[yellow]Consider:[/yellow]")
-                            console.print(f"  • Breaking down the task into smaller steps")
-                            console.print(f"  • Trying a different approach")
-                            console.print(f"  • Checking if manual intervention is needed")
+                            console.print("[yellow]Consider:[/yellow]")
+                            console.print("  • Breaking down the task into smaller steps")
+                            console.print("  • Trying a different approach")
+                            console.print("  • Checking if manual intervention is needed")
                             
                             response = console.input("\n[bold]Continue trying? (y/n):[/bold] ")
                             if response.lower() not in ('y', 'yes'):
@@ -902,7 +902,7 @@ class Orchestrator:
                             stuck_count = 0
                         
                         if goal_status.next_steps:
-                            console.print(f"\n[cyan]Next steps suggested:[/cyan]")
+                            console.print("\n[cyan]Next steps suggested:[/cyan]")
                             for step in goal_status.next_steps:
                                 console.print(f"  • {step}")
                         
@@ -927,10 +927,10 @@ class Orchestrator:
             # Check if we hit the absolute limit
             if iteration >= max_total_iterations and not goal_achieved:
                 console.print(f"\n[red]⚠️  Maximum iterations reached ({max_total_iterations})[/red]")
-                console.print(f"[yellow]Goal was not achieved. Task may be:[/yellow]")
-                console.print(f"  • Too complex for iterative approach")
-                console.print(f"  • Requires manual intervention")
-                console.print(f"  • Blocked by permissions or system constraints")
+                console.print("[yellow]Goal was not achieved. Task may be:[/yellow]")
+                console.print("  • Too complex for iterative approach")
+                console.print("  • Requires manual intervention")
+                console.print("  • Blocked by permissions or system constraints")
                 return f"Task stopped after {iteration} iteration(s) - maximum iterations reached"
             
             # Final result (goal achieved)
@@ -945,7 +945,7 @@ class Orchestrator:
                         steps=[s.model_dump() for s in intent.steps],
                         success=True
                     )
-                except:
+                except Exception:
                     pass
             
             return f"Task completed successfully in {iteration} iteration(s)"
@@ -1006,7 +1006,7 @@ class Orchestrator:
             session = self.multi_agent.collaborate(task, context or {})
             
             # Display results from each agent
-            console.print(f"[bold]Collaboration Summary:[/bold]")
+            console.print("[bold]Collaboration Summary:[/bold]")
             console.print(f"Session ID: {session.session_id}")
             console.print(f"Agents Involved: {', '.join([a.value for a in session.agents_involved])}")
             console.print(f"Duration: {session.total_duration:.2f}s\n")
@@ -1023,11 +1023,11 @@ class Orchestrator:
             
             # Final result
             if session.success:
-                console.print(f"[green bold]✓ Collaboration successful![/green bold]")
+                console.print("[green bold]✓ Collaboration successful![/green bold]")
                 console.print(f"[dim]{session.final_result}[/dim]")
                 return session.final_result
             else:
-                console.print(f"[red bold]✗ Collaboration failed[/red bold]")
+                console.print("[red bold]✗ Collaboration failed[/red bold]")
                 console.print(f"[dim]{session.final_result}[/dim]")
                 return f"Error: {session.final_result}"
                 
@@ -1255,7 +1255,7 @@ class Orchestrator:
                     recorder = get_workflow_recorder()
                     if recorder.recording:
                         recorder.record_step(user_input, str(result), execution_time)
-                except:
+                except Exception:
                     pass
                 
                 # Check for patterns periodically
@@ -1264,7 +1264,7 @@ class Orchestrator:
                     try:
                         from zenus_core.shell.commands import check_and_suggest_patterns
                         check_and_suggest_patterns(self)
-                    except:
+                    except Exception:
                         pass  # Silently fail if pattern detection fails
                 
             except KeyboardInterrupt:

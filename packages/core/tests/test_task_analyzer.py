@@ -4,7 +4,6 @@ Tests for TaskAnalyzer
 Validates task complexity detection and iterative need classification
 """
 
-import pytest
 from zenus_core.brain.task_analyzer import TaskAnalyzer, TaskComplexity
 
 
@@ -31,7 +30,7 @@ def test_simple_oneshot_tasks():
     
     for task in simple_tasks:
         result = analyzer.analyze(task)
-        assert result.needs_iteration == False, f"Task '{task}' should be one-shot"
+        assert not result.needs_iteration, f"Task '{task}' should be one-shot"
         assert result.confidence >= 0.5
 
 
@@ -49,7 +48,7 @@ def test_complex_iterative_tasks():
     
     for task in complex_tasks:
         result = analyzer.analyze(task)
-        assert result.needs_iteration == True, f"Task '{task}' should be iterative"
+        assert result.needs_iteration, f"Task '{task}' should be iterative"
         assert result.confidence >= 0.5
 
 
@@ -61,7 +60,7 @@ def test_multi_step_detection():
     task = "scan the folder, then move PDFs to a new directory, and finally delete temp files"
     result = analyzer.analyze(task)
     
-    assert result.needs_iteration == True
+    assert result.needs_iteration
     assert result.estimated_steps >= 2
 
 
@@ -73,7 +72,7 @@ def test_conditional_task_detection():
     task = "find files that are older than 30 days and move them to archive"
     result = analyzer.analyze(task)
     
-    assert result.needs_iteration == True
+    assert result.needs_iteration
 
 
 def test_estimated_steps():
@@ -119,7 +118,7 @@ def test_iterative_keywords_detection():
     
     for task in tasks_with_keywords:
         result = analyzer.analyze(task)
-        assert result.needs_iteration == True, f"Task '{task}' should be iterative but got: {result}"
+        assert result.needs_iteration, f"Task '{task}' should be iterative but got: {result}"
 
 
 def test_oneshot_keywords_detection():
@@ -137,7 +136,7 @@ def test_oneshot_keywords_detection():
     
     for task in tasks_with_keywords:
         result = analyzer.analyze(task)
-        assert result.needs_iteration == False
+        assert not result.needs_iteration
 
 
 def test_word_count_heuristic():
@@ -161,7 +160,7 @@ def test_file_operations_with_conditions():
     task = "move files where the name contains 'backup' to the archive folder"
     result = analyzer.analyze(task)
     
-    assert result.needs_iteration == True
+    assert result.needs_iteration
 
 
 def test_reasoning_provided():

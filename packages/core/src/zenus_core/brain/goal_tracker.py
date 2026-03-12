@@ -5,7 +5,7 @@ Determines when a goal has been achieved based on observations.
 Uses LLM to reflect on execution results and decide if task is complete.
 """
 
-from typing import List, Dict, Any
+from typing import List
 from zenus_core.brain.llm.factory import get_llm
 from zenus_core.brain.llm.schemas import IntentIR
 
@@ -190,7 +190,7 @@ NEXT_STEPS: [Comma-separated list of next actions, or "None" if achieved]
             elif line.startswith("CONFIDENCE:"):
                 try:
                     confidence = float(line.split(":")[1].strip())
-                except:
+                except ValueError:
                     confidence = 0.5
             
             elif line.startswith("REASONING:"):

@@ -9,7 +9,7 @@ from typing import Union, List, Dict, Optional, Any
 from enum import Enum
 
 from zenus_core.visualization.chart_generator import ChartGenerator, ChartType
-from zenus_core.visualization.table_formatter import TableFormatter, TableStyle
+from zenus_core.visualization.table_formatter import TableFormatter
 from zenus_core.visualization.diff_viewer import DiffViewer
 
 
@@ -156,7 +156,7 @@ class Visualizer:
             # Unknown -> try table format
             try:
                 return self.table_fmt.format_table(data, title=title)
-            except:
+            except Exception:
                 return str(data)
     
     def _create_chart(self, data: Any, title: Optional[str]) -> str:

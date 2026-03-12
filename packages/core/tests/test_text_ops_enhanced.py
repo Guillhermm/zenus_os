@@ -179,7 +179,7 @@ def test_read_nonexistent_file(text_ops):
 
 def test_write_empty_content(text_ops, temp_file):
     """Test writing empty content"""
-    result = text_ops.write(temp_file, "")
+    text_ops.write(temp_file, "")
     
     assert os.path.exists(temp_file)
     with open(temp_file) as f:

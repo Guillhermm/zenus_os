@@ -8,7 +8,7 @@ Tracks success rates and adjusts retry behavior accordingly.
 import time
 from typing import Callable, Any, Optional
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime
 
 
 @dataclass

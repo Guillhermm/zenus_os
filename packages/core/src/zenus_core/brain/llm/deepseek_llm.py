@@ -106,7 +106,7 @@ class DeepSeekLLM:
                             config_model = config_data['llm'].get('model')
                             config_max_tokens = config_data['llm'].get('max_tokens')
                             break
-        except Exception as e:
+        except Exception:
             pass  # Silently fall back to env vars / defaults
 
         self.model = config_model or os.getenv("LLM_MODEL", "deepseek-chat")

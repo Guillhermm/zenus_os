@@ -12,9 +12,8 @@ This is true proactive AI - preventing problems, not just reacting!
 """
 
 import json
-import time
 import subprocess
-from typing import List, Dict, Optional, Callable, Tuple
+from typing import List, Dict, Optional, Tuple
 from dataclasses import dataclass, asdict
 from enum import Enum
 from datetime import datetime, timedelta
@@ -522,7 +521,7 @@ class ProactiveMonitor:
             timestamp = datetime.fromisoformat(timestamp_str)
             age = datetime.now() - timestamp
             return age < timedelta(hours=hours)
-        except:
+        except Exception:
             return False
     
     def _initialize_default_checks(self):

@@ -3,7 +3,7 @@ Tests for Self-Reflection and Data Visualization features
 """
 
 import pytest
-from unittest.mock import Mock, MagicMock
+from unittest.mock import Mock
 import json
 
 
@@ -66,10 +66,10 @@ class TestSelfReflection:
     
     def test_should_proceed(self, self_reflection):
         """Test should_proceed logic"""
-        from zenus_core.brain.self_reflection import PlanReflection, ConfidenceLevel, StepReflection
+        from zenus_core.brain.self_reflection import PlanReflection, ConfidenceLevel
         from zenus_core.brain.llm.schemas import IntentIR, Step
         
-        intent = IntentIR(goal="test", requires_confirmation=False, steps=[Step(tool="TestTool", action="test", args={}, risk=0)])
+        IntentIR(goal="test", requires_confirmation=False, steps=[Step(tool="TestTool", action="test", args={}, risk=0)])
         
         # High confidence - should proceed
         reflection = PlanReflection(

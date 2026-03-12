@@ -14,10 +14,10 @@ Key features:
 
 import json
 from typing import List, Dict, Optional, Tuple
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass
 from enum import Enum
 
-from zenus_core.brain.llm.schemas import IntentIR, Step
+from zenus_core.brain.llm.schemas import IntentIR
 
 
 class ConfidenceLevel(Enum):
@@ -348,7 +348,7 @@ Be thorough - this is the last chance to catch problems!
             ConfidenceLevel.VERY_LOW: "red"
         }.get(reflection.overall_confidence, "white")
         
-        console.print(f"\n[bold]🤔 Self-Reflection:[/bold]")
+        console.print("\n[bold]🤔 Self-Reflection:[/bold]")
         console.print(f"Overall Confidence: [{confidence_color}]{reflection.overall_confidence_score:.0%}[/{confidence_color}]")
         console.print(f"Risk: {reflection.risk_assessment}")
         
@@ -360,20 +360,20 @@ Be thorough - this is the last chance to catch problems!
         
         # Questions for user
         if reflection.questions_for_user:
-            console.print(f"\n[cyan bold]❓ Questions:[/cyan bold]")
+            console.print("\n[cyan bold]❓ Questions:[/cyan bold]")
             for q in reflection.questions_for_user:
                 console.print(f"  • {q}")
         
         # Suggested improvements
         if reflection.suggested_improvements:
-            console.print(f"\n[cyan]💡 Suggestions:[/cyan]")
+            console.print("\n[cyan]💡 Suggestions:[/cyan]")
             for suggestion in reflection.suggested_improvements[:3]:  # Top 3
                 console.print(f"  • {suggestion}")
         
         # Step-by-step confidence
         low_confidence_steps = [s for s in reflection.step_reflections if s.confidence_score < 0.7]
         if low_confidence_steps:
-            console.print(f"\n[yellow]⚠️  Low Confidence Steps:[/yellow]")
+            console.print("\n[yellow]⚠️  Low Confidence Steps:[/yellow]")
             for step in low_confidence_steps:
                 console.print(f"  Step {step.step_index + 1}: {step.step_description}")
                 console.print(f"    Confidence: {step.confidence_score:.0%}")

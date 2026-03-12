@@ -24,7 +24,6 @@ class SandboxedAdaptivePlanner(AdaptivePlanner):
         
         # For now, use regular tools - sandbox is enforced at executor level
         # Full sandboxed registry will be implemented in next iteration
-        from zenus_core.tools.registry import TOOLS
         self.tools = TOOLS
     
     def execute_with_retry(self, intent: IntentIR, max_retries: int = 2) -> List[str]:
@@ -34,7 +33,7 @@ class SandboxedAdaptivePlanner(AdaptivePlanner):
         Wraps parent's execute_adaptive and returns step results.
         """
         # Use parent's execute_adaptive method
-        success = self.execute_adaptive(intent, max_retries=max_retries)
+        self.execute_adaptive(intent, max_retries=max_retries)
         
         # Extract results from execution history
         results = []

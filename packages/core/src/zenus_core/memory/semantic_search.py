@@ -5,7 +5,6 @@ Find similar past commands using sentence embeddings.
 Enables learning from previous interactions.
 """
 
-import os
 import json
 from typing import List, Dict, Optional
 from pathlib import Path
@@ -64,7 +63,7 @@ class SemanticSearch:
                 self.embeddings = np.load(self.embeddings_file)
                 with open(self.metadata_file) as f:
                     self.metadata = json.load(f)
-            except:
+            except Exception:
                 # Cache corrupted, start fresh
                 self.embeddings = None
                 self.metadata = []

@@ -113,7 +113,7 @@ class WakeWordDetector:
                 keyword_index = self.porcupine.process(pcm)
                 
                 if keyword_index >= 0:
-                    print(f"\n🔔 Wake word detected!")
+                    print("\n🔔 Wake word detected!")
                     
                     if self.on_wake:
                         self.on_wake()
@@ -181,7 +181,7 @@ class SimpleWakeWordDetector:
                 
                 # Check if wake phrase detected
                 if result.text and self.wake_phrase in result.text.lower():
-                    print(f"\n🔔 Wake phrase detected!")
+                    print("\n🔔 Wake phrase detected!")
                     
                     if self.on_wake:
                         self.on_wake()
