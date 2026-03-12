@@ -159,8 +159,9 @@ jobs:
   # ─── GitHub Release: create release and attach artifacts ─────────────────
   github-release:
     name: GitHub Release
-    # Requires PyPI publish and snap build; snap store publish is optional
-    needs: [publish-pypi, build-snap]
+    # Only requires test gate and snap build — PyPI publish is independent
+    # and can be re-run separately once credentials are configured.
+    needs: [test, build-snap]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
