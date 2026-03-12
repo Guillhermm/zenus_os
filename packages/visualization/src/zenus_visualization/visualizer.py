@@ -132,7 +132,7 @@ class Visualizer:
                 elif mem_float > 5:
                     mem_style = "bold yellow"
                 else:
-                    mem_style = "green"
+                    mem_style = "bold green"
                 
                 table.add_row(
                     pid,

@@ -260,10 +260,9 @@ class ExecutionLog(Vertical):
 
         log.write(f"[{timestamp}] {command}  {status_icon}  {duration:.1f}s")
 
-        if result:
-            for line in result.split("\n")[:10]:
-                if line.strip():
-                    log.write(f"  → {line[:200]}")
+        if result and result.strip():
+            for line in result.split("\n"):
+                log.write(f"  {line}" if line.strip() else "")
         else:
             log.write("  → (completed, no output)" if success else "  → (failed, no output)")
 

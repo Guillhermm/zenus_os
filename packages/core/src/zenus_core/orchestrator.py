@@ -560,7 +560,15 @@ class Orchestrator:
                     self.logger.log_error(f"Failed to add to semantic search: {e}")
             
             print_success("Plan executed successfully")
-            
+
+            # Build result string that includes actual tool output (used by TUI / workflow recorder)
+            _step_output_parts = []
+            for _step, _res in zip(intent.steps, step_results):
+                _res_str = str(_res).strip() if _res is not None else ""
+                if _res_str:
+                    _step_output_parts.append(f"{_step.tool}.{_step.action}:\n{_res_str}")
+            execution_summary = "\n\n".join(_step_output_parts) if _step_output_parts else "Plan executed successfully"
+
             # Record metrics
             execution_time_ms = (time.time() - start_time) * 1000
             try:
@@ -608,7 +616,7 @@ class Orchestrator:
                 except:
                     pass  # Non-critical
             
-            return "Plan executed successfully"
+            return execution_summary
         
         except IntentTranslationError as e:
             error_msg = str(e)

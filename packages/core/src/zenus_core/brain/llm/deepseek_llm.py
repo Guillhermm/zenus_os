@@ -92,12 +92,12 @@ class DeepSeekLLM:
         try:
             from pathlib import Path
             import yaml
-            
+
             config_paths = [
                 Path.cwd() / "config.yaml",
                 Path.home() / ".zenus" / "config.yaml",
             ]
-            
+
             for config_path in config_paths:
                 if config_path.exists():
                     with open(config_path, 'r') as f:
@@ -105,18 +105,12 @@ class DeepSeekLLM:
                         if config_data and 'llm' in config_data:
                             config_model = config_data['llm'].get('model')
                             config_max_tokens = config_data['llm'].get('max_tokens')
-                            print(f"[DeepSeekLLM] Loaded from {config_path}: model={config_model}, max_tokens={config_max_tokens}")
                             break
-        except Exception as e:
-            print(f"[DeepSeekLLM] WARNING: Failed to read config.yaml: {e}")
-            import traceback
-            traceback.print_exc()
-        
+        except Exception:
+            pass
+
         self.model = config_model or os.getenv("LLM_MODEL", "deepseek-chat")
         self.max_tokens = config_max_tokens or int(os.getenv("LLM_TOKENS", "8192"))
-        
-        if not config_model:
-            print(f"[DeepSeekLLM] Using fallback model: {self.model}")
     
     def translate_intent(self, user_input: str, stream: bool = False) -> IntentIR:
         response = self.client.chat.completions.create(
