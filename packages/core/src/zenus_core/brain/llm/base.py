@@ -27,13 +27,27 @@ class LLM(ABC):
     ) -> str:
         """
         Reflect on whether a goal has been achieved
-        
+
         Args:
             reflection_prompt: Full prompt for reflection
             user_goal: Original user goal
             observations: List of observations from execution
-        
+
         Returns:
             Structured reflection text with ACHIEVED, CONFIDENCE, REASONING, NEXT_STEPS
+        """
+        pass
+
+    @abstractmethod
+    def generate(self, prompt: str) -> str:
+        """
+        Generate a free-form text response for a given prompt.
+        Used by internal systems (e.g. self-reflection) that need a general LLM call.
+
+        Args:
+            prompt: Full prompt string
+
+        Returns:
+            Model response as plain text
         """
         pass

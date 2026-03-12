@@ -103,18 +103,12 @@ class AnthropicLLM:
                             config_model = config_data['llm'].get('model')
                             config_max_tokens = config_data['llm'].get('max_tokens')
                             break
-        except Exception as e:
-            # Config read failed, log the error
-            print(f"[AnthropicLLM] WARNING: Failed to read config.yaml: {e}")
-            import traceback
-            traceback.print_exc()
-        
+        except Exception:
+            pass  # Silently fall back to env vars / defaults
+
         # Use config.yaml model if found, otherwise env var, otherwise default
         self.model = config_model or os.getenv("ANTHROPIC_MODEL", "claude-3-5-sonnet-20241022")
         self.max_tokens = config_max_tokens or int(os.getenv("ANTHROPIC_MAX_TOKENS", "4096"))
-        
-        if not config_model:
-            print(f"[AnthropicLLM] Using fallback model: {self.model} (config.yaml not found or failed to load)")
     
     def translate_intent(self, user_input: str, stream: bool = False) -> IntentIR:
         """
@@ -218,7 +212,16 @@ class AnthropicLLM:
             )
             
             return response.content[0].text
-    
+
+    def generate(self, prompt: str) -> str:
+        """Generate a free-form text response for a given prompt."""
+        response = self.client.messages.create(
+            model=self.model,
+            max_tokens=2048,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        return response.content[0].text
+
     def analyze_image(self, image_base64: str, prompt: str) -> str:
         """
         Analyze image using Claude Vision

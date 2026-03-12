@@ -127,8 +127,9 @@ class SelfReflection:
             return reflection
             
         except Exception as e:
-            self.logger.log_error(f"Self-reflection failed: {e}")
-            
+            import traceback
+            self.logger.log_error(f"Self-reflection failed: {e}\n{traceback.format_exc()}")
+
             # Return default reflection with low confidence
             return self._create_fallback_reflection(intent)
     

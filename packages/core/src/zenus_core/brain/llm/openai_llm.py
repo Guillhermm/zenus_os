@@ -58,16 +58,11 @@ class OpenAILLM:
                             config_model = config_data['llm'].get('model')
                             config_max_tokens = config_data['llm'].get('max_tokens')
                             break
-        except Exception as e:
-            print(f"[OpenAILLM] WARNING: Failed to read config.yaml: {e}")
-            import traceback
-            traceback.print_exc()
-        
+        except Exception:
+            pass  # Silently fall back to env vars / defaults
+
         self.model = config_model or os.getenv("OPENAI_MODEL", "gpt-4o-mini")
         self.max_tokens = config_max_tokens or int(os.getenv("OPENAI_MAX_TOKENS", "4096"))
-        
-        if not config_model:
-            print(f"[OpenAILLM] Using fallback model: {self.model}")
     
     def translate_intent(self, user_input: str, stream: bool = False) -> IntentIR:
         response = self.client.chat.completions.parse(
@@ -136,6 +131,15 @@ class OpenAILLM:
             
             return response.choices[0].message.content
 
+    def generate(self, prompt: str) -> str:
+        """Generate a free-form text response for a given prompt."""
+        response = self.client.chat.completions.create(
+            model=self.model,
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=2048,
+            temperature=0.3,
+        )
+        return response.choices[0].message.content
 
     def analyze_image(self, image_base64: str, prompt: str) -> str:
         """

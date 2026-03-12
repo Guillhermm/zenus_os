@@ -183,3 +183,23 @@ class OllamaLLM:
             raise RuntimeError("Ollama reflection timed out")
         except Exception as e:
             raise RuntimeError(f"Ollama reflection failed: {e}")
+
+    def generate(self, prompt: str) -> str:
+        """Generate a free-form text response for a given prompt."""
+        response = requests.post(
+            f"{self.base_url}/api/generate",
+            json={
+                "model": self.model,
+                "prompt": prompt,
+                "stream": False,
+                "options": {
+                    "temperature": 0.3,
+                    "num_predict": 2048,
+                    "num_ctx": 8192,
+                },
+            },
+            timeout=60,
+        )
+        if response.status_code != 200:
+            raise RuntimeError(f"Ollama generate error: {response.status_code}")
+        return response.json().get("response", "")
