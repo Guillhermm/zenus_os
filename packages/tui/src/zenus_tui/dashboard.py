@@ -635,19 +635,19 @@ class ZenusDashboard(App):
     
     #command-input-container {
         dock: bottom;
-        height: 3;
+        height: 5;
         background: $panel;
-        padding: 0 1;
+        padding: 1;
     }
-    
+
     #command-input {
         width: 50%;
     }
     
     #execution-log-container {
-        height: 1fr;
+        height: 18;
         border: solid $primary;
-        padding: 0 1;
+        padding: 1;
     }
 
     #execution-log {
